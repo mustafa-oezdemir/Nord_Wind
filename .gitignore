@@ -1,7 +1,25 @@
-# Lokale Planungsunterlagen
+# Lokale Planungsunterlagen und KI-Agenten
 /_todo/
 AGENT.md
 AGENTS.md
+CLAUDE.md
+GEMINI.md
+*prompt*.md
+*PROMPT*.md
+*.agent.md
+*.instructions.md
+prompts/
+_prompts/
+ai-agents/
+/.agents/
+/.claude/
+/.codex/
+/.cursor/
+/.cursorrules
+/.github/prompts/
+/.github/agents/
+/.github/instructions/
+/.github/copilot-instructions.md
 
 # Umgebungsdateien und Geheimnisse (freigebbare Vorlagen ausnehmen)
 .env
