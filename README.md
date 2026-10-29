@@ -4,12 +4,12 @@ Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche 
 
 ## Projektstand
 
-Dieses Repository enthält derzeit die grundlegende Konfiguration, Vorlagen für die Container-Images und den Anforderungsabgleich. Die Angular-Oberfläche, die Go-API, das PostgreSQL-Schema und die Docker-Compose-Konfiguration sind noch nicht implementiert. Der Shop ist noch nicht lauffähig.
+Dieses Repository enthält eine minimale technische Basis: eine deutschsprachige Angular-Startseite, eine Go-API mit Gin, eine erste PostgreSQL-Migration und einen lokalen Docker-Compose-Stack. Katalog, Benutzerkonten, Warenkorb und Checkout sind noch nicht implementiert; der Shop verkauft noch nichts.
 
 ## Geplante Architektur
 
 - Angular, TypeScript und Bootstrap für die Kundenoberfläche
-- Go mit REST-API für die Serveranwendung
+- Go mit Gin-REST-API für die Serveranwendung
 - PostgreSQL für die dauerhafte Datenspeicherung
 - Docker Compose und Caddy für den lokalen Betrieb und die HTTP-Weiterleitung
 
@@ -19,12 +19,37 @@ Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Mark
 
 Die Datei `.env.example` enthält freigebbare Variablennamen und Beispielwerte. Für die lokale Entwicklung wird sie nach `.env` kopiert. Anschließend muss `POSTGRES_PASSWORD` durch ein eigenes, starkes Passwort ersetzt werden. `.env` und der lokale Planungsordner `_todo/` werden nicht in Git aufgenommen.
 
-Start- und Testbefehle werden hier dokumentiert, sobald die Anwendung und die Compose-Dateien vorhanden sind.
+## Lokal starten und prüfen
+
+Die folgenden Befehle werden im Repository-Stamm ausgeführt. Die lokale `.env` benötigt vor dem ersten Start ein eigenes, starkes `POSTGRES_PASSWORD`.
+
+```powershell
+docker compose -f compose.yaml config --quiet
+docker compose up --build -d
+pwsh -File scripts/smoke.ps1
+docker compose ps
+```
+
+Unter einer POSIX-Shell führt `sh scripts/smoke.sh` denselben Smoke-Test aus. `docker compose down` stoppt den Stack, ohne das Datenbank-Volume zu entfernen. Die Datenbank ist nicht am Host veröffentlicht; nur Caddy ist lokal unter `127.0.0.1:8080` erreichbar. Der Port kann über `HOST_HTTP_PORT` in `.env` geändert und dem Smoke-Test als URL übergeben werden.
+
+Frontend und Backend lassen sich auch getrennt prüfen:
+
+```powershell
+cd frontend
+npm ci
+npm run typecheck
+npm test -- --watch=false
+npm run build
+cd ../backend
+go mod download
+go test ./...
+```
 
 Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und der [priorisierte Backlog](docs/requirements/backlog.md) halten Anforderungen, Widersprüche und die nächsten Entwicklungsschritte fest.
 Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Prüfungen derzeit bestehen und welche wegen des fehlenden Starters noch nicht ausführbar sind.
-Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die noch nicht ausführbaren Prüfungen.
+Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die damals noch ausstehenden Prüfungen.
+Der [NW-03-Buildnachweis](docs/progress/NW-03.md) dokumentiert die inzwischen lauffähige Basis und ihre tatsächlichen Prüfergebnisse.
 
 ## Container-Images
 
-Das mehrstufige `Dockerfile` definiert zwei Ziele: `edge` für Angular und Caddy sowie `api` für die Go-Anwendung. Beide Ziele erwarten Quellcode in `frontend/` beziehungsweise `backend/`. Ein vollständiger Image-Build ist erst möglich, wenn diese Anwendungen angelegt sind. Die Caddy-Konfiguration nutzt für die lokale Entwicklung HTTP auf Port 8080; für einen öffentlichen Betrieb ist eine gesonderte HTTPS-Konfiguration erforderlich.
+Das mehrstufige `Dockerfile` definiert zwei Ziele: `edge` für Angular und Caddy sowie `api` für Go und die Migration. Die Builds verwenden `npm ci`, `go mod download` und die versionierten Lock-/Prüfsummendateien. Compose startet PostgreSQL, führt die erste Migration aus und schaltet danach API und Caddy frei. Die Caddy-Konfiguration nutzt lokal HTTP auf Port 8080; für einen öffentlichen Betrieb ist eine gesonderte HTTPS-Konfiguration erforderlich.
