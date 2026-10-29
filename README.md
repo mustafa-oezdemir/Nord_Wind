@@ -1,22 +1,22 @@
 # Kuzey Rüzgarları
 
-Almanya pazarı için planlanan, Almanca arayüzlü ve EUR kullanan e-ticaret projesi.
+Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche und Preisen in Euro.
 
-## Mevcut durum
+## Projektstand
 
-Bu depo şu anda yalnızca başlangıç yapılandırmasını içerir. Angular arayüzü, Go API'si, PostgreSQL şeması ve Docker Compose uygulaması henüz eklenmedi; çalıştırılabilir bir mağaza olduğu varsayılmamalıdır.
+Dieses Repository enthält derzeit nur die grundlegende Konfiguration. Die Angular-Oberfläche, die Go-API, das PostgreSQL-Schema und die Docker-Compose-Konfiguration sind noch nicht implementiert. Der Shop ist noch nicht lauffähig.
 
-## Planlanan temel yapı
+## Geplante Architektur
 
-- Angular + TypeScript + Bootstrap: müşteri arayüzü
-- Go REST API: sunucu uygulaması
-- PostgreSQL: kalıcı veri
-- Docker Compose ve Caddy: yerel çalışma ve HTTP yönlendirmesi
+- Angular, TypeScript und Bootstrap für die Kundenoberfläche
+- Go mit REST-API für die Serveranwendung
+- PostgreSQL für die dauerhafte Datenspeicherung
+- Docker Compose und Caddy für den lokalen Betrieb und die HTTP-Weiterleitung
 
-İlk sürüm tek satıcılı bir mağaza olarak geliştirilecektir. Marka adı **Kuzey Rüzgarları**; teknik adlarda `kuzey-ruzgarlari` kullanılır.
+Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Markenname lautet **Kuzey Rüzgarları**. Für technische Bezeichner wird `kuzey-ruzgarlari` verwendet.
 
-## Yerel ortam
+## Lokale Konfiguration
 
-`.env.example` paylaşılabilir anahtarları ve örnek değerleri gösterir. Yerel geliştirme için onu `.env` olarak kopyalayın ve `POSTGRES_PASSWORD` değerini benzersiz, güçlü bir parola ile değiştirin. `.env` ve yerel planlama klasörü `_todo/` Git dışında tutulur.
+Die Datei `.env.example` enthält freigebbare Variablennamen und Beispielwerte. Für die lokale Entwicklung wird sie nach `.env` kopiert. Anschließend muss `POSTGRES_PASSWORD` durch ein eigenes, starkes Passwort ersetzt werden. `.env` und der lokale Planungsordner `_todo/` werden nicht in Git aufgenommen.
 
-Uygulama ve Compose dosyaları eklendiğinde çalıştırma ve test komutları burada belgelenecektir.
+Start- und Testbefehle werden hier dokumentiert, sobald die Anwendung und die Compose-Dateien vorhanden sind.

@@ -1,7 +1,7 @@
-# Local planning material
+# Lokale Planungsunterlagen
 /_todo/
 
-# Environment and secrets (keep the shareable templates)
+# Umgebungsdateien und Geheimnisse (freigebbare Vorlagen ausnehmen)
 .env
 .env.*
 !.env.example
@@ -27,7 +27,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Go build and test artifacts
+# Go-Build- und Testdateien
 *.exe
 *.exe~
 *.test
@@ -35,13 +35,13 @@ pnpm-debug.log*
 /bin/
 /tmp/
 
-# Docker and local database data
+# Docker und lokale Datenbankdaten
 /.data/
 /data/postgres/
 /postgres-data/
 *.pid
 
-# Editor and operating system files
+# Editor- und Betriebssystemdateien
 .DS_Store
 Thumbs.db
 Desktop.ini
@@ -53,6 +53,6 @@ Desktop.ini
 *.swo
 *~
 
-# Local logs and reports
+# Lokale Protokolle und Berichte
 *.log
 /reports/
