@@ -19,7 +19,7 @@ Alle sechs vorhandenen Master-Dokumente wurden inhaltlich geprüft. Die SHA-256-
 
 ## Vorrang und tatsächlicher Projektstand
 
-Die ausdrückliche Nutzervorgabe und die lokale `AGENTS.md` legen **Kuzey Rüzgarları** als Markennamen und `kuzey-ruzgarlari` als technischen Bezeichner fest. Ältere Namen in den Entwürfen sind historische Vorschläge. Öffentliche Projektdokumentation wird auf Deutsch geschrieben.
+Die Nutzervorgabe für NW-02 legt **NordWinds** als Markennamen fest; neue technische Bezeichner verwenden `nordwinds`. Dies ersetzt die im Schritt NW-00 dokumentierte frühere Markenentscheidung. Ältere Namen in den Entwürfen sind historische Vorschläge. Öffentliche Projektdokumentation wird auf Deutsch geschrieben.
 
 Das Repository enthält derzeit `README.md`, `.env.example`, ein mehrstufiges `Dockerfile`, `.dockerignore` und `ops/Caddyfile`. `frontend/`, `backend/`, `compose.yaml`, Datenbankmigrationen, OpenAPI und Tests fehlen. Aussagen in S5 über einen vorhandenen MarktHaus-Starter gelten daher **nicht** als Nachweis für dieses Repository. Die Docker-Ziele wurden geparst und Caddy validiert; ein vollständiger Anwendungs-Build wurde mangels Quellcode nicht ausgeführt.
 
@@ -30,7 +30,7 @@ Status bedeutet: **bestätigt** durch die aktuelle Nutzervorgabe oder eine über
 | ID | Anforderung | Nachweis in den Quellen | Status | Umsetzungsschritt |
 | --- | --- | --- | --- | --- |
 | REQ-PROJ-01 | Einzelanbieter-Shop für Deutschland, Oberfläche `de-DE`, Währung `EUR`. | S1 §2; S2 §1–2; S3 §2; S4 §2; S5 §2; S6 §1 | bestätigt | durchgehend |
-| REQ-BRAND-01 | Öffentliche Marke **Kuzey Rüzgarları**, technischer Name `kuzey-ruzgarlari`. | aktuelle Nutzervorgabe; S1 §2, S5 §8 und Fahrplan §1 enthalten ältere Namen | bestätigt | NW-02 und neue Artefakte |
+| REQ-BRAND-01 | Öffentliche Marke **NordWinds**, technischer Name `nordwinds`. | Nutzervorgabe für NW-02; Fahrplan §1 und §5; S1 §2 und S5 §8 enthalten weitere frühere Namen | bestätigt | NW-02 und neue Artefakte |
 | REQ-ARCH-01 | Angular/Bootstrap, Go-API, PostgreSQL und Caddy/Docker; Go als modularer Monolith. | S1 §3–4; S2 §3–4; S3 §4; S4 §8–10; S5 §3–4; S6 §2, §6 | vorgeschlagen | NW-01–04 |
 | REQ-CAT-01 | Hierarchische Kategorien; Produkte können mehreren Kategorien zugeordnet sein. | S1 §5–6; S2 §2, §7; S3 §3; S4 §4–5; S5 §5–6; S6 §5 | vorgeschlagen | NW-06–09 |
 | REQ-CAT-02 | Kaufbare Varianten haben eindeutige SKU, Preis und Bestandsbezug. | S4 §5, §11; S5 §5–6; Fahrplan §3 | vorgeschlagen | NW-06, NW-10 |
@@ -54,7 +54,7 @@ Status bedeutet: **bestätigt** durch die aktuelle Nutzervorgabe oder eine über
 
 | Thema | Abweichung | Behandlung |
 | --- | --- | --- |
-| Marke | Fahrplan: NordWinds; S1: Nordmarkt; S5: MarktHaus; S6: EuroShop. | Aktuelle Nutzervorgabe **Kuzey Rüzgarları** hat Vorrang. Historische Quelldateien bleiben unverändert. |
+| Marke | Fahrplan: NordWinds; S1: Nordmarkt; S5: MarktHaus; S6: EuroShop. NW-00 verwendete zwischenzeitlich Kuzey Rüzgarları. | Aktuelle Nutzervorgabe **NordWinds** hat Vorrang. Historische Quelldateien und frühere Entscheidungsnachweise bleiben nachvollziehbar. |
 | Starter | S5 §14/§17 beschreibt vorhandenen Angular-/Go-/PostgreSQL-Code; im aktuellen Repository fehlt dieser. | NW-01 untersucht den tatsächlichen Stand und muss Bootstrap statt Starter-Audit planen. Kein vorhandenes Feature wird behauptet. |
 | Zahlungszeitpunkt | S3 §2–3 fordert Onlinezahlung in der ersten verkaufsfähigen Version; S1 §13 und S5 §15 staffeln Katalog, Bestellung und Zahlung. | Technische Zwischenstände dürfen ohne Zahlung entstehen, aber nicht als vollständiger verkaufsfähiger Shop gelten. Umsetzung erst nach Preis-, Bestands- und Sessionregeln. |
 | Gast-Checkout | S1 §6/§13 nennt Gast/Demo, S3 §2 und S4 §3 lassen Gast-Checkout offen, Fahrplan NW-14 setzt zunächst Sessions voraus. | Fachentscheidung vor Warenkorb-/Checkout-Vertrag erforderlich; kein öffentlicher ungeschützter Bestell-Endpunkt. |

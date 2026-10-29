@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Beide Images werden aus dem Repository-Stamm gebaut:
-# docker build --target edge -t kuzey-ruzgarlari-edge .
-# docker build --target api  -t kuzey-ruzgarlari-api  .
+# docker build --target edge -t nordwinds-edge .
+# docker build --target api  -t nordwinds-api  .
 
 # Node.js 26: aktuelle LTS-Version. Go, Caddy und Alpine: aktuelle stabile Versionen.
 FROM node:26.13.0-alpine3.24 AS frontend-build
@@ -11,9 +11,9 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY frontend/ ./
 RUN npm run build -- --configuration production \
-    && test -f dist/kuzey-ruzgarlari/browser/index.html \
+    && test -f dist/nordwinds/browser/index.html \
     && mkdir -p /out/web \
-    && cp -a dist/kuzey-ruzgarlari/browser/. /out/web/
+    && cp -a dist/nordwinds/browser/. /out/web/
 
 FROM golang:1.27.3-alpine3.24 AS backend-build
 WORKDIR /src/backend

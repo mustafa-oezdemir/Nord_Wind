@@ -1,4 +1,4 @@
-# Kuzey Rüzgarları
+# NordWinds
 
 Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche und Preisen in Euro.
 
@@ -13,7 +13,7 @@ Dieses Repository enthält derzeit die grundlegende Konfiguration, Vorlagen für
 - PostgreSQL für die dauerhafte Datenspeicherung
 - Docker Compose und Caddy für den lokalen Betrieb und die HTTP-Weiterleitung
 
-Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Markenname lautet **Kuzey Rüzgarları**. Für technische Bezeichner wird `kuzey-ruzgarlari` verwendet.
+Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Markenname lautet **NordWinds**. Für neue technische Bezeichner wird `nordwinds` verwendet.
 
 ## Lokale Konfiguration
 
@@ -23,6 +23,7 @@ Start- und Testbefehle werden hier dokumentiert, sobald die Anwendung und die Co
 
 Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und der [priorisierte Backlog](docs/requirements/backlog.md) halten Anforderungen, Widersprüche und die nächsten Entwicklungsschritte fest.
 Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Prüfungen derzeit bestehen und welche wegen des fehlenden Starters noch nicht ausführbar sind.
+Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die noch nicht ausführbaren Prüfungen.
 
 ## Container-Images
 
