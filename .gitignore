@@ -1,5 +1,7 @@
 # Lokale Planungsunterlagen
 /_todo/
+AGENT.md
+AGENTS.md
 
 # Umgebungsdateien und Geheimnisse (freigebbare Vorlagen ausnehmen)
 .env
