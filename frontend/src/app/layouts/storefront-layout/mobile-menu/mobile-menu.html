@@ -1,0 +1,47 @@
+<dialog
+  #dialog
+  id="mobiles-menue"
+  class="nw-drawer"
+  aria-labelledby="mobiles-menue-titel"
+  closedby="any"
+  (close)="handleClosed()"
+>
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <h2 id="mobiles-menue-titel" class="drawer-title">Menü</h2>
+      <button
+        class="btn-close"
+        type="button"
+        aria-label="Menü schließen"
+        (click)="close()"
+      ></button>
+    </div>
+    <nav class="drawer-body" aria-label="Kategorien">
+      <ul class="drawer-list">
+        <li><a routerLink="/" (click)="close()">Startseite</a></li>
+        <li><a routerLink="/produkte" (click)="close()">Alle Produkte</a></li>
+        @for (category of store.tree(); track category.id) {
+          <li>
+            <a [routerLink]="['/kategorien', category.slug]" (click)="close()">{{
+              category.name
+            }}</a>
+            @if (category.children.length > 0) {
+              <ul class="drawer-sublist">
+                @for (child of category.children; track child.id) {
+                  <li>
+                    <a [routerLink]="['/kategorien', child.slug]" (click)="close()">{{
+                      child.name
+                    }}</a>
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+      @if (store.isLoading()) {
+        <p class="drawer-hint" role="status">Kategorien werden geladen …</p>
+      }
+    </nav>
+  </div>
+</dialog>

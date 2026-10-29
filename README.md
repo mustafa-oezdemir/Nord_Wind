@@ -4,7 +4,7 @@ Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche 
 
 ## Projektstand
 
-Dieses Repository enthält eine minimale technische Basis: eine deutschsprachige Angular-Startseite, eine Go-API mit Gin, eine erste PostgreSQL-Migration und einen lokalen Docker-Compose-Stack. Katalog, Benutzerkonten, Warenkorb und Checkout sind noch nicht implementiert; der Shop verkauft noch nichts.
+Dieses Repository enthält eine deutschsprachige Angular-Storefront (Startseite, Produktliste, Suche und Kategorien), eine Go-API mit Gin und lesender Katalog-API, versionierte PostgreSQL-Migrationen und einen lokalen Docker-Compose-Stack. Benutzerkonten, Warenkorb und Checkout sind noch nicht implementiert; der Shop verkauft noch nichts.
 
 ## Geplante Architektur
 
@@ -50,6 +50,7 @@ Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Pr�
 Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die damals noch ausstehenden Prüfungen.
 Der [NW-03-Buildnachweis](docs/progress/NW-03.md) dokumentiert die inzwischen lauffähige Basis und ihre tatsächlichen Prüfergebnisse.
 Die [CI- und PR-Anleitung](docs/verification/ci.md) erklärt die Qualitätsschritte und die Voraussetzungen für verpflichtende Statuschecks.
+Der [NW-09-Nachweis](docs/progress/NW-09.md) beschreibt Storefront, Design-System und die ausgeführten bzw. noch ausstehenden Oberflächenprüfungen.
 
 ## Container-Images
 

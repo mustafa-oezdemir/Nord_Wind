@@ -1,0 +1,73 @@
+// Bootstrap 5.3 mit NordWinds-Variablen. Nur die tatsächlich genutzten Teile werden
+// eingebunden. Bootstrap verwendet noch `@import`; die Sass-Hinweise dazu sind in
+// `angular.json` gezielt stummgeschaltet.
+@use 'tokens' as t;
+
+$primary: t.$fjord;
+$secondary: t.$slate;
+$success: t.$success;
+$danger: t.$danger;
+$warning: t.$amber;
+$light: t.$mist;
+$dark: t.$ink;
+
+$body-color: t.$ink;
+$body-bg: t.$white;
+$body-secondary-color: t.$slate;
+$border-color: t.$line;
+$link-color: t.$fjord;
+$link-hover-color: t.$fjord-dark;
+
+$font-family-sans-serif: t.$font-text;
+$headings-font-family: t.$font-display;
+$headings-font-weight: 700;
+$headings-color: t.$ink;
+$line-height-base: 1.55;
+
+$border-radius: t.$radius-sm;
+$border-radius-sm: 0.25rem;
+$border-radius-lg: t.$radius-md;
+$border-radius-pill: t.$radius-pill;
+
+$enable-shadows: false;
+$enable-reduced-motion: true;
+$min-contrast-ratio: 4.5;
+
+$focus-ring-width: 0.2rem;
+$focus-ring-opacity: 0.4;
+$focus-ring-color: rgba(t.$ink, 0.4);
+$input-border-color: #a9bcc6;
+$input-placeholder-color: t.$slate;
+
+$container-max-widths: (
+  sm: 540px,
+  md: 720px,
+  lg: 960px,
+  xl: 1140px,
+  xxl: 1280px,
+);
+
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/images';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/transitions';
+@import 'bootstrap/scss/nav';
+@import 'bootstrap/scss/breadcrumb';
+@import 'bootstrap/scss/badge';
+@import 'bootstrap/scss/alert';
+@import 'bootstrap/scss/close';
+@import 'bootstrap/scss/placeholders';
+@import 'bootstrap/scss/helpers';
+@import 'bootstrap/scss/utilities/api';

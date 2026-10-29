@@ -1,0 +1,22 @@
+<form class="search-form" role="search" (submit)="submit($event)">
+  <label class="visually-hidden" [for]="inputId()">Produkte durchsuchen</label>
+  <input
+    class="form-control search-input"
+    type="search"
+    name="q"
+    [id]="inputId()"
+    [value]="term()"
+    (input)="onInput($event)"
+    [attr.maxlength]="maxLength"
+    placeholder="Wonach suchen Sie?"
+    autocomplete="off"
+    enterkeyhint="search"
+  />
+  <button class="btn btn-primary search-button" type="submit">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5" />
+    </svg>
+    <span class="search-button-label">Suchen</span>
+  </button>
+</form>

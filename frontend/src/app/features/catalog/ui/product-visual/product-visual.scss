@@ -1,0 +1,42 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  --visual-bg: #{t.$mist};
+  --visual-line: #{t.$fjord};
+}
+
+:host([data-palette='ink']) {
+  --visual-bg: #{t.$ink};
+  --visual-line: #{t.$amber};
+}
+
+:host([data-palette='fjord']) {
+  --visual-bg: #{t.$fjord};
+  --visual-line: #{t.$mist};
+}
+
+:host([data-palette='amber']) {
+  --visual-bg: #{t.$amber-soft};
+  --visual-line: #{t.$ink};
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.visual-bg {
+  fill: var(--visual-bg);
+}
+
+.visual-line {
+  fill: none;
+  stroke: var(--visual-line);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 12;
+}

@@ -1,0 +1,63 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  background: t.$white;
+}
+
+.site-header {
+  border-bottom: 1px solid t.$line;
+}
+
+.site-header-inner {
+  display: grid;
+  grid-template-areas:
+    'menu brand'
+    'search search';
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.75rem 0.5rem;
+  padding-block: 0.75rem;
+}
+
+.menu-button {
+  grid-area: menu;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding-inline: 0.5rem;
+  color: t.$ink;
+  font-weight: 600;
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2.2;
+  }
+}
+
+.site-header-brand {
+  grid-area: brand;
+  justify-self: start;
+  border-radius: t.$radius-sm;
+  text-decoration: none;
+}
+
+.site-header-search {
+  grid-area: search;
+}
+
+// Ab Tablet-Querformat: Marke links, Suche daneben in voller Breite.
+@media (min-width: t.$bp-lg) {
+  .site-header-inner {
+    grid-template-areas: 'brand search';
+    grid-template-columns: auto minmax(0, 40rem);
+    justify-content: space-between;
+    gap: 2rem;
+    padding-block: 1rem;
+  }
+}

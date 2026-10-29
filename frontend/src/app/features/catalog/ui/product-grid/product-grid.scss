@@ -1,0 +1,38 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+}
+
+ul {
+  margin-bottom: 0;
+}
+
+.skeleton-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-bottom: 1rem;
+  overflow: hidden;
+  border: 1px solid t.$line;
+  border-radius: t.$radius-md;
+
+  .placeholder {
+    margin-inline: 1rem;
+    border-radius: t.$radius-sm;
+    background-color: #c5d5dc;
+  }
+}
+
+.skeleton-visual.placeholder {
+  display: block;
+  aspect-ratio: 4 / 3;
+  margin: 0 0 0.35rem;
+  border-radius: 0;
+}
+
+.skeleton-price {
+  margin-top: 0.4rem;
+  min-height: 1.4rem;
+}

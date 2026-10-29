@@ -1,0 +1,55 @@
+// NordWinds-Design-Tokens: eine Quelle für Farben, Schrift, Radien und Breakpoints.
+// Komponenten binden diese Datei mit `@use 'tokens' as t;` ein; sie erzeugt kein CSS.
+
+// Farben: Nordsee-Palette mit Bernstein als einzigem warmen Akzent.
+$ink: #102b44; // Tiefsee: Text, Überschriften, dunkle Flächen
+$fjord: #126b82; // Fjord: Primäraktionen und Links (6,1:1 auf Weiß)
+$fjord-dark: #0c5263;
+$slate: #4c6172; // Sekundärtext (6,4:1 auf Weiß)
+$mist: #eef4f6; // ruhige Flächen
+$line: #d3e0e6; // Trennlinien und Rahmen
+$white: #fff;
+$amber: #f0b33c; // Bernstein: Akzent und Fokus auf dunklem Grund
+$amber-soft: #fbe8c2;
+$success: #1d6f47;
+$danger: #a4262c;
+
+// Schrift: Systemschriften, damit keine Drittanbieter-Anfragen (DSGVO) entstehen.
+$font-text:
+  'Segoe UI Variable Text',
+  'Segoe UI',
+  system-ui,
+  -apple-system,
+  BlinkMacSystemFont,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$font-display:
+  'Segoe UI Variable Display',
+  'Segoe UI',
+  system-ui,
+  -apple-system,
+  BlinkMacSystemFont,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+
+// Typografische Skala im Verhältnis 1,25 (große Terz).
+$size-sm: 0.875rem;
+$size-base: 1rem;
+$size-md: 1.25rem;
+$size-lg: 1.5625rem;
+$size-xl: 1.953rem;
+$size-2xl: 2.441rem;
+$size-3xl: 3.052rem;
+
+// Radien nach Hierarchie: Steuerelemente klein, Kacheln mittel, Chips rund.
+$radius-sm: 0.375rem;
+$radius-md: 0.75rem;
+$radius-pill: 999px;
+
+// Breakpoints entsprechen den Bootstrap-Standards.
+$bp-sm: 576px;
+$bp-md: 768px;
+$bp-lg: 992px;
+$bp-xl: 1200px;

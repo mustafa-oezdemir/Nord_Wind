@@ -1,0 +1,159 @@
+@use 'tokens' as t;
+
+.hero {
+  --nw-focus: #{t.$amber};
+  position: relative;
+  overflow: hidden;
+  background: t.$ink;
+  color: #d6e3ea;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  padding-block: clamp(2.5rem, 7vw, 4.75rem);
+}
+
+.hero-title {
+  max-width: 13ch;
+  margin: 0 0 1rem;
+  color: t.$white;
+  font-size: clamp(2.3rem, 6.5vw, 4.25rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.hero-lead {
+  max-width: 34rem;
+  margin: 0 0 1.75rem;
+  font-size: clamp(t.$size-base, 2vw, t.$size-md);
+  line-height: 1.5;
+}
+
+.hero-cta {
+  font-weight: 650;
+}
+
+// Die drei Windlinien des Markenzeichens, groß in der rechten Hälfte. Unterhalb des
+// Desktop-Layouts liegen sie blass hinter dem Text, damit nichts überdeckt wird.
+.hero-wind {
+  position: absolute;
+  right: -30%;
+  bottom: -18%;
+  width: 120vw;
+  opacity: 0.3;
+
+  path {
+    fill: none;
+    stroke: t.$fjord;
+    stroke-dasharray: 1200;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 22;
+    animation: wind-draw 1.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  path:nth-child(2) {
+    stroke: t.$amber;
+    animation-delay: 0.12s;
+  }
+
+  path:nth-child(3) {
+    animation-delay: 0.24s;
+  }
+}
+
+@media (min-width: t.$bp-lg) {
+  .hero-wind {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 52%;
+    width: min(46rem, 52vw);
+    opacity: 0.9;
+    transform: translateY(-50%);
+  }
+
+  .hero-lead {
+    max-width: min(34rem, 44vw);
+  }
+}
+
+@keyframes wind-draw {
+  from {
+    stroke-dashoffset: 1200;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-wind path {
+    animation: none;
+  }
+}
+
+.home-section {
+  padding-top: clamp(2rem, 5vw, 3.25rem);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.25rem;
+
+  h2 {
+    margin: 0;
+    font-size: clamp(t.$size-lg, 3vw, t.$size-xl);
+    letter-spacing: -0.03em;
+  }
+}
+
+.section-link {
+  font-weight: 600;
+}
+
+.category-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-tile {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.15rem;
+  border-left: 4px solid t.$fjord;
+  border-radius: t.$radius-sm;
+  background: t.$mist;
+  color: t.$ink;
+  text-decoration: none;
+
+  &:hover {
+    border-left-color: t.$amber;
+  }
+}
+
+.category-tile-name {
+  font-weight: 650;
+}
+
+.category-tile-text {
+  display: -webkit-box;
+  overflow: hidden;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}

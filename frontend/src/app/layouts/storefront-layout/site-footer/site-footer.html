@@ -1,0 +1,29 @@
+<footer class="site-footer">
+  <div class="container">
+    <div class="row gy-4">
+      <div class="col-12 col-md-5">
+        <app-brand-logo [inverse]="true" />
+        <p class="site-footer-claim">Onlineshop für Deutschland.</p>
+      </div>
+      <nav class="col-6 col-md-3" aria-label="Sortiment">
+        <h2 class="site-footer-heading">Sortiment</h2>
+        <ul class="site-footer-links">
+          <li><a routerLink="/produkte">Alle Produkte</a></li>
+          @for (category of categories(); track category.id) {
+            <li>
+              <a [routerLink]="['/kategorien', category.slug]">{{ category.name }}</a>
+            </li>
+          }
+        </ul>
+      </nav>
+      <div class="col-6 col-md-4">
+        <h2 class="site-footer-heading">Hinweis</h2>
+        <p class="site-footer-note">
+          Dies ist eine Vorschau. Bestellungen sind noch nicht möglich; Preise und Verfügbarkeit
+          können sich bis zum Verkaufsstart ändern.
+        </p>
+      </div>
+    </div>
+    <p class="site-footer-copy">© {{ year }} NordWinds</p>
+  </div>
+</footer>

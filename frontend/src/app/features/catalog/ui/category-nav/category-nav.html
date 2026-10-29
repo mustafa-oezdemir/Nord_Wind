@@ -1,0 +1,25 @@
+<nav class="category-nav" aria-label="Kategorien">
+  <div class="container">
+    <ul class="category-nav-list">
+      <li>
+        <a
+          routerLink="/produkte"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="allProductsMatch"
+          ariaCurrentWhenActive="page"
+          >Alle Produkte</a
+        >
+      </li>
+      @for (category of store.tree(); track category.id) {
+        <li>
+          <a
+            [routerLink]="['/kategorien', category.slug]"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            >{{ category.name }}</a
+          >
+        </li>
+      }
+    </ul>
+  </div>
+</nav>

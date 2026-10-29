@@ -1,0 +1,100 @@
+@if (categoryMissing()) {
+  <app-not-found-view
+    heading="Kategorie nicht gefunden"
+    message="Diese Kategorie gibt es nicht oder sie ist derzeit nicht verfügbar."
+  />
+} @else {
+  <div class="container product-list">
+    @if (query().category) {
+      <nav aria-label="Brotkrumen" class="product-list-breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/">Startseite</a></li>
+          <li class="breadcrumb-item"><a routerLink="/produkte">Alle Produkte</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ headingText() }}</li>
+        </ol>
+      </nav>
+    }
+
+    <header class="product-list-header">
+      <div>
+        <h1 class="product-list-title" tabindex="-1" #heading>{{ headingText() }}</h1>
+        @if (category()?.description; as description) {
+          <p class="product-list-description">{{ description }}</p>
+        }
+        <p class="product-list-count" aria-live="polite">
+          @if (page()) {
+            {{ resultText() }}
+          }
+        </p>
+      </div>
+      <div class="product-list-sort">
+        <label class="form-label" for="sortierung">Sortieren nach</label>
+        <select id="sortierung" class="form-select" (change)="changeSort($event)">
+          @for (option of sortOptions; track option.param) {
+            <option [value]="option.param" [selected]="option.param === selectedSort()">
+              {{ option.label }}
+            </option>
+          }
+        </select>
+      </div>
+    </header>
+
+    <section aria-labelledby="ergebnisse-titel">
+      <h2 id="ergebnisse-titel" class="visually-hidden">Produkte</h2>
+      @if (products.isLoading()) {
+        <app-product-grid [loading]="true" />
+      } @else if (apiError()) {
+        <app-error-state
+          heading="Produkte konnten nicht geladen werden"
+          [message]="errorMessage()"
+          [retryable]="apiError()?.kind !== 'invalid-request'"
+          (retry)="products.reload()"
+        >
+          @if (apiError()?.kind === 'invalid-request') {
+            <a class="btn btn-primary" routerLink="/produkte">Alle Produkte ansehen</a>
+          }
+        </app-error-state>
+      } @else if (pageBeyondEnd()) {
+        <app-empty-state
+          heading="Diese Seite gibt es nicht"
+          message="Die Ergebnisliste ist kürzer."
+        >
+          <a
+            class="btn btn-primary"
+            [routerLink]="[]"
+            [queryParams]="{ seite: null }"
+            queryParamsHandling="merge"
+            >Zur ersten Seite</a
+          >
+        </app-empty-state>
+      } @else if (page()?.items.length === 0) {
+        @if (query().search) {
+          <app-empty-state
+            heading="Keine Produkte gefunden"
+            message="Prüfen Sie die Schreibweise oder versuchen Sie einen allgemeineren Begriff."
+          >
+            <a class="btn btn-primary" routerLink="/produkte">Alle Produkte ansehen</a>
+          </app-empty-state>
+        } @else if (query().category) {
+          <app-empty-state
+            heading="In dieser Kategorie gibt es noch keine Produkte"
+            message="Schauen Sie sich in der Zwischenzeit das übrige Sortiment an."
+          >
+            <a class="btn btn-primary" routerLink="/produkte">Alle Produkte ansehen</a>
+          </app-empty-state>
+        } @else {
+          <app-empty-state
+            heading="Noch keine Produkte im Sortiment"
+            message="Sobald Produkte veröffentlicht sind, erscheinen sie hier."
+          />
+        }
+      } @else if (page(); as result) {
+        <app-product-grid [products]="result.items" />
+        <app-pagination
+          [page]="result.pagination.page"
+          [totalPages]="result.pagination.totalPages"
+        />
+      }
+    </section>
+  </div>
+}

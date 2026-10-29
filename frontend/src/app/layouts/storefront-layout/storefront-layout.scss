@@ -1,0 +1,44 @@
+@use 'tokens' as t;
+
+:host {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1000;
+  padding: 0.6rem 1rem;
+  border-radius: t.$radius-sm;
+  background: t.$ink;
+  color: t.$white;
+  font-weight: 600;
+  transform: translateY(-200%);
+  --nw-focus: #{t.$amber};
+
+  &:focus {
+    transform: none;
+  }
+}
+
+.preview-bar {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  background: t.$amber;
+  color: t.$ink;
+  font-size: t.$size-sm;
+  font-weight: 600;
+  text-align: center;
+}
+
+.storefront-main {
+  flex: 1;
+  padding-bottom: 3.5rem;
+
+  &:focus {
+    outline: none;
+  }
+}

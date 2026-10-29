@@ -1,0 +1,52 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  margin-top: auto;
+}
+
+.site-footer {
+  --nw-focus: #{t.$amber};
+  padding-block: 2.75rem 1.5rem;
+  background: t.$ink;
+  color: #d6e3ea;
+
+  a {
+    color: t.$white;
+    text-decoration-color: rgba(t.$white, 0.4);
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      text-decoration-color: t.$amber;
+    }
+  }
+}
+
+.site-footer-claim,
+.site-footer-note {
+  margin: 0.75rem 0 0;
+  max-width: 30rem;
+  font-size: t.$size-sm;
+}
+
+.site-footer-heading {
+  margin: 0 0 0.75rem;
+  color: t.$white;
+  font-size: t.$size-base;
+}
+
+.site-footer-links {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  font-size: t.$size-sm;
+  list-style: none;
+}
+
+.site-footer-copy {
+  margin: 2.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(t.$white, 0.16);
+  font-size: t.$size-sm;
+}

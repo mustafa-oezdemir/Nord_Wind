@@ -1,0 +1,40 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+}
+
+.state-box {
+  max-width: 38rem;
+  margin: 1.5rem 0;
+  padding: 1.75rem 1.5rem;
+  border: 1px solid t.$line;
+  border-left: 4px solid t.$fjord;
+  border-radius: t.$radius-sm;
+  background: t.$mist;
+}
+
+.state-box--error {
+  border-left-color: t.$danger;
+  background: #fbf1f1;
+}
+
+.state-title {
+  margin: 0 0 0.5rem;
+  font-size: t.$size-md;
+}
+
+.state-message {
+  margin: 0;
+  color: t.$slate;
+}
+
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.state-actions:not(:empty) {
+  margin-top: 1.25rem;
+}
