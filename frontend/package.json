@@ -7,7 +7,9 @@
     "build": "ng build",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "lint": "ng lint",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" angular.json package.json \"tsconfig*.json\" eslint.config.js"
   },
   "private": true,
   "packageManager": "npm@12.2.0",
@@ -26,9 +28,13 @@
     "@angular/build": "^22.2.4",
     "@angular/cli": "^22.2.4",
     "@angular/compiler-cli": "^22.2.0",
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "22.6.0",
+    "eslint": "^10.12.0",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
+    "typescript-eslint": "8.71.0",
     "vitest": "^5.0.0"
   }
 }

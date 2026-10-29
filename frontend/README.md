@@ -6,6 +6,8 @@ Dieses Angular-Projekt bildet die technische Basis der deutschsprachigen Shop-Ob
 
 ```bash
 npm ci
+npm run format:check
+npm run lint
 npm run build
 npm test -- --watch=false
 ```
