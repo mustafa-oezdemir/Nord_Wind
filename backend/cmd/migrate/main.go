@@ -12,8 +12,8 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	if len(os.Args) != 2 || (os.Args[1] != "up" && os.Args[1] != "status") {
-		logger.Error("Aufruf: migrate up|status")
+	if len(os.Args) != 2 || (os.Args[1] != "up" && os.Args[1] != "down" && os.Args[1] != "status") {
+		logger.Error("Aufruf: migrate up|down|status")
 		os.Exit(2)
 	}
 	db, err := database.OpenFromEnv()
@@ -26,6 +26,8 @@ func main() {
 	defer cancel()
 	if os.Args[1] == "up" {
 		err = migrations.Up(ctx, db)
+	} else if os.Args[1] == "down" {
+		err = migrations.Down(ctx, db)
 	} else {
 		err = migrations.Check(ctx, db)
 	}
