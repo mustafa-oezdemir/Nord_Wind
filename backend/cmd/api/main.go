@@ -11,28 +11,30 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	db, err := database.OpenFromEnv()
+	connection, err := database.OpenGORMFromEnv(logger)
 	if err != nil {
 		logger.Error("Datenbankkonfiguration ungültig", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer connection.Close()
 
 	appName := os.Getenv("APP_NAME")
 	if appName == "" {
 		appName = "NordWinds"
 	}
-	router, err := server.New(appName, db)
+	router, err := server.New(appName, connection.SQL)
 	if err != nil {
 		logger.Error("Router konnte nicht erstellt werden", "error", err)
 		os.Exit(1)
 	}
+	server.RegisterCatalogRoutes(router, catalog.NewRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"
