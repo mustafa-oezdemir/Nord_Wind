@@ -27,7 +27,7 @@ Die folgenden Punkte sind **nicht** Bestandteil der Step-1-Implementierung. Die 
 - [ ] [PR #5 — NW-04 CI](https://github.com/mustafa-oezdemir/Nord_Wind/pull/5): Der `quality`-Check steht auf **FAILURE**; Ursache im GitHub-Job prüfen und Qualitätsgate erst nach grünem Lauf als abgeschlossen bezeichnen.
 - [ ] [PR #6 — NW-05 API-Fehler](https://github.com/mustafa-oezdemir/Nord_Wind/pull/6): Mit den späteren Katalog-Routen zusammenführen; Problemformat, Request-ID und Middleware-Verhalten erneut mit `httptest` prüfen.
 - [ ] [PR #7 — NW-06 Domain](https://github.com/mustafa-oezdemir/Nord_Wind/pull/7), [PR #8 — NW-07 Repository](https://github.com/mustafa-oezdemir/Nord_Wind/pull/8), [PR #9 — NW-08 Katalog-API](https://github.com/mustafa-oezdemir/Nord_Wind/pull/9): In dieser Abhängigkeitsfolge reviewen und die PR-Basen nach Merges aktualisieren. GitGuardian war bei #6–#9 grün; für diese PRs wurde beim letzten Abruf kein GitHub-Actions-Ergebnis angezeigt.
-- [ ] NW-08a nach Review auf NW-08 aufbauen und erst nach erfolgreicher Prüfung mit den anderen Branches integrieren. Vor jedem Merge Konflikte in `backend/cmd/api/main.go`, `internal/server` und dem Datenbank-Setup prüfen.
+- [ ] [PR #10 — NW-08a GORM Setup](https://github.com/mustafa-oezdemir/Nord_Wind/pull/10) basiert auf PR #9. Die noch offenen Prüfungen aus Abschnitt 1 nachholen und erst nach erfolgreichem Review integrieren. Vor jedem Merge Konflikte in `backend/cmd/api/main.go`, `internal/server` und dem Datenbank-Setup prüfen.
 
 ## 4. Weitere Roadmap-Aufgaben
 
