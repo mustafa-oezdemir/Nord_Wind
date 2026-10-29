@@ -11,7 +11,7 @@ Stand: 29. Oktober 2026. Die IDs verweisen auf [den Dokumentenabgleich](document
 | NW-03 | P1 | REQ-ARCH-01, REQ-OPS-01, REQ-SEC-01 | Lockfiles, Build, Compose, Migration und Healthcheck sind in einem sauberen Checkout reproduzierbar. | NW-01–02 |
 | NW-04 | P1 | REQ-TEST-01, REQ-SEC-01 | CI führt Format-, Test-, Build- und geeignete Sicherheitsprüfungen aus; fehlerhafte Änderungen schlagen fehl. | NW-03 |
 | NW-05 | P1 | REQ-API-01, REQ-OBS-01 | Einheitliche sichere Problem-Antworten, Request-ID, Timeout und strukturierte Logs sind mit API-Tests belegt. | NW-03 |
-| NW-06–07 | P1 | REQ-CAT-01, REQ-CAT-02, REQ-MONEY-01 | Migrationen und echte PostgreSQL-Tests prüfen SKU-Eindeutigkeit, Fremdschlüssel und nichtnegative Werte. | NW-01 |
+| NW-06–07 | P1 | REQ-CAT-01, REQ-CAT-02, REQ-MONEY-01 | Migrationen und echte PostgreSQL-Tests prüfen SKU-Eindeutigkeit, Fremdschlüssel und nichtnegative Werte. | NW-01a |
 | NW-08 | P1 | REQ-CAT-01, REQ-CAT-03, REQ-API-01 | Katalog-API liefert begrenzte, filterbare und sortierbare Ergebnisse; ungültige Eingaben werden abgewiesen. | NW-07 |
 | NW-09–10 | P1 | REQ-UI-01, REQ-CAT-02 | Deutsche responsive Oberfläche zeigt API-Daten, Varianten sowie Lade-, Leer- und Fehlerzustände. | NW-08 |
 | NW-11–12 | P1 | REQ-AUTH-01, REQ-ADMIN-01 | Session, CSRF, Rollen und Besitzprüfung schützen Kunden- und Admin-Funktionen; negative Tests bestehen. | NW-05–06 |
