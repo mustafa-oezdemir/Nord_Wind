@@ -6,11 +6,12 @@ Stand: 29. Oktober 2026. Die IDs verweisen auf [den Dokumentenabgleich](document
 | --- | --- | --- | --- | --- |
 | NW-00 | P0 | alle | Sechs Quellen abgeglichen; Konflikte, Status und dieser Backlog dokumentiert. | keine |
 | NW-01 | P0 | REQ-ARCH-01, REQ-OPS-01, REQ-TEST-01 | Ist-Zustand, fehlender Starter und ausführbare bzw. fehlende Prüfungen mit PASS/FAIL/NICHT AUSFÜHRBAR belegt. | NW-00 |
-| NW-02 | P1 | REQ-BRAND-01 | Sichtbare Marke und neue technische Bezeichner sind konsistent; bestehende Daten werden nicht umbenannt oder gelöscht. | NW-01 |
+| NW-01a | P0 | REQ-ARCH-01, REQ-OPS-01, REQ-TEST-01 | Wegen fehlendem Starter: minimale Angular-/Go-/PostgreSQL-/Compose-Basis aufbauen und Compose, Builds, Health sowie Smoke-Test real prüfen. | NW-01 |
+| NW-02 | P1 | REQ-BRAND-01 | Sichtbare Marke und neue technische Bezeichner sind konsistent; bestehende Daten werden nicht umbenannt oder gelöscht. | NW-01a |
 | NW-03 | P1 | REQ-ARCH-01, REQ-OPS-01, REQ-SEC-01 | Lockfiles, Build, Compose, Migration und Healthcheck sind in einem sauberen Checkout reproduzierbar. | NW-01–02 |
 | NW-04 | P1 | REQ-TEST-01, REQ-SEC-01 | CI führt Format-, Test-, Build- und geeignete Sicherheitsprüfungen aus; fehlerhafte Änderungen schlagen fehl. | NW-03 |
 | NW-05 | P1 | REQ-API-01, REQ-OBS-01 | Einheitliche sichere Problem-Antworten, Request-ID, Timeout und strukturierte Logs sind mit API-Tests belegt. | NW-03 |
-| NW-06–07 | P1 | REQ-CAT-01, REQ-CAT-02, REQ-MONEY-01 | Migrationen und echte PostgreSQL-Tests prüfen SKU-Eindeutigkeit, Fremdschlüssel und nichtnegative Werte. | NW-01 |
+| NW-06–07 | P1 | REQ-CAT-01, REQ-CAT-02, REQ-MONEY-01 | Migrationen und echte PostgreSQL-Tests prüfen SKU-Eindeutigkeit, Fremdschlüssel und nichtnegative Werte. | NW-01a |
 | NW-08 | P1 | REQ-CAT-01, REQ-CAT-03, REQ-API-01 | Katalog-API liefert begrenzte, filterbare und sortierbare Ergebnisse; ungültige Eingaben werden abgewiesen. | NW-07 |
 | NW-09–10 | P1 | REQ-UI-01, REQ-CAT-02 | Deutsche responsive Oberfläche zeigt API-Daten, Varianten sowie Lade-, Leer- und Fehlerzustände. | NW-08 |
 | NW-11–12 | P1 | REQ-AUTH-01, REQ-ADMIN-01 | Session, CSRF, Rollen und Besitzprüfung schützen Kunden- und Admin-Funktionen; negative Tests bestehen. | NW-05–06 |
@@ -37,4 +38,4 @@ Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen
 4. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
 5. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.
 
-Der nächste Arbeitsschritt ist **NW-01: tatsächlichen Projektstand als Baseline prüfen**. Die in älteren Entwürfen beschriebene Starter-Anwendung ist in diesem Repository nicht vorhanden.
+Die [NW-01-Baseline](../verification/baseline.md) weist den fehlenden Starter nach. Der nächste Arbeitsschritt ist **NW-01a: eine minimal lauffähige Basis schaffen und erneut prüfen**. Die in älteren Entwürfen beschriebene Starter-Anwendung ist in diesem Repository nicht vorhanden.
