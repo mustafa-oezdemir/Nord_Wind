@@ -4,16 +4,17 @@ Stand: 29. Oktober 2026. Die IDs verweisen auf [den Dokumentenabgleich](document
 
 | Schritt | Priorität | Anforderungen | Ergebnis und überprüfbares Kriterium | Abhängigkeit |
 | --- | --- | --- | --- | --- |
-| NW-00 | P0 | alle | Sechs Quellen abgeglichen; Konflikte, Status und dieser Backlog dokumentiert. | keine |
+| NW-00 | P0 | alle | Acht Quellen abgeglichen (S7 und S8 nachgetragen); Konflikte, Status und dieser Backlog dokumentiert. | keine |
 | NW-01 | P0 | REQ-ARCH-01, REQ-OPS-01, REQ-TEST-01 | Ist-Zustand, fehlender Starter und ausführbare bzw. fehlende Prüfungen mit PASS/FAIL/NICHT AUSFÜHRBAR belegt. | NW-00 |
 | NW-01a | P0 | REQ-ARCH-01, REQ-OPS-01, REQ-TEST-01 | Wegen fehlendem Starter: minimale Angular-/Go-/PostgreSQL-/Compose-Basis aufbauen und Compose, Builds, Health sowie Smoke-Test real prüfen. | NW-01 |
 | NW-02 | P1 | REQ-BRAND-01 | Sichtbare Marke und neue technische Bezeichner sind konsistent; bestehende Daten werden nicht umbenannt oder gelöscht. | NW-01a |
 | NW-03 | P1 | REQ-ARCH-01, REQ-OPS-01, REQ-SEC-01 | Lockfiles, Build, Compose, Migration und Healthcheck sind in einem sauberen Checkout reproduzierbar. | NW-01–02 |
 | NW-04 | P1 | REQ-TEST-01, REQ-SEC-01 | CI führt Format-, Test-, Build- und geeignete Sicherheitsprüfungen aus; fehlerhafte Änderungen schlagen fehl. | NW-03 |
-| NW-05 | P1 | REQ-API-01, REQ-OBS-01 | Einheitliche sichere Problem-Antworten, Request-ID, Timeout und strukturierte Logs sind mit API-Tests belegt. | NW-03 |
+| NW-05 | P1 | REQ-API-01, REQ-OBS-01, REQ-ARCH-02 | Einheitliche sichere Problem-Antworten, Request-ID, Timeout und strukturierte Logs sind mit API-Tests belegt. | NW-03; HTTP-Schicht Gin ([ADR-001](../adr/ADR-001-http-router.md)) |
 | NW-06–07 | P1 | REQ-CAT-01, REQ-CAT-02, REQ-MONEY-01 | Migrationen und echte PostgreSQL-Tests prüfen SKU-Eindeutigkeit, Fremdschlüssel und nichtnegative Werte. | NW-01a |
 | NW-08 | P1 | REQ-CAT-01, REQ-CAT-03, REQ-API-01 | Katalog-API liefert begrenzte, filterbare und sortierbare Ergebnisse; ungültige Eingaben werden abgewiesen. | NW-07 |
-| NW-09–10 | P1 | REQ-UI-01, REQ-CAT-02 | Deutsche responsive Oberfläche zeigt API-Daten, Varianten sowie Lade-, Leer- und Fehlerzustände. | NW-08 |
+| NW-08a | P1 | REQ-DATA-01, REQ-CAT-01 | Nach Annahme von [ADR-003](../adr/ADR-003-data-access.md): GORM auf dem bestehenden `*sql.DB`, Katalog-Repository umgestellt; Integrationstests aus NW-07/NW-08 bestehen unverändert, Nullwert-Updates und Duplicate-Key getestet. | NW-08; ADR-003 angenommen |
+| NW-09–10 | P1 | REQ-UI-01, REQ-CAT-02, REQ-I18N-01 | Deutsche responsive Oberfläche zeigt API-Daten, Varianten sowie Lade-, Leer- und Fehlerzustände; sichtbare Texte bleiben für spätere Sprachen austauschbar. | NW-08 |
 | NW-11–12 | P1 | REQ-AUTH-01, REQ-ADMIN-01 | Session, CSRF, Rollen und Besitzprüfung schützen Kunden- und Admin-Funktionen; negative Tests bestehen. | NW-05–06 |
 | NW-13 | P2 | REQ-CAT-02, REQ-SEC-01 | Medien-Upload oder externer Bildbezug ist bezüglich Typ, Größe und Zugriff abgesichert. | NW-12 |
 | NW-14 | P1 | REQ-CART-01 | Warenkorb speichert Variante und Menge; fremde Sessions bleiben getrennt; ungültige Mengen werden abgewiesen. | NW-10–11; Gast-Checkout-Entscheid |
@@ -28,14 +29,17 @@ Stand: 29. Oktober 2026. Die IDs verweisen auf [den Dokumentenabgleich](document
 
 ## Vorläufig zurückgestellt (P3)
 
-Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen, Kafka, Kubernetes, Redis und ein eigener Suchdienst werden erst bei konkretem Geschäfts- oder Leistungsbedarf bewertet (S1 §13; S2 §2; S3 §3; S4 §22; S5 §2; S6 §6).
+Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen, Kafka, Kubernetes, Redis und ein eigener Suchdienst werden erst bei konkretem Geschäfts- oder Leistungsbedarf bewertet (S1 §13; S2 §2; S3 §3; S4 §22; S5 §2; S6 §6; S7 §7; S8 §3).
 
 ## Entscheidungen vor der jeweiligen Umsetzung
 
-1. **Vor NW-06/NW-10:** Produktarten, Varianten und Preis-/Bestandsmodell festlegen.
-2. **Vor NW-14/NW-16:** Gast-Checkout oder Konto-Pflicht bestimmen.
-3. **Vor NW-15:** Steuerklassen, Brutto-/Netto-Quelle, Rundung, Versand und Rabatte fachlich bestätigen.
-4. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
-5. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.
+1. **Erledigt am 29. Oktober 2026:** Arbeitsweise nach S7b (Umsetzung nach Fahrplan) und HTTP-Router nach [ADR-001](../adr/ADR-001-http-router.md) (Gin).
+2. **Vor weiteren Repositories nach NW-08:** Die noch vorgeschlagene Repository-Umstellung aus [ADR-003](../adr/ADR-003-data-access.md) (GORM) annehmen oder ablehnen. NW-08a Step 1 hat bereits den gemeinsamen Pool und GORM eingerichtet.
+3. **Vor NW-06/NW-10:** Produktarten, Varianten und Preis-/Bestandsmodell festlegen.
+4. **Vor NW-14/NW-16:** Gast-Checkout oder Konto-Pflicht bestimmen.
+5. **Vor NW-15:** Steuerklassen, Brutto-/Netto-Quelle, Rundung, Versand und Rabatte fachlich bestätigen.
+6. **Vor NW-16:** Bestell- und Zahlungsstatus sowie ihre erlaubten Übergänge per ADR festlegen.
+7. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
+8. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.
 
-Die [NW-01-Baseline](../verification/baseline.md) weist den damaligen fehlenden Starter nach. Die in älteren Entwürfen beschriebene Starter-Anwendung war nicht im Repository; NW-03 hat deshalb eine neue minimale Basis erstellt und die Prüfungen für NW-01a nachgeholt. [Der NW-03-Nachweis](../progress/NW-03.md) beschreibt den ausführbaren Stand. Der nächste geplante Schritt ist NW-04.
+Die [NW-01-Baseline](../verification/baseline.md) weist den damaligen fehlenden Starter nach. Die in älteren Entwürfen beschriebene Starter-Anwendung war nicht im Repository; NW-03 hat deshalb eine neue minimale Basis erstellt und die Prüfungen für NW-01a nachgeholt. [Der NW-03-Nachweis](../progress/NW-03.md) beschreibt den ausführbaren Stand. NW-04 bis NW-08 und NW-08a Step 1 sind implementiert; die offene CI-Prüfung und die nächsten Schritte stehen in der [Claude-Übergabe](../tasks/CLAUDE_HANDOFF.md).
