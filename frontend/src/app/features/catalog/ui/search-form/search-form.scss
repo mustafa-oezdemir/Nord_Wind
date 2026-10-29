@@ -1,0 +1,46 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+}
+
+.search-form {
+  display: flex;
+  gap: 0;
+}
+
+.search-input {
+  min-height: 2.75rem;
+  border-right: 0;
+  border-radius: t.$radius-sm 0 0 t.$radius-sm;
+}
+
+.search-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  border-radius: 0 t.$radius-sm t.$radius-sm 0;
+  padding-inline: 0.9rem;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2.2;
+  }
+}
+
+// Auf kleinen Bildschirmen nur das Symbol; der Text bleibt für Screenreader erhalten.
+@media (max-width: #{t.$bp-sm - 0.02px}) {
+  .search-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

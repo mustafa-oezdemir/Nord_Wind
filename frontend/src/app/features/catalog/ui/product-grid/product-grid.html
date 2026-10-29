@@ -1,0 +1,28 @@
+@if (loading()) {
+  <div class="product-grid-loading" aria-busy="true">
+    <p class="visually-hidden" role="status">Produkte werden geladen …</p>
+    <ul
+      class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 g-lg-4 list-unstyled"
+      aria-hidden="true"
+    >
+      @for (item of skeletons(); track item) {
+        <li class="col">
+          <div class="skeleton-card placeholder-glow" data-testid="product-skeleton">
+            <span class="placeholder skeleton-visual"></span>
+            <span class="placeholder col-9"></span>
+            <span class="placeholder col-6"></span>
+            <span class="placeholder col-4 skeleton-price"></span>
+          </div>
+        </li>
+      }
+    </ul>
+  </div>
+} @else {
+  <ul class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 g-lg-4 list-unstyled">
+    @for (product of products(); track product.id) {
+      <li class="col">
+        <app-product-card [product]="product" />
+      </li>
+    }
+  </ul>
+}

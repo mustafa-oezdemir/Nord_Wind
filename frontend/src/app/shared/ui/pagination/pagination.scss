@@ -1,0 +1,13 @@
+.pagination-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.pagination-status {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

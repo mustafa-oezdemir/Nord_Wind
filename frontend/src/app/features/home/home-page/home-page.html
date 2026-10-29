@@ -1,0 +1,59 @@
+<section class="hero" aria-labelledby="hero-title">
+  <div class="container hero-inner">
+    <h1 id="hero-title" class="hero-title">Willkommen bei NordWinds</h1>
+    <p class="hero-lead">
+      Ihr Onlineshop für Deutschland. Stöbern Sie nach Kategorien oder finden Sie Produkte über die
+      Suche.
+    </p>
+    <a class="btn btn-warning btn-lg hero-cta" routerLink="/produkte">Alle Produkte ansehen</a>
+  </div>
+  <svg class="hero-wind" viewBox="0 0 720 360" aria-hidden="true" focusable="false">
+    <path d="M-20 118h470c56 0 56-63 14-63-21 0-35 14-35 28" />
+    <path d="M-20 178h560c56 0 56 63 14 63-21 0-35-14-35-28" />
+    <path d="M-20 238h300c56 0 56 63 14 63-21 0-35-14-35-28" />
+  </svg>
+</section>
+
+<section class="container home-section" aria-labelledby="neuheiten-titel">
+  <div class="section-head">
+    <h2 id="neuheiten-titel">Neu im Sortiment</h2>
+    <a class="section-link" routerLink="/produkte">Alle Produkte</a>
+  </div>
+
+  @if (newArrivals.isLoading()) {
+    <app-product-grid [loading]="true" [skeletonCount]="4" />
+  } @else if (errorMessage(); as message) {
+    <app-error-state
+      heading="Neue Produkte konnten nicht geladen werden"
+      [message]="message"
+      (retry)="newArrivals.reload()"
+    />
+  } @else if (products().length === 0) {
+    <app-empty-state
+      heading="Noch keine Produkte im Sortiment"
+      message="Sobald Produkte veröffentlicht sind, erscheinen sie hier."
+    />
+  } @else {
+    <app-product-grid [products]="products()" />
+  }
+</section>
+
+@if (featuredCategories().length > 0) {
+  <section class="container home-section" aria-labelledby="kategorien-titel">
+    <div class="section-head">
+      <h2 id="kategorien-titel">Kategorien</h2>
+    </div>
+    <ul class="category-tiles">
+      @for (category of featuredCategories(); track category.id) {
+        <li>
+          <a class="category-tile" [routerLink]="['/kategorien', category.slug]">
+            <span class="category-tile-name">{{ category.name }}</span>
+            @if (category.description) {
+              <span class="category-tile-text">{{ category.description }}</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+}

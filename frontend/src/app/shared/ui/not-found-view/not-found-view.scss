@@ -1,0 +1,33 @@
+@use 'tokens' as t;
+
+.not-found {
+  padding-block: clamp(2.5rem, 8vw, 5rem);
+}
+
+.not-found-code {
+  margin: 0;
+  color: t.$fjord;
+  font-family: t.$font-display;
+  font-size: clamp(4rem, 14vw, 8rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+
+h1 {
+  margin: 0.75rem 0;
+  font-size: clamp(t.$size-xl, 4vw, t.$size-2xl);
+  letter-spacing: -0.03em;
+}
+
+.not-found-message {
+  max-width: 36rem;
+  color: t.$slate;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}

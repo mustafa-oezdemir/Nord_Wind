@@ -1,0 +1,55 @@
+@use 'tokens' as t;
+
+.product-list {
+  padding-top: 1.5rem;
+}
+
+.product-list-breadcrumb .breadcrumb {
+  margin-bottom: 1rem;
+  font-size: t.$size-sm;
+}
+
+.product-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid t.$line;
+}
+
+.product-list-title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(t.$size-xl, 4vw, t.$size-2xl);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.product-list-description {
+  max-width: 40rem;
+  margin: 0 0 0.35rem;
+  color: t.$slate;
+}
+
+.product-list-count {
+  min-height: 1.5em;
+  margin: 0;
+  color: t.$slate;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-list-sort {
+  min-width: 13rem;
+
+  .form-label {
+    margin-bottom: 0.25rem;
+    font-size: t.$size-sm;
+    font-weight: 600;
+  }
+}
