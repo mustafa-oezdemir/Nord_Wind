@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOCKER_BUILDKIT: '1'
+    steps:
+      - name: Quellen auschecken
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '26.13.0'
+          package-manager-cache: false
+
+      - name: Go einrichten
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+
+      - name: npm festlegen
+        run: npm install --global npm@12.2.0
+
+      - name: Angular-Abhängigkeiten installieren
+        working-directory: frontend
+        run: npm ci
+
+      - name: Go-Format prüfen
+        run: |
+          unformatted="$(gofmt -l backend)"
+          if [ -n "$unformatted" ]; then
+            printf 'Nicht formatiert:\n%s\n' "$unformatted"
+            exit 1
+          fi
+
+      - name: Angular-Format prüfen
+        working-directory: frontend
+        run: npm run format:check
+
+      - name: Angular linten
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Go testen
+        working-directory: backend
+        run: go test ./...
+
+      - name: Angular testen
+        working-directory: frontend
+        run: npm test -- --watch=false
+
+      - name: Angular-Typen prüfen
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Angular bauen
+        working-directory: frontend
+        run: npm run build
+
+      - name: npm-Abhängigkeiten prüfen
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Go-Abhängigkeiten prüfen
+        working-directory: backend
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+      - name: Compose-Konfiguration prüfen
+        env:
+          POSTGRES_PASSWORD: ci-only-dummy-password
+        run: docker compose -f compose.yaml config --quiet
+
+      - name: API-Image bauen
+        run: docker build --target api --tag nordwinds-api:ci .
+
+      - name: Edge-Image bauen
+        run: docker build --target edge --tag nordwinds-edge:ci .

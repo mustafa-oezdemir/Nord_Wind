@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,8 +15,10 @@ type fakeDB struct{ err error }
 
 func (f fakeDB) PingContext(context.Context) error { return f.err }
 
+func discardLogger() *slog.Logger { return slog.New(slog.NewJSONHandler(io.Discard, nil)) }
+
 func TestHealthAndBrand(t *testing.T) {
-	router, err := New("NordWinds", fakeDB{})
+	router, err := New("NordWinds", fakeDB{}, discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +37,7 @@ func TestHealthAndBrand(t *testing.T) {
 }
 
 func TestReadinessFailsWhenDatabaseIsUnavailable(t *testing.T) {
-	router, err := New("NordWinds", fakeDB{err: errors.New("offline")})
+	router, err := New("NordWinds", fakeDB{err: errors.New("offline")}, discardLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,5 +48,8 @@ func TestReadinessFailsWhenDatabaseIsUnavailable(t *testing.T) {
 	}
 	if strings.Contains(response.Body.String(), "offline") {
 		t.Fatal("Interner Datenbankfehler wurde veröffentlicht")
+	}
+	if !strings.HasPrefix(response.Header().Get("Content-Type"), "application/problem+json") {
+		t.Fatal("Readiness-Fehler hat kein Problemformat")
 	}
 }

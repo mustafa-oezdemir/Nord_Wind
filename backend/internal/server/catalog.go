@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -168,20 +167,12 @@ func writeCatalogError(c *gin.Context, err error) {
 }
 
 func writeCatalogProblem(c *gin.Context, status int) {
-	code, slug, title, detail := "INTERNAL_ERROR", "internal-error", "Interner Fehler", "Die Anfrage konnte nicht bearbeitet werden."
 	switch status {
 	case http.StatusBadRequest:
-		code, slug, title, detail = "INVALID_REQUEST", "invalid-request", "Ungültige Anfrage", "Die Abfrageparameter sind ungültig."
+		HandleError(c, &APIError{Code: InvalidRequest})
 	case http.StatusNotFound:
-		code, slug, title, detail = "NOT_FOUND", "not-found", "Nicht gefunden", "Die angeforderte Kategorie wurde nicht gefunden."
+		HandleError(c, &APIError{Code: NotFound})
+	default:
+		HandleError(c, &APIError{Code: InternalError})
 	}
-	body, _ := json.Marshal(struct {
-		Type   string `json:"type"`
-		Title  string `json:"title"`
-		Status int    `json:"status"`
-		Detail string `json:"detail"`
-		Code   string `json:"code"`
-	}{"/api/v1/problems/" + slug, title, status, detail, code})
-	c.Header("Cache-Control", "no-store")
-	c.Data(status, "application/problem+json; charset=utf-8", body)
 }

@@ -84,7 +84,7 @@ func TestCatalogAPIOnPostgres(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		router, err := New("NordWinds", db)
+		router, err := New("NordWinds", db, discardLogger())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,7 +164,7 @@ func TestCatalogAPIOnPostgres(t *testing.T) {
 		if err := tx.Rollback(); err != nil {
 			t.Fatal(err)
 		}
-		router, err := New("NordWinds", db)
+		router, err := New("NordWinds", db, discardLogger())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -232,13 +232,15 @@ func assertProblem(t *testing.T, response *httptest.ResponseRecorder, status int
 		t.Fatalf("Problemantwort: Status %d, Content-Type %q, Body %s", response.Code, response.Header().Get("Content-Type"), response.Body.String())
 	}
 	var problem struct {
-		Status int    `json:"status"`
-		Code   string `json:"code"`
+		Status    int    `json:"status"`
+		Code      string `json:"code"`
+		RequestID string `json:"request_id"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &problem); err != nil {
 		t.Fatal(err)
 	}
-	if problem.Status != status || problem.Code != code {
+	if problem.Status != status || problem.Code != code || problem.RequestID == "" ||
+		problem.RequestID != response.Header().Get("X-Request-ID") {
 		t.Fatalf("Problemformat: %+v", problem)
 	}
 }

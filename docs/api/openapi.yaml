@@ -228,7 +228,7 @@ components:
           $ref: '#/components/schemas/Pagination'
     Problem:
       type: object
-      required: [type, title, status, detail, code]
+      required: [type, title, status, detail, code, request_id]
       properties:
         type:
           type: string
@@ -244,4 +244,4 @@ components:
           enum: [INVALID_REQUEST, NOT_FOUND, INTERNAL_ERROR]
         request_id:
           type: string
-          description: Vorhanden, wenn die Request-ID-Middleware aktiviert ist.
+          description: Serverseitig erzeugte Kennung aus `X-Request-ID`.

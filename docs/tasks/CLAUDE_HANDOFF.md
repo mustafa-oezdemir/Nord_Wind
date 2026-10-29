@@ -4,13 +4,13 @@
 
 ## 1. Aktuellen GORM-Schritt abschließen
 
-Der Arbeitsbranch ist `codex/nw-08a-gorm-setup`, abgeleitet von NW-08 (`a9b1268`). Der beigefügte GORM-Auftrag verlangt zunächst **nur Step 1 – GORM Setup**. Der implementierte Stand und die wirklich ausgeführten Prüfungen sind in [NW-08a](../progress/NW-08a.md) dokumentiert.
+Step 1 – GORM Setup wurde über [PR #10](https://github.com/mustafa-oezdemir/Nord_Wind/pull/10) in `main` integriert. Der implementierte Stand und die wirklich ausgeführten Prüfungen sind in [NW-08a](../progress/NW-08a.md) dokumentiert.
 
-- [ ] Den gepushten Step-1-Diff und die Integrationsentscheidung prüfen. `gorm.io/gorm v1.31.2` und `gorm.io/driver/postgres v1.6.3` sind eingebunden; API und GORM teilen einen `database/sql`/pgx-Pool. Migrationen und Katalog-Repositories nutzen weiterhin SQL. Keine produktive Datenbank migrieren und `AutoMigrate` nicht einschalten.
+- [ ] Den integrierten Step-1-Diff und die Integrationsentscheidung prüfen. `gorm.io/gorm v1.31.2` und `gorm.io/driver/postgres v1.6.3` sind eingebunden; API und GORM teilen einen `database/sql`/pgx-Pool. Migrationen und Katalog-Repositories nutzen weiterhin SQL. Keine produktive Datenbank migrieren und `AutoMigrate` nicht einschalten.
 - [ ] `go test -race ./...` mit getrennten PostgreSQL-Testdatenbanken in einer CGO-fähigen Umgebung nachholen. Der normale Gesamtlauf mit vier Datenbanken, `go vet`, Go-/Docker-Build und ein isolierter Docker-Smoke-Test waren erfolgreich.
-- [ ] `govulncheck ./...` in CI oder einer zulässigen Laufzeit nachholen. Das vorhandene Windows-Programm wurde durch die Anwendungssteuerungsrichtlinie blockiert; es liegt **kein** Ergebnis vor.
+- [x] `govulncheck@v1.9.0 ./...` lief auf dem integrierten Stand in einem Linux-Container: null erreichbare Schwachstellen, drei Meldungen in benötigten Modulen ohne Aufruf durch den Code. Ein grüner GitHub-Actions-Lauf steht weiterhin aus.
 - [ ] Den GORM-Startpfad und `main.go` auf Schließung des Pools bei allen frühen Fehlerpfaden prüfen; gegebenenfalls `run() error` statt `os.Exit` innerhalb der Ressourcenlebensdauer verwenden. Den Redaction-Test für den `slog`-Adapter erhalten.
-- [ ] Vor dem nächsten GORM-Schritt die Traditional API gegen die Generics API am tatsächlichen Repository abwägen. `docs/adr/ADR-003-data-access.md` ist derzeit ein **lokaler, nicht versionierter Vorschlag**, keine bereits gemergte Entscheidung.
+- [ ] Vor dem nächsten GORM-Schritt die Traditional API gegen die Generics API am tatsächlichen Repository abwägen. [ADR-003](../adr/ADR-003-data-access.md) beschreibt die vorgeschlagene Repository-Umstellung; Step 1 entscheidet diese Umstellung noch nicht.
 
 ## 2. GORM-Auftrag nach Schritt 1
 
@@ -22,12 +22,11 @@ Die folgenden Punkte sind **nicht** Bestandteil der Step-1-Implementierung. Die 
 - [ ] **Step 5 – Transactions:** Bestehende testbare Mehrschrittoperationen mit derselben GORM-Transaktion ausführen. Checkout, Warenkorb und Bestandsabbau existieren noch nicht; deren Sperren, Rollback und parallele Bestellungen erst in den vorgesehenen NW-14/NW-16/NW-17-Schritten implementieren.
 - [ ] **Step 6 – Error Handling & Testing:** Echte PostgreSQL-Regressionen für CRUD, Beziehungen, Rollback, Fehlerübersetzung und HTTP-Vertrag ausführen. `go test -race ./...`, `go vet ./...`, Docker-Smoke, `govulncheck`, Log-Redaction und Dependency-Diff prüfen. Fehlende Prüfungen als offen kennzeichnen.
 
-## 3. Offene PRs und Integrationsreihenfolge
+## 3. Integrierte PRs und verbleibende CI-Prüfung
 
-- [ ] [PR #5 — NW-04 CI](https://github.com/mustafa-oezdemir/Nord_Wind/pull/5): Der `quality`-Check steht auf **FAILURE**; Ursache im GitHub-Job prüfen und Qualitätsgate erst nach grünem Lauf als abgeschlossen bezeichnen.
-- [ ] [PR #6 — NW-05 API-Fehler](https://github.com/mustafa-oezdemir/Nord_Wind/pull/6): Mit den späteren Katalog-Routen zusammenführen; Problemformat, Request-ID und Middleware-Verhalten erneut mit `httptest` prüfen.
-- [ ] [PR #7 — NW-06 Domain](https://github.com/mustafa-oezdemir/Nord_Wind/pull/7), [PR #8 — NW-07 Repository](https://github.com/mustafa-oezdemir/Nord_Wind/pull/8), [PR #9 — NW-08 Katalog-API](https://github.com/mustafa-oezdemir/Nord_Wind/pull/9): In dieser Abhängigkeitsfolge reviewen und die PR-Basen nach Merges aktualisieren. GitGuardian war bei #6–#9 grün; für diese PRs wurde beim letzten Abruf kein GitHub-Actions-Ergebnis angezeigt.
-- [ ] [PR #10 — NW-08a GORM Setup](https://github.com/mustafa-oezdemir/Nord_Wind/pull/10) basiert auf PR #9. Die noch offenen Prüfungen aus Abschnitt 1 nachholen und erst nach erfolgreichem Review integrieren. Vor jedem Merge Konflikte in `backend/cmd/api/main.go`, `internal/server` und dem Datenbank-Setup prüfen.
+- [x] [PR #7 — NW-06 Domain](https://github.com/mustafa-oezdemir/Nord_Wind/pull/7) und [PR #10 — NW-08a GORM Setup](https://github.com/mustafa-oezdemir/Nord_Wind/pull/10) sind in `main`. Die Commits von [PR #8 — NW-07 Repository](https://github.com/mustafa-oezdemir/Nord_Wind/pull/8) und [PR #9 — NW-08 Katalog-API](https://github.com/mustafa-oezdemir/Nord_Wind/pull/9) wurden als Vorfahren von PR #10 ebenfalls integriert.
+- [x] Die Änderungen aus [PR #5 — NW-04 CI](https://github.com/mustafa-oezdemir/Nord_Wind/pull/5) und [PR #6 — NW-05 API-Fehler](https://github.com/mustafa-oezdemir/Nord_Wind/pull/6) wurden auf einem gemeinsamen Integrationsbranch mit dem Katalog und GORM zusammengeführt. Der Katalog verwendet nun das gemeinsame Problemformat mit `request_id`; `httptest` und Go-Gesamttests bestanden lokal.
+- [ ] GitHub Actions `quality` auf dem Integrations-PR und nach dem Merge auf `main` erneut ausführen. Der bisherige Lauf von PR #5 wurde vor dem Runnerstart wegen einer GitHub-Abrechnungs-/Ausgabenlimitmeldung beendet. Erst ein grüner Lauf belegt das CI-DoD; die Branch-Protection ist im privaten Repository derzeit nicht einrichtbar.
 
 ## 4. Weitere Roadmap-Aufgaben
 
@@ -40,4 +39,4 @@ Die Reihenfolge bleibt abhängig von den vorherigen Schritten. Für jede Aufgabe
 
 ## 5. Arbeitsbaum und Datensicherheit
 
-Beim Übergabezeitpunkt lagen zusätzlich unabhängige Änderungen in `docs/progress/NW-00.md`, `docs/requirements/backlog.md`, `docs/requirements/document-review.md` sowie nicht versionierte `docs/adr/ADR-001-http-router.md` und `docs/adr/ADR-003-data-access.md`. Diese Dateien gehören **nicht** zum GORM-Step-1-Commit und dürfen nicht pauschal gestaged, gelöscht oder überschrieben werden. Der bestehende Compose-Stack und sein persistentes Datenbank-Volume wurden für die GORM-Prüfung nicht verändert. Für Integrations- und Migrationstests immer separate `nordwinds_test_*`-Datenbanken verwenden.
+Die fünf zuvor nur im lokalen Arbeitsbaum liegenden Dokumente (`docs/progress/NW-00.md`, `docs/requirements/backlog.md`, `docs/requirements/document-review.md`, ADR-001 und ADR-003) wurden für die Integration einzeln übernommen. Ihre ursprünglichen Dateien wurden nicht verändert. Der bestehende Compose-Stack und sein persistentes Datenbank-Volume wurden für die GORM-Prüfung nicht verändert. Für Integrations- und Migrationstests immer separate `nordwinds_test_*`-Datenbanken verwenden.
