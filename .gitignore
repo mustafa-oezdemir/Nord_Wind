@@ -1,0 +1,58 @@
+# Local planning material
+/_todo/
+
+# Environment and secrets (keep the shareable templates)
+.env
+.env.*
+!.env.example
+!.env.*.example
+/secrets/
+/certs/local/
+
+# Angular / Node.js
+**/node_modules/
+**/.angular/
+**/dist/
+**/coverage/
+**/.cache/
+**/.npm/
+**/.pnpm-store/
+**/.yarn/cache/
+**/.yarn/unplugged/
+**/.next/
+**/.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Go build and test artifacts
+*.exe
+*.exe~
+*.test
+*.out
+/bin/
+/tmp/
+
+# Docker and local database data
+/.data/
+/data/postgres/
+/postgres-data/
+*.pid
+
+# Editor and operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Local logs and reports
+*.log
+/reports/
