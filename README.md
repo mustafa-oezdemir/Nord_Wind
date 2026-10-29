@@ -4,7 +4,7 @@ Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche 
 
 ## Projektstand
 
-Dieses Repository enthält derzeit die grundlegende Konfiguration und Vorlagen für die Container-Images. Die Angular-Oberfläche, die Go-API, das PostgreSQL-Schema und die Docker-Compose-Konfiguration sind noch nicht implementiert. Der Shop ist noch nicht lauffähig.
+Dieses Repository enthält derzeit die grundlegende Konfiguration, Vorlagen für die Container-Images und den Anforderungsabgleich. Die Angular-Oberfläche, die Go-API, das PostgreSQL-Schema und die Docker-Compose-Konfiguration sind noch nicht implementiert. Der Shop ist noch nicht lauffähig.
 
 ## Geplante Architektur
 
@@ -20,6 +20,8 @@ Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Mark
 Die Datei `.env.example` enthält freigebbare Variablennamen und Beispielwerte. Für die lokale Entwicklung wird sie nach `.env` kopiert. Anschließend muss `POSTGRES_PASSWORD` durch ein eigenes, starkes Passwort ersetzt werden. `.env` und der lokale Planungsordner `_todo/` werden nicht in Git aufgenommen.
 
 Start- und Testbefehle werden hier dokumentiert, sobald die Anwendung und die Compose-Dateien vorhanden sind.
+
+Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und der [priorisierte Backlog](docs/requirements/backlog.md) halten Anforderungen, Widersprüche und die nächsten Entwicklungsschritte fest.
 
 ## Container-Images
 
