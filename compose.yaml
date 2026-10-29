@@ -1,0 +1,96 @@
+name: ${COMPOSE_PROJECT_NAME:-nordwinds}
+
+services:
+  db:
+    image: postgres:18.6-alpine3.24
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nordwinds}
+      POSTGRES_USER: ${POSTGRES_USER:-nordwinds_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - private
+
+  migrate:
+    image: nordwinds-api:local
+    build:
+      context: .
+      target: api
+    entrypoint: ["/usr/local/bin/migrate"]
+    command: ["up"]
+    environment: &database-environment
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-nordwinds}
+      POSTGRES_USER: ${POSTGRES_USER:-nordwinds_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
+      POSTGRES_SSLMODE: disable
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - private
+    restart: "no"
+
+  api:
+    image: nordwinds-api:local
+    build:
+      context: .
+      target: api
+    environment:
+      <<: *database-environment
+      APP_NAME: ${APP_NAME:-NordWinds}
+      APP_ENV: ${APP_ENV:-development}
+      API_HTTP_PORT: ${API_HTTP_PORT:-8080}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${API_HTTP_PORT:-8080}/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    expose:
+      - "${API_HTTP_PORT:-8080}"
+    networks:
+      - private
+      - public
+    security_opt:
+      - no-new-privileges:true
+
+  edge:
+    image: nordwinds-edge:local
+    build:
+      context: .
+      target: edge
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_HTTP_PORT: ${API_HTTP_PORT:-8080}
+    ports:
+      - "127.0.0.1:${HOST_HTTP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - public
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  private:
+    internal: true
+  public: {}
+
+volumes:
+  db-data: {}

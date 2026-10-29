@@ -30,6 +30,8 @@ ai-agents/
 /certs/local/
 
 # Angular / Node.js
+/frontend/public/favicon.ico
+/frontend/.vscode/
 **/node_modules/
 **/.angular/
 **/dist/

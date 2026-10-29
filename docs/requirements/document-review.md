@@ -21,7 +21,7 @@ Alle sechs vorhandenen Master-Dokumente wurden inhaltlich geprüft. Die SHA-256-
 
 Die Nutzervorgabe für NW-02 legt **NordWinds** als Markennamen fest; neue technische Bezeichner verwenden `nordwinds`. Dies ersetzt die im Schritt NW-00 dokumentierte frühere Markenentscheidung. Ältere Namen in den Entwürfen sind historische Vorschläge. Öffentliche Projektdokumentation wird auf Deutsch geschrieben.
 
-Das Repository enthält derzeit `README.md`, `.env.example`, ein mehrstufiges `Dockerfile`, `.dockerignore` und `ops/Caddyfile`. `frontend/`, `backend/`, `compose.yaml`, Datenbankmigrationen, OpenAPI und Tests fehlen. Aussagen in S5 über einen vorhandenen MarktHaus-Starter gelten daher **nicht** als Nachweis für dieses Repository. Die Docker-Ziele wurden geparst und Caddy validiert; ein vollständiger Anwendungs-Build wurde mangels Quellcode nicht ausgeführt.
+Zum Zeitpunkt des NW-00-Abgleichs enthielt das Repository `README.md`, `.env.example`, ein mehrstufiges `Dockerfile`, `.dockerignore` und `ops/Caddyfile`; `frontend/`, `backend/`, `compose.yaml`, Datenbankmigrationen, OpenAPI und Tests fehlten. Aussagen in S5 über einen vorhandenen MarktHaus-Starter waren daher **kein** Nachweis für diesen Checkout. Der später in NW-03 erstellte Starter und seine tatsächlichen Prüfungen sind in [NW-03](../progress/NW-03.md) dokumentiert.
 
 ## Zusammengeführte Anforderungen
 

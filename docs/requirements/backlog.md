@@ -38,4 +38,4 @@ Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen
 4. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
 5. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.
 
-Die [NW-01-Baseline](../verification/baseline.md) weist den fehlenden Starter nach. Der nächste Arbeitsschritt ist **NW-01a: eine minimal lauffähige Basis schaffen und erneut prüfen**. Die in älteren Entwürfen beschriebene Starter-Anwendung ist in diesem Repository nicht vorhanden.
+Die [NW-01-Baseline](../verification/baseline.md) weist den damaligen fehlenden Starter nach. Die in älteren Entwürfen beschriebene Starter-Anwendung war nicht im Repository; NW-03 hat deshalb eine neue minimale Basis erstellt und die Prüfungen für NW-01a nachgeholt. [Der NW-03-Nachweis](../progress/NW-03.md) beschreibt den ausführbaren Stand. Der nächste geplante Schritt ist NW-04.

@@ -30,6 +30,8 @@ certs/local/
 *.pfx
 
 # Erzeugte Dateien werden in den Build-Stufen neu erstellt.
+frontend/public/favicon.ico
+frontend/.vscode/
 **/node_modules/
 **/.angular/
 **/dist/
