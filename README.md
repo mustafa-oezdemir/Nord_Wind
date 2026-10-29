@@ -49,6 +49,7 @@ Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und de
 Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Prüfungen derzeit bestehen und welche wegen des fehlenden Starters noch nicht ausführbar sind.
 Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die damals noch ausstehenden Prüfungen.
 Der [NW-03-Buildnachweis](docs/progress/NW-03.md) dokumentiert die inzwischen lauffähige Basis und ihre tatsächlichen Prüfergebnisse.
+Die [CI- und PR-Anleitung](docs/verification/ci.md) erklärt die Qualitätsschritte und die Voraussetzungen für verpflichtende Statuschecks.
 
 ## Container-Images
 
