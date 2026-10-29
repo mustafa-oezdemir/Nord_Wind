@@ -49,6 +49,7 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	if err := Check(ctx, db); err != nil {
 		t.Fatalf("Status nach Up: %v", err)
 	}
+	assertSearchIndexCount(t, ctx, db, 5)
 	if err := Up(ctx, db); err != nil {
 		t.Fatalf("Wiederholtes Up muss idempotent sein: %v", err)
 	}
@@ -76,15 +77,29 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ($1, $2, 'Telefon', 'NW-SKU-1', 0, 100, '{}'::jsonb)`, "23514", orderID, variantID)
 	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ('00000000-0000-0000-0000-000000000000', $1, 'Telefon', 'NW-SKU-1', 1, 100, '{}'::jsonb)`, "23503", variantID)
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down der Suchindizes mit Domain-Daten: %v", err)
+	}
+	assertSearchIndexCount(t, ctx, db, 0)
 	if err := Down(ctx, db); err == nil {
 		t.Fatal("Down darf vorhandene Domain-Daten nicht löschen")
 	}
+	if applied, err := appliedVersions(ctx, db); err != nil || applied != 2 {
+		t.Fatalf("Fehlgeschlagenes Domain-Down änderte den Versionsstand: %d, %v", applied, err)
+	}
+	if err := Up(ctx, db); err != nil {
+		t.Fatalf("Suchindizes erneut anlegen: %v", err)
+	}
+	assertSearchIndexCount(t, ctx, db, 5)
 	if err := Check(ctx, db); err != nil {
-		t.Fatalf("Fehlgeschlagenes Down änderte den Versionsstand: %v", err)
+		t.Fatalf("Status nach Wiederherstellung der Suchindizes: %v", err)
 	}
 
 	for _, table := range []string{"order_items", "orders", "customers", "product_variants", "product_categories", "products", "categories"} {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 3: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 2: %v", err)
@@ -100,7 +115,10 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	}
 
 	if err := Down(ctx, db); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Down von Version 3 vor Bootstrap-Test: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 2 vor Bootstrap-Test: %v", err)
 	}
 	mustExec(t, ctx, db, `INSERT INTO app_settings (key, value) VALUES ('test', 'wert')`)
 	if err := Down(ctx, db); err == nil {
@@ -126,6 +144,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	var legacyValue string
 	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'legacy'`).Scan(&legacyValue); err != nil || legacyValue != "bleibt" {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 3 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 2 mit bestehendem app_settings: %v", err)
@@ -167,5 +188,16 @@ func assertSQLState(t *testing.T, ctx context.Context, db *sql.DB, query, wantCo
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != wantCode {
 		t.Fatalf("SQLSTATE %s erwartet, erhalten: %v", wantCode, err)
+	}
+}
+
+func assertSearchIndexCount(t *testing.T, ctx context.Context, db *sql.DB, want int) {
+	t.Helper()
+	var count int
+	err := db.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = 'public'
+		AND indexname IN ('categories_name_trgm_idx', 'categories_description_trgm_idx',
+		'products_name_trgm_idx', 'products_description_trgm_idx', 'product_variants_sku_trgm_idx')`).Scan(&count)
+	if err != nil || count != want {
+		t.Fatalf("Suchindizes: %d statt %d, Fehler %v", count, want, err)
 	}
 }

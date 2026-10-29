@@ -1,6 +1,6 @@
 # NordWinds-API
 
-Das Go-Modul enthält eine Gin-API mit `/health/live`, `/health/ready` und `/api/v1/meta`. Migration 1 legt `app_settings` an; Migration 2 ergänzt Katalog-, Kunden- und Bestelltabellen. `internal/catalog` stellt parametrisierte PostgreSQL-Abfragen für Kategorien, Produkte, Varianten und ihre Beziehungen bereit. Die aufrufende Schicht kann dafür eine `*sql.DB` oder eine eigene `*sql.Tx` übergeben; öffentliche Katalog-Endpunkte folgen in NW-08.
+Das Go-Modul enthält eine Gin-API mit `/health/live`, `/health/ready`, `/api/v1/meta`, `/api/v1/products` und `/api/v1/categories`. Migration 1 legt `app_settings` an; Migration 2 ergänzt Katalog-, Kunden- und Bestelltabellen. Migration 3 ergänzt Trigram-Suchindizes. `internal/catalog` stellt parametrisierte PostgreSQL-Abfragen für Kategorien, Produkte, Varianten und ihre Beziehungen bereit. Die aufrufende Schicht kann dafür eine `*sql.DB` oder eine eigene `*sql.Tx` übergeben.
 
 ## Lokale Prüfung
 
@@ -16,3 +16,9 @@ Die Container starten die Migration vor der API. `migrate status` prüft die ang
 Der PostgreSQL-Integrationstest läuft nur mit `NORDWINDS_MIGRATION_TEST_URL`. Er verlangt eine separate, zunächst leere Datenbank mit Namen `nordwinds_test_*`; er darf nicht auf das Compose-Datenbank-Volume zeigen. Er prüft `up/down/up`, bestehende Version-1-Daten und Datenverlustsperren sowie Unique-, FK- und Check-Constraints. Ohne diese Variable wird nur dieser Integrationstest übersprungen.
 
 Der Katalog-Repository-Test benötigt `NORDWINDS_CATALOG_TEST_URL` für eine **andere** PostgreSQL-Testdatenbank mit Namen `nordwinds_test_*` und ohne vorhandene Katalogdaten. Er wendet die Migrationen an, führt alle Fixtures in Transaktionen aus, rollt diese nach jedem Teiltest zurück und prüft, dass keine Katalogdatensätze zurückbleiben. Bei gleichzeitiger Ausführung von `go test ./...` dürfen `NORDWINDS_MIGRATION_TEST_URL` und `NORDWINDS_CATALOG_TEST_URL` nicht auf dieselbe Datenbank zeigen. Ohne Katalog-Test-URL wird nur dieser Integrationstest übersprungen; ein Mock ersetzt den PostgreSQL-Lauf nicht. Der Test prüft CRUD, Kategorie- und Variantenbeziehungen sowie PostgreSQL-SQLSTATE bei Constraint-Verstößen. `go test -race ./...` erfordert eine Go-Umgebung mit aktiviertem CGO und C-Compiler.
+
+## Öffentlicher Katalog
+
+`GET /api/v1/products` liefert veröffentlichte Produkte mit aktiven Varianten; `GET /api/v1/categories` liefert aktive Kategorien. Beide Endpunkte unterstützen `category` (Slug), `q`, `sort`, `page` und `limit`. `page` beginnt bei 1, `limit` liegt zwischen 1 und 100 (Standard 20). Die Antwort enthält immer `data` als Array und `pagination` mit `page`, `limit`, `total` und `total_pages`. Ein unbekannter oder inaktiver Kategorie-Slug ergibt 404, ungültige Parameter ergeben 400. Der vollständige Vertrag einschließlich Sortieroptionen steht in [OpenAPI](../docs/api/openapi.yaml).
+
+Der HTTP-Integrationstest benötigt `NORDWINDS_CATALOG_API_TEST_URL` für eine weitere separate Datenbank `nordwinds_test_*` ohne Katalogdaten. Seine Fixtures werden transaktional zurückgesetzt. Ohne diese Variable wird nur dieser Test übersprungen. Für einen gleichzeitigen Gesamtlauf mit allen drei PostgreSQL-Integrationstests sind **drei verschiedene Testdatenbanken** nötig. Die produktive Compose-Datenbank darf für diese Tests nicht verwendet werden.

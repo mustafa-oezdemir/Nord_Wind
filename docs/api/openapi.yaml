@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: NordWinds Katalog-API
+  version: 1.0.0
+  description: >-
+    Öffentliche, lesende Katalog-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge
+    ist auf 512 Bytes begrenzt; unbekannte oder mehrfach übergebene Parameter werden abgewiesen.
+paths:
+  /api/v1/products:
+    get:
+      summary: Veröffentlichte Produkte auflisten
+      description: >-
+        Nur veröffentlichte Produkte mit mindestens einer aktiven Variante werden geliefert.
+        `price_cents` ist der niedrigste Preis einer aktiven Variante; `available` ist wahr,
+        wenn mindestens eine aktive Variante Bestand hat. Ein Kategoriefilter umfasst die
+        aktive Kategorie und ihre aktiven Unterkategorien.
+      operationId: listProducts
+      parameters:
+        - $ref: '#/components/parameters/ProductCategory'
+        - $ref: '#/components/parameters/Query'
+        - name: sort
+          in: query
+          description: Feste Sortieroption; andere Werte werden abgewiesen.
+          schema:
+            type: string
+            enum: [newest, name_asc, price_asc, price_desc]
+            default: newest
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Produktseite; `data` ist auch bei leerem Ergebnis ein Array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/categories:
+    get:
+      summary: Aktive Kategorien auflisten
+      description: >-
+        Ohne `category` werden alle aktiven Kategorien geliefert. Mit `category` werden
+        nur die direkten aktiven Unterkategorien des angegebenen Slugs geliefert.
+      operationId: listCategories
+      parameters:
+        - $ref: '#/components/parameters/ParentCategory'
+        - $ref: '#/components/parameters/Query'
+        - name: sort
+          in: query
+          description: Feste Sortieroption; andere Werte werden abgewiesen.
+          schema:
+            type: string
+            enum: [sort_order, name_asc, name_desc]
+            default: sort_order
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Kategorieseite; `data` ist auch bei leerem Ergebnis ein Array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    ProductCategory:
+      name: category
+      in: query
+      description: Aktiver Kategorie-Slug; umfasst aktive Nachfahren.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+    ParentCategory:
+      name: category
+      in: query
+      description: Aktiver Kategorie-Slug; liefert direkte aktive Kinder.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+    Query:
+      name: q
+      in: query
+      description: >-
+        Teilwortsuche ohne Beachtung der Großschreibung. Leer oder nur Leerzeichen bedeutet
+        keinen Suchfilter. Prozentzeichen und Unterstrich werden wörtlich behandelt.
+        Produkte durchsuchen Name, Beschreibung und aktive Varianten-SKU;
+        Kategorien durchsuchen Name und Beschreibung.
+      schema:
+        type: string
+        maxLength: 100
+    Page:
+      name: page
+      in: query
+      description: Einsbasierte Seitennummer.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      description: Maximale Einträge je Seite.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    InvalidRequest:
+      description: Ungültiger, doppelter oder nicht unterstützter Abfrageparameter.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    CategoryNotFound:
+      description: Der angegebene aktive Kategorie-Slug existiert nicht.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Interner Fehler ohne technische Details im HTTP-Body.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Pagination:
+      type: object
+      required: [page, limit, total, total_pages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Anzahl aller Treffer vor LIMIT/OFFSET.
+        total_pages:
+          type: integer
+          format: int64
+          minimum: 0
+    Product:
+      type: object
+      required: [id, slug, name, description, price_cents, currency, available, variant_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price_cents:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          enum: [EUR]
+        available:
+          type: boolean
+        variant_count:
+          type: integer
+          format: int64
+          minimum: 1
+    Category:
+      type: object
+      required: [id, parent_id, slug, name, description, sort_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sort_order:
+          type: integer
+          format: int32
+          minimum: 0
+    ProductPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    CategoryPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    Problem:
+      type: object
+      required: [type, title, status, detail, code]
+      properties:
+        type:
+          type: string
+          description: Relativer Problemtyp unter `/api/v1/problems/`.
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+          enum: [INVALID_REQUEST, NOT_FOUND, INTERNAL_ERROR]
+        request_id:
+          type: string
+          description: Vorhanden, wenn die Request-ID-Middleware aktiviert ist.

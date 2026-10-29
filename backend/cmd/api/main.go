@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
@@ -33,6 +34,7 @@ func main() {
 		logger.Error("Router konnte nicht erstellt werden", "error", err)
 		os.Exit(1)
 	}
+	server.RegisterCatalogRoutes(router, catalog.NewRepository(db))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"
