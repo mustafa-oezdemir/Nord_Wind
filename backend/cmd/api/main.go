@@ -63,7 +63,8 @@ func main() {
 		logger.Error("Authentifizierung konnte nicht initialisiert werden", "event", "auth.init.failed")
 		os.Exit(1)
 	}
-	server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
+	authHandler := server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
+	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"

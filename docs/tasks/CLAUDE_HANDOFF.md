@@ -26,14 +26,16 @@ Die folgenden Punkte sind **nicht** Bestandteil der Step-1-Implementierung. Die 
 
 - [x] [PR #7 — NW-06 Domain](https://github.com/mustafa-oezdemir/Nord_Wind/pull/7) und [PR #10 — NW-08a GORM Setup](https://github.com/mustafa-oezdemir/Nord_Wind/pull/10) sind in `main`. Die Commits von [PR #8 — NW-07 Repository](https://github.com/mustafa-oezdemir/Nord_Wind/pull/8) und [PR #9 — NW-08 Katalog-API](https://github.com/mustafa-oezdemir/Nord_Wind/pull/9) wurden als Vorfahren von PR #10 ebenfalls integriert.
 - [x] Die Änderungen aus [PR #5 — NW-04 CI](https://github.com/mustafa-oezdemir/Nord_Wind/pull/5) und [PR #6 — NW-05 API-Fehler](https://github.com/mustafa-oezdemir/Nord_Wind/pull/6) wurden auf einem gemeinsamen Integrationsbranch mit dem Katalog und GORM zusammengeführt. Der Katalog verwendet nun das gemeinsame Problemformat mit `request_id`; `httptest` und Go-Gesamttests bestanden lokal.
-- [ ] GitHub Actions `quality` auf dem Integrations-PR und nach dem Merge auf `main` erneut ausführen. Der bisherige Lauf von PR #5 wurde vor dem Runnerstart wegen einer GitHub-Abrechnungs-/Ausgabenlimitmeldung beendet. Erst ein grüner Lauf belegt das CI-DoD; die Branch-Protection ist im privaten Repository derzeit nicht einrichtbar.
+- [ ] GitHub Actions `quality` erneut ausführen. [PR #11](https://github.com/mustafa-oezdemir/Nord_Wind/pull/11) wurde in `main` integriert; der PR- und der anschließende `main`-Lauf endeten erneut vor jedem Runner-Schritt. Erst ein grüner Lauf belegt das CI-DoD; die Branch-Protection ist im privaten Repository derzeit nicht einrichtbar.
 
 ## 4. Weitere Roadmap-Aufgaben
 
 Die Reihenfolge bleibt abhängig von den vorherigen Schritten. Für jede Aufgabe eigene Akzeptanztests, Fortschrittsnotiz, Commit und Push führen.
 
-- [ ] **NW-09–10:** Responsive Angular-Startseite mit echter Katalog-API; danach Produktdetail, Varianten, Preis-/Bestandsanzeige und fehlende Slugs.
-- [ ] **NW-11–14:** Identität und Sessions; Admin-CRUD; Produktbilder und Mediensicherheit; Warenkorb. Fehlende Tabellen nur mit versionierten, datenbewahrenden Migrationen ergänzen.
+- [x] **NW-09:** Responsive Angular-Startseite mit echter Katalog-API ist in `main` ([Nachweis](../progress/NW-09.md)).
+- [ ] **NW-10:** Produktdetail, Varianten, Preis-/Bestandsanzeige und fehlende Slugs.
+- [x] **NW-11–12:** Identität, Sessions und Admin-Katalogpflege sind implementiert ([NW-11](../progress/NW-11.md), [NW-12](../progress/NW-12.md)). Der Passwort-Reset ist nur entworfen; produktive Rollenvergabe ist noch zu entscheiden.
+- [ ] **NW-13–14:** Produktbilder und Mediensicherheit; Warenkorb. Fehlende Tabellen nur mit versionierten, datenbewahrenden Migrationen ergänzen.
 - [ ] **NW-15–20:** Preis-, Steuer- und Versandvertrag fachlich entscheiden; Checkout-Transaktion; konkurrierenden Bestand; Payment-Webhooks; Versand/Tracking; Kundenkonto und Bestellhistorie.
 - [ ] **NW-21–26:** Deutschland-spezifische E-Commerce-Pflichten; Accessibility/SEO; Security-Hardening; Observability/Backup/Restore; Staging-/Release-Pipeline; Produktionsstart und Monitoring. Rechtliche, Zahlungs- und Betriebsentscheidungen vor der Implementierung mit dem Projektinhaber klären.
 

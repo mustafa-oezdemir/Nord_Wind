@@ -4,15 +4,15 @@ import "time"
 
 // Category gehört zum hierarchischen, öffentlich filterbaren Katalog.
 type Category struct {
-	ID          string
-	ParentID    *string
-	Name        string
-	Slug        string
-	Description string
-	Status      CategoryStatus
-	SortOrder   int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string         `json:"id"`
+	ParentID    *string        `json:"parent_id"`
+	Name        string         `json:"name"`
+	Slug        string         `json:"slug"`
+	Description string         `json:"description"`
+	Status      CategoryStatus `json:"status"`
+	SortOrder   int32          `json:"sort_order"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 type CategoryStatus string
@@ -24,13 +24,13 @@ const (
 
 // Product ist die redaktionelle Einheit; Verkaufspreis und Bestand liegen an der Variante.
 type Product struct {
-	ID          string
-	Name        string
-	Slug        string
-	Description string
-	Status      ProductStatus
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Slug        string        `json:"slug"`
+	Description string        `json:"description"`
+	Status      ProductStatus `json:"status"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
 }
 
 type ProductStatus string
@@ -48,14 +48,14 @@ type ProductCategory struct {
 
 // ProductVariant ist die verkaufbare SKU mit ganzzahligem Cent-Betrag.
 type ProductVariant struct {
-	ID            string
-	ProductID     string
-	SKU           string
-	Label         string
-	PriceCents    int64
-	Currency      string
-	StockQuantity int32
-	IsActive      bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID            string    `json:"id"`
+	ProductID     string    `json:"product_id"`
+	SKU           string    `json:"sku"`
+	Label         string    `json:"label"`
+	PriceCents    int64     `json:"price_cents"`
+	Currency      string    `json:"currency"`
+	StockQuantity int32     `json:"stock_quantity"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

@@ -1,6 +1,6 @@
 # NordWinds-Oberfläche
 
-Angular-Storefront für den deutschen Markt: Startseite, Produktliste mit Suche, Sortierung und Kategorien. Alle Daten kommen aus der Go-API (`/api/v1`, Vertrag in [`docs/api/openapi.yaml`](../docs/api/openapi.yaml)). Bestellungen sind noch nicht möglich.
+Angular-Storefront für den deutschen Markt: Startseite, Produktliste mit Suche, Sortierung und Kategorien. Die geschützte Verwaltungsseite liegt unter `/admin`. Alle Daten kommen aus der Go-API (`/api/v1`, Vertrag in [`docs/api/openapi.yaml`](../docs/api/openapi.yaml)). Bestellungen sind noch nicht möglich.
 
 ## Lokale Prüfung
 
@@ -21,6 +21,7 @@ npm run build
 - `src/app/layouts/storefront-layout`: Kopfbereich, mobiles Menü (natives `<dialog>`), Fußzeile und Fokusführung.
 - `src/app/features/catalog`: API-Zugriff mit Antwortprüfung, Modelle, Kategorien-Store, Produktliste und Katalog-Bausteine.
 - `src/app/features/home`: Startseite.
+- `src/app/features/admin`: Admin-Anmeldung, Kategoriebaum, Produkt-/Variantenpflege und Audit-Ansicht. Schreibzugriffe senden den Session-CSRF-Token nur im Header; Berechtigungen werden in der Go-API erzwungen.
 - `src/app/shared`: Geldformatierung (`de-DE`, EUR) sowie Leer-, Fehler-, 404- und Seitenbausteine.
 - `src/styles`: Design-Tokens und Bootstrap-Sass-Konfiguration. Komponenten binden die Tokens mit `@use 'tokens' as t;` ein.
 - `src/testing`: Testdaten nach dem OpenAPI-Vertrag; nur für Specs.

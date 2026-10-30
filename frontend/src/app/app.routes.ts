@@ -6,6 +6,12 @@ const productList = () =>
 
 export const routes: Routes = [
   {
+    path: 'admin',
+    title: 'Verwaltung',
+    loadComponent: () =>
+      import('./features/admin/pages/admin-page/admin-page').then((m) => m.AdminPage),
+  },
+  {
     path: '',
     component: StorefrontLayout,
     children: [
