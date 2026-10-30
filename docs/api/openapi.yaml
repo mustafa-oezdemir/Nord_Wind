@@ -1,11 +1,95 @@
 openapi: 3.0.3
 info:
-  title: NordWinds Katalog-API
+  title: NordWinds API
   version: 1.0.0
   description: >-
     Öffentliche, lesende Katalog-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge
     ist auf 512 Bytes begrenzt; unbekannte oder mehrfach übergebene Parameter werden abgewiesen.
 paths:
+  /api/v1/auth/register:
+    post:
+      summary: Kundenkonto registrieren
+      operationId: registerCustomer
+      description: Erstellt ausschließlich eine Kundenrolle; eine Adminrolle wird nicht über diese API vergeben.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '201':
+          description: Konto erstellt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/login:
+    post:
+      summary: Anmelden und neue Session ausstellen
+      operationId: loginCustomer
+      description: Gleiche Fehlerantwort für unbekannte E-Mail und falsches Passwort; ersetzt eine vorhandene Session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Session-Cookie und CSRF-Token für geschützte Schreibzugriffe.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '429': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/session:
+    get:
+      summary: Aktuelle Session und CSRF-Token lesen
+      operationId: getAuthSession
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Aktuelle Session; nicht zwischenspeichern.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/logout:
+    post:
+      summary: Session serverseitig widerrufen
+      operationId: logoutCustomer
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRFToken'
+      responses:
+        '204': { description: Session widerrufen und Cookie gelöscht. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/customer/me:
+    get:
+      summary: Kundenprofil lesen
+      operationId: getCustomerProfile
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Aktueller Kunde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEnvelope'
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/products:
     get:
       summary: Veröffentlichte Produkte auflisten
@@ -73,7 +157,20 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-nordwinds_session
   parameters:
+    CSRFToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 43
+        maxLength: 43
     ProductCategory:
       name: category
       in: query
@@ -120,6 +217,12 @@ components:
         maximum: 100
         default: 20
   responses:
+    AuthProblem:
+      description: Authentifizierung, Berechtigung, CSRF oder Rate-Limit fehlgeschlagen.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
     InvalidRequest:
       description: Ungültiger, doppelter oder nicht unterstützter Abfrageparameter.
       content:
@@ -139,6 +242,43 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    Credentials:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 1024
+    CustomerAccount:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [customer, admin] }
+    CustomerEnvelope:
+      type: object
+      required: [customer]
+      properties:
+        customer:
+          $ref: '#/components/schemas/CustomerAccount'
+    AuthSession:
+      type: object
+      required: [customer, csrf_token, expires_at]
+      properties:
+        customer:
+          $ref: '#/components/schemas/CustomerAccount'
+        csrf_token:
+          type: string
+          description: Nur in JSON-Antworten an denselben Origin; niemals in URL oder Log.
+        expires_at: { type: string, format: date-time }
     Pagination:
       type: object
       required: [page, limit, total, total_pages]
@@ -241,7 +381,7 @@ components:
           type: string
         code:
           type: string
-          enum: [INVALID_REQUEST, NOT_FOUND, INTERNAL_ERROR]
+          enum: [INVALID_REQUEST, NOT_FOUND, CONFLICT, UNAUTHENTICATED, FORBIDDEN, RATE_LIMITED, INTERNAL_ERROR]
         request_id:
           type: string
           description: Serverseitig erzeugte Kennung aus `X-Request-ID`.

@@ -32,6 +32,9 @@ Fehlerantworten folgen [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) m
 | `INVALID_REQUEST` | 400 | Ungültige Eingabe |
 | `NOT_FOUND` | 404 | Ressource nicht gefunden |
 | `CONFLICT` | 409 | Fachlicher Zustandskonflikt |
+| `UNAUTHENTICATED` | 401 | Anmeldung fehlt oder ist ungültig |
+| `FORBIDDEN` | 403 | Berechtigung oder CSRF-Prüfung fehlt |
+| `RATE_LIMITED` | 429 | Zu viele Login-Versuche |
 | `METHOD_NOT_ALLOWED` | 405 | HTTP-Methode nicht zulässig |
 | `BODY_TOO_LARGE` | 413 | Anfrageinhalt über 1 MiB |
 | `URI_TOO_LONG` | 414 | Anfrageziel über 2048 Byte |
@@ -42,3 +45,11 @@ Fehlerantworten folgen [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) m
 Neue Handler ordnen erwartete Fehler über `server.APIError` und `server.HandleError` zu. Unbekannte Fehler werden ohne ihren internen Text als `INTERNAL_ERROR` ausgegeben. Der Body wird durch `http.MaxBytesReader` begrenzt; Handler müssen Lesefehler an `server.HandleError` übergeben, damit auch Streaming-Bodies zuverlässig mit 413 beantwortet werden. Der Request-Kontext hat ein Limit von fünf Sekunden. Handler und Datenbankaufrufe müssen den Kontext beachten; ein bereits geschriebener Response kann nach Ablauf nicht ersetzt werden. Der HTTP-Server begrenzt Header auf 16 KiB und Lese- und Schreibzeiten auf zehn Sekunden.
 
 Access-Logs werden als `slog`-JSON ausgegeben. Sie enthalten nur Zeitpunkt, Service/Umgebung, Ereignis, Request-ID, HTTP-Methode, normalisierte Route, Status, Dauer und gegebenenfalls Fehlercode. Normale 4xx-Antworten erscheinen als `INFO`, 5xx als `ERROR`. URL-Parameter, Header, Cookies, Bodies, SQL- und fremde Fehlertexte werden nicht protokolliert.
+
+## Kundenanmeldung
+
+`POST /api/v1/auth/register` erstellt Kundenkonten, `POST /api/v1/auth/login` stellt eine neue Session aus, `GET /api/v1/auth/session` liefert den aktuellen Kunden und CSRF-Token, `POST /api/v1/auth/logout` widerruft die Session. `GET /api/v1/customer/me` ist ausschließlich für die Kundenrolle freigegeben. Der [OpenAPI-Vertrag](../docs/api/openapi.yaml) beschreibt Antworten und Fehlercodes. Die Sicherheitsentscheidung einschließlich Passwort-Reset-Entwurf steht in [ADR-004](../docs/adr/ADR-004-authentication.md).
+
+Für HTTPS-Umgebungen muss `APP_PUBLIC_ORIGIN` auf den exakten öffentlichen Origin gesetzt sein, etwa `https://shop.example.invalid`; `APP_ENV` darf dort nicht `development` sein. Die API startet dann nur mit einer HTTPS-Origin. Das Session-Cookie ist `Secure`, `HttpOnly`, `SameSite=Strict` und ohne `Domain`. Ausschließlich bei `APP_ENV=development` erlaubt die API ein lokales HTTP-Cookie für die Entwicklung. Schreibzugriffe mit Session benötigen `X-CSRF-Token` aus der Login- oder Session-Antwort. Adminrechte werden nicht über die öffentliche Registrierung vergeben.
+
+Der Authentifizierungs-Integrationstest benötigt `NORDWINDS_AUTH_TEST_URL` für eine **separate** zunächst leere PostgreSQL-Datenbank mit Namen `nordwinds_test_*`. Er prüft Registrierung, falsche Passwörter, CSRF, Session-Fixation und -Ablauf, Rate-Limit, Rollenwechsel und Redaction. Ohne die Variable wird nur dieser Test übersprungen. Bei einem parallelen Gesamtlauf benötigt jeder PostgreSQL-Integrationstest eine eigene Datenbank.

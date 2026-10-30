@@ -2,9 +2,22 @@ package identity
 
 import "time"
 
-// Customer ist vor NW-11 nur der referenzierbare Eigentümer einer Bestellung.
+type Role string
+
+const (
+	CustomerRole Role = "customer"
+	AdminRole    Role = "admin"
+)
+
 type Customer struct {
-	ID        string
-	Email     string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Role      Role      `json:"role"`
+	CreatedAt time.Time `json:"-"`
+}
+
+type Session struct {
+	Customer  Customer
+	CSRFToken string
+	ExpiresAt time.Time
 }

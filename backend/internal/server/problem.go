@@ -16,6 +16,9 @@ const (
 	InvalidRequest     ErrorCode = "INVALID_REQUEST"
 	NotFound           ErrorCode = "NOT_FOUND"
 	Conflict           ErrorCode = "CONFLICT"
+	Unauthenticated    ErrorCode = "UNAUTHENTICATED"
+	Forbidden          ErrorCode = "FORBIDDEN"
+	RateLimited        ErrorCode = "RATE_LIMITED"
 	BodyTooLarge       ErrorCode = "BODY_TOO_LARGE"
 	URITooLong         ErrorCode = "URI_TOO_LONG"
 	MethodNotAllowed   ErrorCode = "METHOD_NOT_ALLOWED"
@@ -40,6 +43,9 @@ var problemSpecs = map[ErrorCode]problemSpec{
 	InvalidRequest:     {http.StatusBadRequest, "/api/v1/problems/invalid-request", "Ungültige Anfrage", "Die Anfrage konnte nicht verarbeitet werden."},
 	NotFound:           {http.StatusNotFound, "/api/v1/problems/not-found", "Nicht gefunden", "Die angeforderte Ressource wurde nicht gefunden."},
 	Conflict:           {http.StatusConflict, "/api/v1/problems/conflict", "Konflikt", "Die Anfrage widerspricht dem aktuellen Zustand."},
+	Unauthenticated:    {http.StatusUnauthorized, "/api/v1/problems/unauthenticated", "Nicht angemeldet", "Eine gültige Anmeldung ist erforderlich."},
+	Forbidden:          {http.StatusForbidden, "/api/v1/problems/forbidden", "Zugriff verweigert", "Für diese Aktion fehlt die Berechtigung."},
+	RateLimited:        {http.StatusTooManyRequests, "/api/v1/problems/rate-limited", "Zu viele Anfragen", "Bitte versuchen Sie es später erneut."},
 	BodyTooLarge:       {http.StatusRequestEntityTooLarge, "/api/v1/problems/body-too-large", "Anfrage zu groß", "Der Anfrageinhalt überschreitet die zulässige Größe."},
 	URITooLong:         {http.StatusRequestURITooLong, "/api/v1/problems/uri-too-long", "Adresse zu lang", "Die Anfrageadresse überschreitet die zulässige Länge."},
 	MethodNotAllowed:   {http.StatusMethodNotAllowed, "/api/v1/problems/method-not-allowed", "Methode nicht erlaubt", "Diese HTTP-Methode ist hier nicht erlaubt."},
