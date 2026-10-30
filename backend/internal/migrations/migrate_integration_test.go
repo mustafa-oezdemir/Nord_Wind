@@ -60,8 +60,11 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	mustExec(t, ctx, db, `INSERT INTO product_categories (product_id, category_id) VALUES ($1, $2)`, productID, childID)
 	variantID := insertID(t, ctx, db, `INSERT INTO product_variants (product_id, sku, label, price_cents, stock_quantity) VALUES ($1, 'NW-SKU-1', 'Standard', 100, 2) RETURNING id`, productID)
 	customerID := insertID(t, ctx, db, `INSERT INTO customers (email) VALUES ('test@example.invalid') RETURNING id`)
-	orderID := insertID(t, ctx, db, `INSERT INTO orders (order_number, customer_id, total_cents, shipping_snapshot) VALUES ('TEST-1', $1, 100, '{}'::jsonb) RETURNING id`, customerID)
-	mustExec(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ($1, $2, 'Telefon', 'NW-SKU-1', 1, 100, '{}'::jsonb)`, orderID, variantID)
+	orderID := insertID(t, ctx, db, `INSERT INTO orders (order_number, customer_id, total_cents, shipping_snapshot,
+		idempotency_key, request_hash, customer_email, goods_cents, discount_cents, shipping_cents, tax_lines)
+		VALUES ('TEST-1', $1, 100, '{"address":{}}'::jsonb, 'migrationstest-0001', decode(repeat('ab', 32), 'hex'),
+		'test@example.invalid', 100, 0, 0, '[{}]'::jsonb) RETURNING id`, customerID)
+	mustExec(t, ctx, db, orderItemSQL(`$1, $2, 1, 1, 100, 100`), orderID, variantID)
 	mustExec(t, ctx, db, `UPDATE product_variants SET price_cents = 150 WHERE id = $1`, variantID)
 	var historicalPrice int64
 	if err := db.QueryRowContext(ctx, `SELECT unit_price_cents FROM order_items WHERE order_id = $1`, orderID).Scan(&historicalPrice); err != nil || historicalPrice != 100 {
@@ -74,8 +77,8 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	assertSQLState(t, ctx, db, `INSERT INTO product_variants (product_id, sku, label, price_cents) VALUES ('00000000-0000-0000-0000-000000000000', 'NW-BAD-FK', 'Ungültig', 100)`, "23503")
 	assertSQLState(t, ctx, db, `INSERT INTO products (name, slug) VALUES ('Duplikat', 'TELEFON')`, "23505")
 	assertSQLState(t, ctx, db, `UPDATE categories SET parent_id = $1 WHERE id = $2`, "23514", childID, categoryID)
-	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ($1, $2, 'Telefon', 'NW-SKU-1', 0, 100, '{}'::jsonb)`, "23514", orderID, variantID)
-	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ('00000000-0000-0000-0000-000000000000', $1, 'Telefon', 'NW-SKU-1', 1, 100, '{}'::jsonb)`, "23503", variantID)
+	assertSQLState(t, ctx, db, orderItemSQL(`$1, $2, 2, 0, 100, 0`), "23514", orderID, variantID)
+	assertSQLState(t, ctx, db, orderItemSQL(`'00000000-0000-0000-0000-000000000000', $1, 1, 1, 100, 100`), "23503", variantID)
 	assertSQLState(t, ctx, db, `INSERT INTO cart_items (customer_id, variant_id, quantity) VALUES ($1, $2, 0)`, "23514", customerID, variantID)
 	mustExec(t, ctx, db, `INSERT INTO cart_items (customer_id, variant_id, quantity) VALUES ($1, $2, 2)`, customerID, variantID)
 	assertSQLState(t, ctx, db, `UPDATE products SET tax_class = 'luxus' WHERE id = $1`, "23514", productID)
@@ -84,6 +87,42 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	codeID := insertID(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('HERBST10', 1000) RETURNING id`)
 	assertSQLState(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('HERBST10', 500)`, "23505")
 	mustExec(t, ctx, db, `INSERT INTO cart_discounts (customer_id, discount_code_id) VALUES ($1, $2)`, customerID, codeID)
+
+	// Version 9 (NW-16): Summen, Idempotenz, unveränderliche Positionen und erlaubte Statuswechsel.
+	assertSQLState(t, ctx, db, orderItemSQL(`$1, $2, 2, 2, 100, 199`), "23514", orderID, variantID)
+	assertSQLState(t, ctx, db, `UPDATE order_items SET quantity = 2 WHERE order_id = $1`, "23000", orderID)
+	assertSQLState(t, ctx, db, `UPDATE orders SET total_cents = 0, goods_cents = 0 WHERE id = $1`, "23000", orderID)
+	assertSQLState(t, ctx, db, `DELETE FROM orders WHERE id = $1`, "23000", orderID)
+	assertSQLState(t, ctx, db, `UPDATE orders SET status = 'SHIPPED' WHERE id = $1`, "23514", orderID)
+	mustExec(t, ctx, db, `UPDATE orders SET status = 'CANCELLED' WHERE id = $1`, orderID)
+	assertSQLState(t, ctx, db, `UPDATE orders SET status = 'CREATED' WHERE id = $1`, "23514", orderID)
+	for code, query := range map[string]string{
+		"23514": `INSERT INTO orders (order_number, customer_id, total_cents, shipping_snapshot, idempotency_key, request_hash,
+			customer_email, goods_cents, discount_cents, shipping_cents, tax_lines) VALUES ('TEST-2', $1, 101,
+			'{"address":{}}'::jsonb, 'migrationstest-0002', decode(repeat('ab', 32), 'hex'), 'x', 100, 0, 0, '[{}]'::jsonb)`,
+		"23505": `INSERT INTO orders (order_number, customer_id, total_cents, shipping_snapshot, idempotency_key, request_hash,
+			customer_email, goods_cents, discount_cents, shipping_cents, tax_lines) VALUES ('TEST-3', $1, 100,
+			'{"address":{}}'::jsonb, 'migrationstest-0001', decode(repeat('ab', 32), 'hex'), 'x', 100, 0, 0, '[{}]'::jsonb)`,
+	} {
+		assertSQLState(t, ctx, db, query, code, customerID)
+	}
+	mustExec(t, ctx, db, `INSERT INTO order_status_events (order_id, to_status, actor) VALUES ($1, 'CREATED', 'customer')`, orderID)
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Bestell-Down darf vorhandene Bestellungen nicht entfernen")
+	}
+	// TRUNCATE umgeht die Zeilentrigger; nur so lassen sich Testbestellungen entfernen.
+	mustExec(t, ctx, db, `TRUNCATE order_status_events, order_items, orders`)
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 9 mit Domain-Daten: %v", err)
+	}
+	mustExec(t, ctx, db, `INSERT INTO orders (order_number, customer_id, total_cents, shipping_snapshot) VALUES ('ALT-1', $1, 100, '{}'::jsonb)`, customerID)
+	if err := Up(ctx, db); err == nil {
+		t.Fatal("Up auf Version 9 darf Altbestellungen ohne Preisaufstellung nicht übernehmen")
+	}
+	if applied, err := appliedVersions(ctx, db); err != nil || applied != 8 {
+		t.Fatalf("Fehlgeschlagenes Up änderte den Versionsstand: %d, %v", applied, err)
+	}
+	mustExec(t, ctx, db, `DELETE FROM orders`)
 	if err := Down(ctx, db); err == nil {
 		t.Fatal("Preis-Down darf vorhandene Rabattcodes nicht entfernen")
 	}
@@ -151,6 +190,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 9: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 8: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -181,6 +223,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Status nach Up/Down/Up: %v", err)
 	}
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 9 vor Bootstrap-Test: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 8 vor Bootstrap-Test: %v", err)
 	}
@@ -228,6 +273,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 9 mit bestehendem app_settings: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 8 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -261,6 +309,13 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	if err := Check(ctx, db); err != nil {
 		t.Fatalf("Endstatus: %v", err)
 	}
+}
+
+// orderItemSQL erwartet "order_id, variant_id, position, quantity, unit_price_cents, line_total_cents".
+func orderItemSQL(values string) string {
+	return `INSERT INTO order_items (order_id, variant_id, position, quantity, unit_price_cents, line_total_cents,
+		name_snapshot, variant_label_snapshot, sku_snapshot, tax_snapshot) VALUES (` + values +
+		`, 'Telefon', 'Standard', 'NW-SKU-1', '{"tax_class":"standard","rate_bp":1900}'::jsonb)`
 }
 
 func insertID(t *testing.T, ctx context.Context, db *sql.DB, query string, args ...any) string {

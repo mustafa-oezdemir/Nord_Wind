@@ -425,6 +425,77 @@ paths:
         '200': { $ref: '#/components/responses/CartSnapshot' }
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/orders:
+    post:
+      summary: Bestellung aus dem Warenkorb anlegen (Kasse)
+      description: >-
+        Rechnet den Warenkorb serverseitig neu (ADR-007) und legt Bestellung, Positionen und den
+        ersten Statuseintrag in einer Transaktion an; danach ist der Warenkorb leer (ADR-008).
+        Weicht die neu berechnete Gesamtsumme von `expected_total_cents` ab oder ist eine Position
+        nicht mehr lieferbar, entsteht keine Bestellung (409 `CART_CHANGED` mit aktuellem Warenkorb).
+        Dieselbe Anfrage mit demselben `Idempotency-Key` liefert die vorhandene Bestellung (200);
+        derselbe Schlüssel mit anderer Adresse oder Summe ergibt 422. Bestand wird geprüft, aber erst
+        mit NW-17 reserviert; eine Zahlung folgt mit NW-18.
+      operationId: createOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/CSRFToken' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderCreate' }
+      responses:
+        '201':
+          description: Bestellung angelegt.
+          headers:
+            Location: { schema: { type: string }, description: '`/api/v1/orders/{orderNumber}`' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '200':
+          description: Wiederholung mit demselben Idempotency-Key; die vorhandene Bestellung.
+          headers:
+            Idempotent-Replayed: { schema: { type: string, enum: ['true'] } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409':
+          description: '`CART_EMPTY` oder `CART_CHANGED` (mit `reason` und aktuellem `cart`); keine Bestellung angelegt.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: '`VALIDATION_FAILED` mit Feldfehlern in `errors` oder `IDEMPOTENCY_KEY_REUSED`.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/orders/{orderNumber}:
+    get:
+      summary: Eigene Bestellung lesen
+      description: Fremde und unbekannte Bestellnummern ergeben einheitlich 404.
+      operationId: getOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - name: orderNumber
+          in: path
+          required: true
+          schema: { type: string, pattern: '^NW-[0-9]{4}-[0-9]{6,12}$', example: NW-2026-100001 }
+      responses:
+        '200':
+          description: Bestellung mit unveränderlichem Snapshot.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
   /api/v1/admin/discount-codes:
     get:
       summary: Rabattcodes auflisten
@@ -698,6 +769,12 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Vom Client je Bestellversuch erzeugt (z. B. UUID) und bei Wiederholungen unverändert gesendet.
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{16,64}$' }
     CSRFToken:
       name: X-CSRF-Token
       in: header
@@ -1228,6 +1305,81 @@ components:
         stock_status:
           type: string
           enum: [in_stock, low_stock, out_of_stock]
+    OrderAddress:
+      type: object
+      description: Liefer- und Rechnungsadresse in Deutschland. Leerraum am Rand wird entfernt.
+      required: [first_name, last_name, street, house_number, postal_code, city, country]
+      additionalProperties: false
+      properties:
+        first_name: { type: string, minLength: 1, maxLength: 100 }
+        last_name: { type: string, minLength: 1, maxLength: 100 }
+        company: { type: string, maxLength: 100 }
+        street: { type: string, minLength: 2, maxLength: 100 }
+        house_number: { type: string, example: 17a, pattern: '^[0-9]{1,4} ?[A-Za-z]?( ?[-/] ?[0-9]{1,4} ?[A-Za-z]?)?$' }
+        address_extra: { type: string, maxLength: 100 }
+        postal_code: { type: string, pattern: '^(0[1-9]|[1-9][0-9])[0-9]{3}$' }
+        city: { type: string, minLength: 2, maxLength: 100 }
+        country: { type: string, enum: [DE] }
+    OrderCreate:
+      type: object
+      required: [address, expected_total_cents]
+      additionalProperties: false
+      properties:
+        address: { $ref: '#/components/schemas/OrderAddress' }
+        expected_total_cents:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Gesamtsumme, die dem Kunden vor „Zahlungspflichtig bestellen“ angezeigt wurde.
+    OrderItem:
+      type: object
+      required: [position, variant_id, product_name, variant_label, sku, quantity, unit_price_cents, line_total_cents, tax_class, tax_rate_bp]
+      properties:
+        position: { type: integer, minimum: 1 }
+        variant_id: { type: string, format: uuid }
+        product_name: { type: string }
+        variant_label: { type: string }
+        sku: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+        unit_price_cents: { type: integer, format: int64, description: Bruttostückpreis zum Bestellzeitpunkt. }
+        line_total_cents: { type: integer, format: int64 }
+        tax_class: { type: string, enum: [standard, reduced] }
+        tax_rate_bp: { type: integer, enum: [1900, 700] }
+    Order:
+      type: object
+      required: [id, order_number, status, customer_email, address, items, pricing, discount, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        order_number: { type: string, example: NW-2026-100001 }
+        status:
+          type: string
+          enum: [CREATED, PAYMENT_PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED, PAYMENT_FAILED]
+          description: Neue Bestellungen beginnen mit `CREATED`; erlaubte Wechsel stehen in ADR-008.
+        customer_email: { type: string, format: email }
+        address: { $ref: '#/components/schemas/OrderAddress' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        pricing:
+          type: object
+          required: [goods_cents, discount_cents, shipping_cents, total_cents, currency, taxes]
+          properties:
+            goods_cents: { type: integer, format: int64 }
+            discount_cents: { type: integer, format: int64 }
+            shipping_cents: { type: integer, format: int64 }
+            total_cents: { type: integer, format: int64 }
+            currency: { type: string, enum: [EUR] }
+            taxes:
+              type: array
+              items: { $ref: '#/components/schemas/CartTaxLine' }
+        discount:
+          type: object
+          nullable: true
+          required: [code, percent_bp]
+          properties:
+            code: { type: string }
+            percent_bp: { type: integer }
+        created_at: { type: string, format: date-time }
     Problem:
       type: object
       required: [type, title, status, detail, code, request_id]
@@ -1243,7 +1395,22 @@ components:
           type: string
         code:
           type: string
-          enum: [INVALID_REQUEST, NOT_FOUND, CONFLICT, UNAUTHENTICATED, FORBIDDEN, RATE_LIMITED, BODY_TOO_LARGE, URI_TOO_LONG, METHOD_NOT_ALLOWED, REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, INTERNAL_ERROR]
+          enum: [INVALID_REQUEST, NOT_FOUND, CONFLICT, UNAUTHENTICATED, FORBIDDEN, RATE_LIMITED, BODY_TOO_LARGE, URI_TOO_LONG, METHOD_NOT_ALLOWED, REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, INTERNAL_ERROR, VALIDATION_FAILED, CART_EMPTY, CART_CHANGED, IDEMPOTENCY_KEY_REUSED]
         request_id:
           type: string
           description: Serverseitig erzeugte Kennung aus `X-Request-ID`.
+        errors:
+          type: array
+          description: Nur bei `VALIDATION_FAILED`; nennt Felder und Codes, nie die eingegebenen Werte.
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: { type: string, example: postal_code }
+              code: { type: string, enum: [required, too_short, too_long, invalid_format, unsupported_country] }
+        reason:
+          type: string
+          enum: [total_changed, item_unavailable]
+          description: Nur bei `CART_CHANGED`.
+        cart:
+          $ref: '#/components/schemas/CartSnapshot'

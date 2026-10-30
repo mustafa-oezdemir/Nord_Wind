@@ -66,6 +66,12 @@ Migration 6 speichert bis zu sechs bereinigte JPEG-Bilder je Produkt in PostgreS
 
 Migration 7 ergänzt einen kontogebundenen Warenkorb. `GET /api/v1/cart`, `POST /api/v1/cart/items` und `PUT/DELETE /api/v1/cart/items/{variantId}` verlangen eine Customer-Session, Änderungen zusätzlich CSRF. Mengen und Preis-/Bestandsstatus stammen bei jeder Antwort aus der Datenbank; ein Warenkorb reserviert keinen Bestand. [ADR-006](../docs/adr/ADR-006-customer-cart.md) hält die Entscheidung gegen einen anonymen Warenkorb fest. Der PostgreSQL-HTTP-Test verwendet `NORDWINDS_CART_TEST_URL` auf einer weiteren separaten Testdatenbank.
 
+## Preise und Bestellungen
+
+Migration 8 ergänzt die Steuerklasse je Produkt (19 % oder 7 %), prozentuale Rabattcodes und den Code je Warenkorb. `GET /api/v1/cart` liefert die vollständige Preisaufstellung aus `internal/pricing`. [ADR-007](../docs/adr/ADR-007-pricing-policy.md) beschreibt Bruttopreise, Rundung und Versand. Der PostgreSQL-HTTP-Test verwendet `NORDWINDS_PRICING_TEST_URL`.
+
+Migration 9 macht Bestellungen transaktional und unveränderlich. `POST /api/v1/orders` verlangt Customer-Session, CSRF und `Idempotency-Key`, rechnet den Warenkorb neu und legt Bestellung, Positionen und Statuseintrag in einer Transaktion an. `GET /api/v1/orders/{orderNumber}` liefert nur eigene Bestellungen. [ADR-008](../docs/adr/ADR-008-order-creation.md) beschreibt Idempotenz, Statusübergänge und Datenbankschutz. Der PostgreSQL-HTTP-Test verwendet `NORDWINDS_ORDERS_TEST_URL`. Bestellungen lassen sich wegen der Trigger nicht per `DELETE` entfernen; Testdatenbanken räumen mit `TRUNCATE` auf.
+
 ## Beispielkatalog
 
 `seeds/demo_catalog.sql` enthält 10 Kategorien mit je 2 veröffentlichten Beispielprodukten und einer aktiven Variante pro Produkt. Preise und Bestände sind erfundene Entwicklungsdaten; Produktbilder sind nicht enthalten. Das Skript ergänzt nur fehlende Datensätze, überschreibt bestehende Einträge nicht und bricht bei Slug-, SKU- oder ID-Kollisionen transaktional ab. Es wird bewusst nicht bei jeder Migration ausgeführt.

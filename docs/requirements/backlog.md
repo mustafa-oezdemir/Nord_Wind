@@ -38,7 +38,7 @@ Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen
 3. **Vor NW-06/NW-10:** Produktarten, Varianten und Preis-/Bestandsmodell festlegen.
 4. **Vor NW-14/NW-16:** Gast-Checkout oder Konto-Pflicht bestimmen.
 5. **Erledigt am 30. Oktober 2026:** Steuerklassen, Brutto-/Netto-Quelle, Rundung, Versand und Rabatte nach [ADR-007](../adr/ADR-007-pricing-policy.md) (NW-15). Die steuerliche Prüfung der Einordnung folgt vor NW-21.
-6. **Vor NW-16:** Bestell- und Zahlungsstatus sowie ihre erlaubten Übergänge per ADR festlegen.
+6. **Erledigt am 30. Oktober 2026:** Bestellstatus und erlaubte Übergänge nach [ADR-008](../adr/ADR-008-order-creation.md) (NW-16). Zahlungsstatus, Stornierung nach Zahlung und Erstattung ergänzt NW-18.
 7. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
 8. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.
 

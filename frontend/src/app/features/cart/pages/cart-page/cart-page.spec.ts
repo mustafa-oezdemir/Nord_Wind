@@ -114,6 +114,8 @@ describe('CartPage', () => {
     expect(element.textContent).toContain('Bestand hat sich geändert.');
     expect(text(element, 'cart-goods')).toBe('0,00 €');
     expect(element.querySelector('button.btn-outline-danger')).not.toBeNull();
+    expect(element.querySelector('[data-testid="cart-checkout"]')).toBeNull();
+    expect(element.textContent).toContain('Entfernen Sie nicht lieferbare Artikel');
   });
 
   it('zeigt genau die Beträge der API: Warenwert, Versand, Gesamtsumme und MwSt. je Satz', async () => {
@@ -128,6 +130,9 @@ describe('CartPage', () => {
       'Noch 10,00 € bis zum kostenlosen Versand.',
     );
     expect(element.querySelector('[data-testid="cart-discount"]')).toBeNull();
+    expect(element.querySelector('[data-testid="cart-checkout"]')?.getAttribute('href')).toBe(
+      '/kasse',
+    );
     // Intl trennt Zahl und Prozentzeichen mit einem geschützten Leerzeichen.
     expect(element.textContent).toMatch(/enthaltene MwSt\. 19\s%/);
     expect(element.textContent).toMatch(/enthaltene MwSt\. 7\s%/);

@@ -25,6 +25,11 @@ const (
 	RequestTimeout     ErrorCode = "REQUEST_TIMEOUT"
 	ServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
 	InternalError      ErrorCode = "INTERNAL_ERROR"
+	// Kasse (NW-16)
+	ValidationFailed     ErrorCode = "VALIDATION_FAILED"
+	CartEmpty            ErrorCode = "CART_EMPTY"
+	CartChanged          ErrorCode = "CART_CHANGED"
+	IdempotencyKeyReused ErrorCode = "IDEMPOTENCY_KEY_REUSED"
 )
 
 // APIError transportiert nur einen bekannten Fehlercode, nie sensible Ursachen.
@@ -52,6 +57,11 @@ var problemSpecs = map[ErrorCode]problemSpec{
 	RequestTimeout:     {http.StatusServiceUnavailable, "/api/v1/problems/request-timeout", "Zeitüberschreitung", "Die Anfrage konnte nicht rechtzeitig bearbeitet werden."},
 	ServiceUnavailable: {http.StatusServiceUnavailable, "/api/v1/problems/service-unavailable", "Dienst nicht verfügbar", "Der Dienst ist vorübergehend nicht verfügbar."},
 	InternalError:      {http.StatusInternalServerError, "/api/v1/problems/internal-error", "Interner Fehler", "Die Anfrage konnte nicht bearbeitet werden."},
+	ValidationFailed:   {http.StatusUnprocessableEntity, "/api/v1/problems/validation-failed", "Eingaben unvollständig", "Bitte prüfen Sie die markierten Felder."},
+	CartEmpty:          {http.StatusConflict, "/api/v1/problems/cart-empty", "Warenkorb leer", "Der Warenkorb enthält keine Artikel."},
+	CartChanged:        {http.StatusConflict, "/api/v1/problems/cart-changed", "Warenkorb geändert", "Preis, Bestand oder Rabatt haben sich geändert. Bitte prüfen Sie die neue Summe."},
+	IdempotencyKeyReused: {http.StatusUnprocessableEntity, "/api/v1/problems/idempotency-key-reused", "Schlüssel bereits verwendet",
+		"Dieser Idempotency-Key gehört zu einer anderen Anfrage."},
 }
 
 type problem struct {
@@ -61,6 +71,17 @@ type problem struct {
 	Detail    string    `json:"detail"`
 	Code      ErrorCode `json:"code"`
 	RequestID string    `json:"request_id"`
+	problemExtension
+}
+
+// problemExtension sind optionale Zusatzfelder nach RFC 9457 Abschnitt 3.2.
+type problemExtension struct {
+	// Errors nennt ungültige Felder mit stabilen Codes, nie die eingegebenen Werte.
+	Errors any `json:"errors,omitempty"`
+	// Reason präzisiert CART_CHANGED (total_changed, item_unavailable).
+	Reason string `json:"reason,omitempty"`
+	// Cart ist der aktuelle Warenkorb des angemeldeten Kunden bei CART_CHANGED.
+	Cart any `json:"cart,omitempty"`
 }
 
 // HandleError ordnet bekannte Fehler einer sicheren Problemantwort zu.
@@ -79,7 +100,9 @@ func HandleError(c *gin.Context, err error) {
 	}
 }
 
-func writeProblem(c *gin.Context, code ErrorCode) {
+func writeProblem(c *gin.Context, code ErrorCode) { writeProblemWith(c, code, problemExtension{}) }
+
+func writeProblemWith(c *gin.Context, code ErrorCode, extension problemExtension) {
 	spec, ok := problemSpecs[code]
 	if !ok {
 		code = InternalError
@@ -90,6 +113,7 @@ func writeProblem(c *gin.Context, code ErrorCode) {
 	response, err := json.Marshal(problem{
 		Type: spec.typeURI, Title: spec.title, Status: spec.status,
 		Detail: spec.detail, Code: code, RequestID: RequestID(c.Request.Context()),
+		problemExtension: extension,
 	})
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)

@@ -48,10 +48,23 @@ type Repository struct{ db *sql.DB }
 
 func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
 
+// Querier ist *sql.DB oder *sql.Tx; so rechnet der Checkout in seiner Transaktion
+// mit genau derselben Logik wie die Warenkorbanzeige.
+type Querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 func (r *Repository) Get(ctx context.Context, customerID string) (Snapshot, error) {
+	return Load(ctx, r.db, customerID)
+}
+
+// Load liest den Warenkorb eines Kunden mit aktuellem Preis, Bestand und Rabatt und
+// berechnet die Preisaufstellung nach ADR-007.
+func Load(ctx context.Context, q Querier, customerID string) (Snapshot, error) {
 	snapshot := Snapshot{Items: []Item{}, Currency: "EUR"}
 	lines := []pricing.Line{}
-	rows, err := r.db.QueryContext(ctx, `SELECT ci.variant_id, v.product_id, p.slug, p.name,
+	rows, err := q.QueryContext(ctx, `SELECT ci.variant_id, v.product_id, p.slug, p.name,
 		v.sku, v.label, ci.quantity, v.price_cents, v.currency, v.stock_quantity,
 		v.is_active, p.status, p.tax_class
 		FROM cart_items ci JOIN product_variants v ON v.id = ci.variant_id
@@ -96,7 +109,7 @@ func (r *Repository) Get(ctx context.Context, customerID string) (Snapshot, erro
 		return snapshot, err
 	}
 	rows.Close()
-	discount, err := r.storedDiscount(ctx, customerID)
+	discount, err := storedDiscount(ctx, q, customerID)
 	if err != nil {
 		return snapshot, err
 	}

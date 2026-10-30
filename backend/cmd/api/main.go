@@ -17,6 +17,7 @@ import (
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
 
@@ -69,6 +70,7 @@ func main() {
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	server.RegisterDiscountAdminRoutes(router, authHandler, cart.NewDiscountAdmin(connection.SQL))
+	server.RegisterOrderRoutes(router, authHandler, orders.NewRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"

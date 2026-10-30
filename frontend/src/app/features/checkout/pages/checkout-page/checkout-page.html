@@ -1,0 +1,139 @@
+<div class="container py-4 py-lg-5 checkout-page">
+  <app-checkout-steps [current]="2" />
+  <h1 class="checkout-title">Kasse</h1>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p role="status">Kasse wird geladen …</p>
+    }
+    @case ('signed-out') {
+      <div class="alert alert-info" role="status">
+        Bitte melden Sie sich im <a routerLink="/warenkorb">Warenkorb</a> an, um zu bestellen.
+      </div>
+    }
+    @case ('not-customer') {
+      <div class="alert alert-warning" role="alert">
+        Mit diesem Konto kann nicht bestellt werden.
+      </div>
+    }
+    @case ('empty') {
+      <p>Ihr Warenkorb ist leer.</p>
+      <a class="btn btn-primary" routerLink="/produkte">Produkte ansehen</a>
+    }
+    @case ('error') {
+      <div class="alert alert-danger" role="alert">
+        Die Kasse konnte nicht geladen werden. Versuchen Sie es in einem Moment erneut.
+      </div>
+      <button class="btn btn-outline-primary" type="button" (click)="load()">Erneut laden</button>
+    }
+    @case ('ready') {
+      <form class="checkout-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <section class="checkout-address" aria-labelledby="checkout-address-title">
+          <h2 id="checkout-address-title" class="checkout-heading">Liefer- und Rechnungsadresse</h2>
+          <p class="checkout-lead">
+            Wir liefern innerhalb Deutschlands. Die Rechnung geht an dieselbe Adresse.
+          </p>
+
+          @for (group of groups; track group.legend) {
+            <fieldset class="checkout-group">
+              <legend>{{ group.legend }}</legend>
+              <div class="checkout-fields">
+                @for (f of group.fields; track f.name) {
+                  @let error = fieldError(f.name);
+                  @let id = 'checkout-' + f.name;
+                  <div
+                    class="checkout-field"
+                    [class.checkout-field-wide]="f.size === 'wide'"
+                    [class.checkout-field-grow]="f.size === 'grow'"
+                    [class.checkout-field-narrow]="f.size === 'narrow'"
+                  >
+                    <label class="form-label" [for]="id">
+                      {{ labels[f.name] }}
+                      @if (f.optional) {
+                        <span class="checkout-optional">optional</span>
+                      }
+                    </label>
+                    <input
+                      class="form-control"
+                      [class.is-invalid]="error"
+                      [id]="id"
+                      [formControl]="form.controls[f.name]"
+                      [attr.autocomplete]="f.autocomplete"
+                      [attr.inputmode]="f.numeric ? 'numeric' : null"
+                      [attr.aria-invalid]="error ? true : null"
+                      [attr.aria-describedby]="error ? id + '-error' : f.hint ? id + '-hint' : null"
+                      [attr.aria-required]="f.optional ? null : true"
+                      (input)="clearServerError(f.name)"
+                    />
+                    @if (error) {
+                      <p class="invalid-feedback d-block" [id]="id + '-error'">{{ error }}</p>
+                    } @else if (f.hint) {
+                      <p class="form-text" [id]="id + '-hint'">{{ f.hint }}</p>
+                    }
+                  </div>
+                }
+              </div>
+              @if (group.country) {
+                <p class="checkout-country">
+                  <span class="checkout-country-label">Land</span> Deutschland
+                </p>
+              }
+            </fieldset>
+          }
+
+          <p class="checkout-account">Bestellt über das Kundenkonto {{ email() }}</p>
+        </section>
+
+        <aside class="checkout-summary" aria-labelledby="checkout-summary-title">
+          <h2 id="checkout-summary-title" class="checkout-heading">Ihre Bestellung</h2>
+          <ul class="checkout-items">
+            @for (item of cart().items; track item.variant_id) {
+              <li>
+                <span class="checkout-qty" aria-hidden="true">{{ item.quantity }}×</span>
+                <span class="checkout-item-name">
+                  <span class="visually-hidden">{{ item.quantity }} ×</span>
+                  {{ item.product_name }}
+                  <span class="checkout-item-meta">{{ item.label }}</span>
+                  @if (!item.available) {
+                    <span class="checkout-item-unavailable">Nicht lieferbar</span>
+                  }
+                </span>
+                <span class="checkout-item-price">{{ money(item.line_total_cents) | money }}</span>
+              </li>
+            }
+          </ul>
+          <app-price-summary [pricing]="cart().pricing" [discount]="appliedDiscount()" />
+
+          @if (notice(); as current) {
+            <div
+              #noticeBox
+              class="checkout-notice"
+              [class.checkout-notice-danger]="current.kind === 'danger'"
+              role="alert"
+              tabindex="-1"
+            >
+              {{ current.text }}
+              @if (!allAvailable()) {
+                <a class="d-block mt-1" routerLink="/warenkorb">Zum Warenkorb</a>
+              }
+            </div>
+          }
+
+          <button
+            class="checkout-submit"
+            type="submit"
+            data-testid="checkout-submit"
+            [disabled]="busy() || !allAvailable()"
+            [attr.aria-busy]="busy() ? true : null"
+          >
+            {{ busy() ? 'Bestellung wird gesendet …' : 'Zahlungspflichtig bestellen' }}
+          </button>
+          <p class="checkout-legal">
+            Vorschau: Die Bestellung wird gespeichert, aber weder bezahlt noch versendet.
+          </p>
+          <a class="checkout-back" routerLink="/warenkorb">Warenkorb ändern</a>
+        </aside>
+      </form>
+    }
+  }
+</div>

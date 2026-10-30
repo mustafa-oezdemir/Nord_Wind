@@ -1,0 +1,112 @@
+<div class="container py-4 py-lg-5 order-page">
+  @switch (state()) {
+    @case ('loading') {
+      <p role="status">Bestellung wird geladen …</p>
+    }
+    @case ('signed-out') {
+      <h1>Bestellung</h1>
+      <div class="alert alert-info" role="status">
+        Bitte melden Sie sich im <a routerLink="/warenkorb">Warenkorb</a> an, um Ihre Bestellung zu
+        sehen.
+      </div>
+    }
+    @case ('not-found') {
+      <h1>Bestellung nicht gefunden</h1>
+      <p>Zu dieser Nummer gibt es in Ihrem Kundenkonto keine Bestellung.</p>
+      <a class="btn btn-primary" routerLink="/produkte">Produkte ansehen</a>
+    }
+    @case ('error') {
+      <h1>Bestellung</h1>
+      <div class="alert alert-danger" role="alert">
+        Die Bestellung konnte nicht geladen werden. Versuchen Sie es in einem Moment erneut.
+      </div>
+      <button class="btn btn-outline-primary" type="button" (click)="load(orderNumber())">
+        Erneut laden
+      </button>
+    }
+    @case ('ready') {
+      @let current = order()!;
+      @let a = current.address;
+      <app-checkout-steps [current]="3" />
+
+      <header class="order-hero">
+        <svg class="order-check" viewBox="0 0 52 52" aria-hidden="true">
+          <circle cx="26" cy="26" r="24" />
+          <path d="M15 27.5 22.5 35 37.5 18.5" />
+        </svg>
+        <div>
+          <h1 #heading tabindex="-1">Danke, {{ a.first_name }}!</h1>
+          <p class="order-lead">
+            Ihre Bestellung ist gespeichert. Bitte notieren Sie die Bestellnummer für Rückfragen.
+          </p>
+          <p class="order-number">
+            <span class="order-number-label">Bestellnummer</span>
+            <span data-testid="order-number">{{ current.order_number }}</span>
+          </p>
+        </div>
+      </header>
+
+      <ol class="order-next" aria-label="So geht es weiter">
+        <li class="order-next-done">
+          <strong>Bestellung gespeichert</strong>
+          <span>{{ current.created_at | date: 'd. MMMM y, HH:mm' : 'Europe/Berlin' }} Uhr</span>
+        </li>
+        <li>
+          <strong>Zahlung</strong>
+          <span>In der Vorschau nicht aktiv – es wird nichts abgebucht.</span>
+        </li>
+        <li>
+          <strong>Versand</strong>
+          <span>Startet erst nach der Zahlung.</span>
+        </li>
+      </ol>
+
+      <div class="order-grid">
+        <div class="order-details">
+          <section class="order-card" aria-labelledby="order-items-title">
+            <h2 id="order-items-title" class="order-card-title">Artikel</h2>
+            <ul class="order-items">
+              @for (item of current.items; track item.position) {
+                <li>
+                  <span class="order-qty" aria-hidden="true">{{ item.quantity }}×</span>
+                  <span class="order-item-name">
+                    <span class="visually-hidden">{{ item.quantity }} ×</span>
+                    {{ item.product_name }}
+                    <span class="order-item-meta">{{ item.variant_label }} · {{ item.sku }}</span>
+                  </span>
+                  <span class="order-price">{{ money(item.line_total_cents) | money }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+
+          <section class="order-card" aria-labelledby="order-address-title">
+            <h2 id="order-address-title" class="order-card-title">Liefer- und Rechnungsadresse</h2>
+            <address class="order-address" data-testid="order-address">
+              {{ a.first_name }} {{ a.last_name }}<br />
+              @if (a.company) {
+                {{ a.company }}<br />
+              }
+              {{ a.street }} {{ a.house_number }}<br />
+              @if (a.address_extra) {
+                {{ a.address_extra }}<br />
+              }
+              {{ a.postal_code }} {{ a.city }}<br />
+              Deutschland
+            </address>
+            <p class="order-account">Kundenkonto {{ current.customer_email }}</p>
+          </section>
+        </div>
+
+        <section class="order-card order-summary" aria-labelledby="order-summary-title">
+          <h2 id="order-summary-title" class="order-card-title">Übersicht</h2>
+          <p class="order-status">
+            Status <span data-testid="order-status">{{ statusLabel(current.status) }}</span>
+          </p>
+          <app-price-summary [pricing]="current.pricing" [discount]="current.discount" />
+          <a class="btn btn-primary w-100" routerLink="/produkte">Weiter einkaufen</a>
+        </section>
+      </div>
+    }
+  }
+</div>
