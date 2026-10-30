@@ -8,6 +8,7 @@ import {
   AdminApi,
   AdminAuditEvent,
   AdminCategory,
+  AdminImage,
   AdminProduct,
   AdminVariant,
   AuthSession,
@@ -56,6 +57,7 @@ export class AdminPage implements OnInit {
   protected readonly categories = signal<AdminCategory[]>([]);
   protected readonly products = signal<AdminProduct[]>([]);
   protected readonly variants = signal<AdminVariant[]>([]);
+  protected readonly images = signal<AdminImage[]>([]);
   protected readonly linkedCategories = signal<AdminCategory[]>([]);
   protected readonly events = signal<AdminAuditEvent[]>([]);
   protected readonly selectedProductId = signal('');
@@ -87,6 +89,8 @@ export class AdminPage implements OnInit {
   protected productForm = emptyProduct();
   protected variantForm = emptyVariant();
   protected categoryToAttach = '';
+  protected imageFile: File | null = null;
+  protected imageAlt = '';
 
   async ngOnInit(): Promise<void> {
     try {
@@ -114,6 +118,7 @@ export class AdminPage implements OnInit {
       this.categories.set([]);
       this.products.set([]);
       this.variants.set([]);
+      this.images.set([]);
       this.events.set([]);
     });
   }
@@ -180,16 +185,19 @@ export class AdminPage implements OnInit {
     this.categoryToAttach = '';
     if (!id) {
       this.variants.set([]);
+      this.images.set([]);
       this.linkedCategories.set([]);
       return;
     }
     try {
-      const [variants, categories] = await Promise.all([
+      const [variants, categories, images] = await Promise.all([
         firstValueFrom(this.api.listVariants(id)),
         firstValueFrom(this.api.productCategories(id)),
+        firstValueFrom(this.api.listImages(id)),
       ]);
       if (this.selectedProductId() !== id) return;
       this.variants.set(variants.data);
+      this.images.set(images.data);
       this.linkedCategories.set(categories.data);
     } catch (error) {
       this.showError(error);
@@ -223,6 +231,40 @@ export class AdminPage implements OnInit {
       await this.selectProduct(this.selectedProductId());
       await this.loadAudit();
       this.notice.set('Variante gelöscht.');
+    });
+  }
+
+  protected chooseImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.imageFile = input.files?.item(0) ?? null;
+  }
+
+  protected async uploadImage(input: HTMLInputElement): Promise<void> {
+    const productId = this.selectedProductId();
+    const file = this.imageFile;
+    if (!productId || !file) return;
+    if (file.size > 3 * 1024 * 1024 || !['image/jpeg', 'image/png'].includes(file.type)) {
+      this.error.set('Nur JPEG oder PNG bis 3 MiB hochladen.');
+      return;
+    }
+    await this.run(async () => {
+      await firstValueFrom(this.api.uploadImage(productId, file, this.imageAlt.trim()));
+      this.imageFile = null;
+      this.imageAlt = '';
+      input.value = '';
+      await this.selectProduct(productId);
+      await this.loadAudit();
+      this.notice.set('Bild gespeichert.');
+    });
+  }
+
+  protected async deleteImage(image: AdminImage): Promise<void> {
+    if (!globalThis.confirm(`Bild „${image.alt}“ wirklich löschen?`)) return;
+    await this.run(async () => {
+      await firstValueFrom(this.api.deleteImage(image.id));
+      await this.selectProduct(this.selectedProductId());
+      await this.loadAudit();
+      this.notice.set('Bild gelöscht.');
     });
   }
 
@@ -296,6 +338,9 @@ export class AdminPage implements OnInit {
           return;
         case 429:
           this.error.set('Zu viele Anmeldeversuche. Versuchen Sie es später erneut.');
+          return;
+        case 413:
+          this.error.set('Das Bild überschreitet die zulässige Größe.');
           return;
       }
     }

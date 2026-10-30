@@ -50,6 +50,7 @@ type productDetailResponse struct {
 	SaleStatus  string                 `json:"sale_status"`
 	Categories  []categoryRefResponse  `json:"categories"`
 	Variants    []variantOfferResponse `json:"variants"`
+	Images      []catalog.ProductImage `json:"images"`
 }
 
 type categoryRefResponse struct {
@@ -73,6 +74,7 @@ func newProductDetailResponse(detail catalog.ProductDetail) productDetailRespons
 		SaleStatus: string(detail.SaleStatus),
 		Categories: make([]categoryRefResponse, 0, len(detail.Categories)),
 		Variants:   make([]variantOfferResponse, 0, len(detail.Variants)),
+		Images:     detail.Images,
 	}
 	for _, category := range detail.Categories {
 		response.Categories = append(response.Categories, categoryRefResponse{

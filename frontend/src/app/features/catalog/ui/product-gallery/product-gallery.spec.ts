@@ -43,4 +43,13 @@ describe('ProductGallery', () => {
     expect(main().getAttribute('src')).toBe('/bilder/pfanne-seite.jpg');
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('zeigt nach einem gelöschten Bild das Platzhalter-Motiv, ohne abzustürzen', async () => {
+    const { fixture, element } = await render([images[0]]);
+    const main = element.querySelector('.gallery-image') as HTMLImageElement;
+    main.dispatchEvent(new Event('error'));
+    await fixture.whenStable();
+    expect(element.querySelector('app-product-visual')).not.toBeNull();
+    expect(element.querySelector('.gallery-image')).toBeNull();
+  });
 });

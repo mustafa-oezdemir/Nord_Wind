@@ -58,13 +58,14 @@ type ProductDetail struct {
 	SaleStatus  SaleStatus
 	Categories  []CategoryRef
 	Variants    []VariantOffer
+	Images      []ProductImage
 }
 
 // GetPublicProduct lädt ein veröffentlichtes oder archiviertes Produkt über seinen Slug.
 // Entwürfe bleiben unsichtbar und ergeben ErrNotFound. Archivierte Produkte liefern keine
 // Varianten, damit nichts mehr bestellt werden kann.
 func (r *Repository) GetPublicProduct(ctx context.Context, slug string) (ProductDetail, error) {
-	detail := ProductDetail{Categories: []CategoryRef{}, Variants: []VariantOffer{}}
+	detail := ProductDetail{Categories: []CategoryRef{}, Variants: []VariantOffer{}, Images: []ProductImage{}}
 	var status ProductStatus
 	err := r.db.QueryRowContext(ctx, `SELECT id, slug, name, description, status FROM products
 		WHERE lower(slug) = lower($1) AND status IN ('published', 'archived')`,
@@ -74,6 +75,9 @@ func (r *Repository) GetPublicProduct(ctx context.Context, slug string) (Product
 		return ProductDetail{}, notFound(err)
 	}
 	if detail.Categories, err = r.publicProductCategories(ctx, detail.ID); err != nil {
+		return ProductDetail{}, err
+	}
+	if detail.Images, err = r.ListProductImages(ctx, detail.ID); err != nil {
 		return ProductDetail{}, err
 	}
 	if status == ProductPublished {

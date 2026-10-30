@@ -65,6 +65,7 @@ func main() {
 	}
 	authHandler := server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
 	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
+	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"

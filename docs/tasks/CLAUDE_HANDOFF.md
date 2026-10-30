@@ -35,7 +35,8 @@ Die Reihenfolge bleibt abhängig von den vorherigen Schritten. Für jede Aufgabe
 - [x] **NW-09:** Responsive Angular-Startseite mit echter Katalog-API ist in `main` ([Nachweis](../progress/NW-09.md)).
 - [x] **NW-10:** Produktdetail, Varianten, Preis-/Bestandsanzeige und fehlende Slugs sind in `main` ([Nachweis](../progress/NW-10.md)).
 - [x] **NW-11–12:** Identität, Sessions und Admin-Katalogpflege sind implementiert ([NW-11](../progress/NW-11.md), [NW-12](../progress/NW-12.md)). Der Passwort-Reset ist nur entworfen; produktive Rollenvergabe ist noch zu entscheiden.
-- [ ] **NW-13–14:** Produktbilder und Mediensicherheit; Warenkorb. Fehlende Tabellen nur mit versionierten, datenbewahrenden Migrationen ergänzen.
+- [x] **NW-13:** Produktbilder und Mediensicherheit sind umgesetzt ([Nachweis](../progress/NW-13.md)).
+- [ ] **NW-14:** Persistenter Warenkorb mit Sitzungsbindung. Fehlende Tabellen nur mit versionierten, datenbewahrenden Migrationen ergänzen.
 - [ ] **NW-15–20:** Preis-, Steuer- und Versandvertrag fachlich entscheiden; Checkout-Transaktion; konkurrierenden Bestand; Payment-Webhooks; Versand/Tracking; Kundenkonto und Bestellhistorie.
 - [ ] **NW-21–26:** Deutschland-spezifische E-Commerce-Pflichten; Accessibility/SEO; Security-Hardening; Observability/Backup/Restore; Staging-/Release-Pipeline; Produktionsstart und Monitoring. Rechtliche, Zahlungs- und Betriebsentscheidungen vor der Implementierung mit dem Projektinhaber klären.
 

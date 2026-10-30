@@ -259,6 +259,66 @@ paths:
         '200': { $ref: '#/components/responses/AdminAuditList' }
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/admin/products/{id}/images:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Bilder eines Produkts in der Verwaltung lesen
+      operationId: adminListImages
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ProductImageList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    post:
+      summary: Bild hochladen und als neues JPEG speichern
+      operationId: adminUploadImage
+      description: JPEG/PNG bis 3 MiB und 2000 × 2000 Pixel; höchstens sechs Bilder pro Produkt. Originalname und Metadaten werden verworfen.
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, alt]
+              properties:
+                image: { type: string, format: binary }
+                alt: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '201': { $ref: '#/components/responses/ProductImage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+        '413': { $ref: '#/components/responses/BodyTooLarge' }
+  /api/v1/admin/images/{id}:
+    delete:
+      summary: Produktbild entfernen
+      operationId: adminDeleteImage
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AdminID'
+        - $ref: '#/components/parameters/CSRFToken'
+      responses:
+        '204': { description: Bild gelöscht und Audit-Ereignis geschrieben. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/media/products/{id}:
+    get:
+      summary: Bereinigtes Bild eines veröffentlichten oder archivierten Produkts abrufen
+      operationId: getProductImage
+      parameters: [{ $ref: '#/components/parameters/AdminID' }]
+      responses:
+        '200':
+          description: 'Neu kodiertes JPEG; X-Content-Type-Options: nosniff.'
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
   /api/v1/auth/register:
     post:
       summary: Kundenkonto registrieren
@@ -558,6 +618,20 @@ components:
             required: [data]
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/AdminAuditEvent' } }
+    ProductImage:
+      description: Bereinigtes Produktbild.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ProductImage' }
+    ProductImageList:
+      description: Bilder in Uploadreihenfolge.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/ProductImage' } }
     AdminConflict:
       description: Unique- oder Fremdschlüsselkonflikt; keine Änderung oder Audit-Eintrag geschrieben.
       content:
@@ -580,6 +654,11 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+    BodyTooLarge:
+      description: Multipart-Anfrage oder Bilddatei überschreitet das Größenlimit.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     CategoryNotFound:
       description: Der angegebene aktive Kategorie-Slug existiert nicht.
       content:
@@ -661,7 +740,7 @@ components:
       properties:
         id: { type: integer, format: int64 }
         actor_customer_id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [category, product, variant, product_category] }
+        entity_type: { type: string, enum: [category, product, variant, product_category, image] }
         entity_id: { type: string, format: uuid }
         related_id: { type: string, format: uuid, nullable: true }
         action: { type: string, enum: [create, update, delete, attach, detach] }
@@ -725,7 +804,7 @@ components:
           minimum: 0
     Product:
       type: object
-      required: [id, slug, name, description, price_cents, currency, available, variant_count]
+      required: [id, slug, name, description, price_cents, currency, available, variant_count, image_url]
       properties:
         id:
           type: string
@@ -749,6 +828,9 @@ components:
           type: integer
           format: int64
           minimum: 1
+        image_url:
+          type: string
+          description: Erstes Produktbild oder leerer String für das Platzhalter-Motiv.
     Category:
       type: object
       required: [id, parent_id, slug, name, description, sort_order]
@@ -792,7 +874,7 @@ components:
           $ref: '#/components/schemas/Pagination'
     ProductDetail:
       type: object
-      required: [id, slug, name, description, sale_status, categories, variants]
+      required: [id, slug, name, description, sale_status, categories, variants, images]
       properties:
         id:
           type: string
@@ -820,6 +902,20 @@ components:
           description: Aktive Varianten; auch ohne Einträge ein Array.
           items:
             $ref: '#/components/schemas/VariantOffer'
+        images:
+          type: array
+          description: Bilder in Uploadreihenfolge; auch ohne Einträge ein Array.
+          items:
+            $ref: '#/components/schemas/ProductImage'
+    ProductImage:
+      type: object
+      required: [id, src, alt, width, height]
+      properties:
+        id: { type: string, format: uuid }
+        src: { type: string, pattern: '^/api/v1/media/products/[0-9a-f-]+$' }
+        alt: { type: string, minLength: 1, maxLength: 200 }
+        width: { type: integer, minimum: 1, maximum: 2000 }
+        height: { type: integer, minimum: 1, maximum: 2000 }
     CategoryRef:
       type: object
       required: [id, slug, name]

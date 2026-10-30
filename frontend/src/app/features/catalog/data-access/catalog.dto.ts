@@ -16,6 +16,7 @@ export interface ProductDto {
   readonly currency: 'EUR';
   readonly available: boolean;
   readonly variant_count: number;
+  readonly image_url: string;
 }
 
 export interface CategoryDto {
@@ -55,4 +56,13 @@ export interface ProductDetailDto {
   readonly sale_status: 'available' | 'sold_out' | 'unavailable' | 'discontinued';
   readonly categories: readonly CategoryRefDto[];
   readonly variants: readonly VariantOfferDto[];
+  readonly images: readonly ProductImageDto[];
+}
+
+export interface ProductImageDto {
+  readonly id: string;
+  readonly src: string;
+  readonly alt: string;
+  readonly width: number;
+  readonly height: number;
 }

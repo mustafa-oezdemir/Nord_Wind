@@ -6,6 +6,7 @@ import {
   Page,
   Pagination,
   ProductDetail,
+  ProductImage,
   ProductSummary,
   SaleStatus,
   StockStatus,
@@ -43,9 +44,36 @@ export function parseProductDetail(body: unknown): ProductDetail {
     saleStatus: oneOf(record, 'sale_status', SALE_STATUSES),
     categories: list(record, 'categories').map(parseCategoryRef),
     variants: list(record, 'variants').map(parseVariant),
-    // Bilder liefert die API erst mit NW-13; bis dahin zeigt die Galerie das Platzhalter-Motiv.
-    images: [],
+    images: list(record, 'images').map(parseImage),
   };
+}
+
+function parseImage(value: unknown): ProductImage {
+  const record = asRecord(value, 'images');
+  const id = text(record, 'id');
+  const src = text(record, 'src');
+  if (
+    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id) ||
+    src !== `/api/v1/media/products/${id}`
+  ) {
+    throw new InvalidApiResponseError('images.src');
+  }
+  return {
+    src,
+    alt: text(record, 'alt'),
+    width: integer(record, 'width', 1),
+    height: integer(record, 'height', 1),
+  };
+}
+
+function mediaPath(value: string): string {
+  if (
+    value !== '' &&
+    !/^\/api\/v1\/media\/products\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
+  ) {
+    throw new InvalidApiResponseError('image_url');
+  }
+  return value;
 }
 
 function parseCategoryRef(value: unknown): CategoryRef {
@@ -99,6 +127,7 @@ function parseProduct(value: unknown): ProductSummary {
     lowestPrice: euros(integer(record, 'price_cents', 0)),
     available: bool(record, 'available'),
     variantCount: integer(record, 'variant_count', 1),
+    imageUrl: mediaPath(text(record, 'image_url', true)),
   };
 }
 

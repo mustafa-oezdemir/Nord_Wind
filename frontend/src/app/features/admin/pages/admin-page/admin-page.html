@@ -297,6 +297,70 @@
     @if (selectedProduct(); as product) {
       <section class="card p-3 p-lg-4 mt-4" aria-labelledby="variants-title">
         <h2 id="variants-title" class="h4">{{ product.name }}: Varianten und Kategorien</h2>
+        <section class="mb-4" aria-labelledby="product-images-title">
+          <h3 id="product-images-title" class="h5">Produktbilder</h3>
+          <p class="text-secondary">
+            Bis zu sechs JPEG- oder PNG-Dateien, je höchstens 3 MiB und 2000 × 2000 Pixel. Die API
+            erzeugt neue JPEG-Dateien ohne Originalnamen.
+          </p>
+          <ul class="list-group mb-3">
+            @for (image of images(); track image.id) {
+              <li class="list-group-item d-flex align-items-center gap-3">
+                <img
+                  [src]="image.src"
+                  [alt]="image.alt"
+                  width="72"
+                  height="72"
+                  class="object-fit-contain"
+                />
+                <span class="flex-grow-1">{{ image.alt }}</span>
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="deleteImage(image)"
+                >
+                  Entfernen
+                </button>
+              </li>
+            } @empty {
+              <li class="list-group-item text-secondary">Noch keine Bilder vorhanden.</li>
+            }
+          </ul>
+          <form class="row g-2 align-items-end" (ngSubmit)="uploadImage(imageInput)">
+            <div class="col-md-5">
+              <label class="form-label" for="product-image-file">Bilddatei</label>
+              <input
+                #imageInput
+                id="product-image-file"
+                class="form-control"
+                type="file"
+                accept="image/jpeg,image/png"
+                (change)="chooseImage($event)"
+              />
+            </div>
+            <div class="col-md-5">
+              <label class="form-label" for="product-image-alt">Bildbeschreibung</label>
+              <input
+                id="product-image-alt"
+                name="imageAlt"
+                class="form-control"
+                required
+                maxlength="200"
+                [(ngModel)]="imageAlt"
+              />
+            </div>
+            <div class="col-md-2">
+              <button
+                class="btn btn-outline-primary w-100"
+                type="submit"
+                [disabled]="busy() || !imageFile || !imageAlt.trim() || images().length >= 6"
+              >
+                Hochladen
+              </button>
+            </div>
+          </form>
+        </section>
         <div class="row g-4">
           <div class="col-12 col-lg-5">
             <h3 class="h5">Kategoriezuordnung</h3>
