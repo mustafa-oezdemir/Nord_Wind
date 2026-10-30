@@ -2,7 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { categoryDto, pageDto, productDto } from '../../../../testing/catalog-fixtures';
+import {
+  categoryDto,
+  pageDto,
+  productDetailDto,
+  productDto,
+  variantDto,
+} from '../../../../testing/catalog-fixtures';
 import { InvalidApiResponseError } from '../../../core/http/api-error';
 import { CatalogApi } from './catalog-api';
 
@@ -108,5 +114,60 @@ describe('CatalogApi', () => {
       'kochgeschirr',
     ]);
     expect(categories[1].parentId).toBe('0f1e2d3c-4b5a-4968-8776-655443322110');
+  });
+});
+
+describe('CatalogApi.getProduct', () => {
+  let api: CatalogApi;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    api = TestBed.inject(CatalogApi);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('lädt das Produkt über den kodierten Slug und bildet Varianten mit Cent-Preisen ab', async () => {
+    const result = firstValueFrom(api.getProduct('pfanne/28 cm'));
+    const request = httpMock.expectOne('/api/v1/products/pfanne%2F28%20cm');
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush(productDetailDto());
+
+    const product = await result;
+    expect(product.saleStatus).toBe('available');
+    expect(product.categories).toEqual([{ id: 'c-pfannen', slug: 'pfannen', name: 'Pfannen' }]);
+    expect(
+      product.variants.map((variant) => [
+        variant.sku,
+        variant.price.amountCents,
+        variant.stockStatus,
+      ]),
+    ).toEqual([
+      ['NW-PFANNE-24', 4_990, 'out_of_stock'],
+      ['NW-PFANNE-28', 5_990, 'low_stock'],
+      ['NW-PFANNE-32', 7_490, 'in_stock'],
+    ]);
+    expect(product.images).toEqual([]);
+  });
+
+  it('weist unbekannte Status, fremde Währungen und fehlende Listen ab', async () => {
+    const invalidBodies: object[] = [
+      productDetailDto({ sale_status: 'bald' as never }),
+      productDetailDto({ variants: [variantDto({ stock_status: 'viele' as never })] }),
+      productDetailDto({ variants: [{ ...variantDto(), currency: 'USD' as never }] }),
+      productDetailDto({ variants: [variantDto({ price_cents: -1 })] }),
+      { ...productDetailDto(), categories: null },
+    ];
+    for (const body of invalidBodies) {
+      const result = firstValueFrom(api.getProduct('gusseisenpfanne')).catch(
+        (error: unknown) => error,
+      );
+      httpMock.expectOne('/api/v1/products/gusseisenpfanne').flush(body);
+      expect(await result).toBeInstanceOf(InvalidApiResponseError);
+    }
   });
 });

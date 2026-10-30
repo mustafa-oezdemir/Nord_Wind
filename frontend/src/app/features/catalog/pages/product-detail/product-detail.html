@@ -1,0 +1,96 @@
+@if (notFound()) {
+  <app-not-found-view
+    heading="Produkt nicht gefunden"
+    message="Dieses Produkt gibt es nicht oder es wird nicht mehr angezeigt."
+  />
+} @else if (product.isLoading()) {
+  <div class="container product-detail" aria-busy="true">
+    <p class="visually-hidden" role="status">Produkt wird geladen …</p>
+    <div class="row g-4 g-lg-5 placeholder-glow" aria-hidden="true">
+      <div class="col-12 col-md-6 col-lg-7">
+        <span class="placeholder detail-skeleton-visual"></span>
+      </div>
+      <div class="col-12 col-md-6 col-lg-5">
+        <span class="placeholder col-9 detail-skeleton-title"></span>
+        <span class="placeholder col-4 detail-skeleton-price"></span>
+        <span class="placeholder col-6"></span>
+      </div>
+    </div>
+  </div>
+} @else if (apiError()) {
+  <div class="container product-detail">
+    <app-error-state
+      heading="Produkt konnte nicht geladen werden"
+      [message]="errorMessage()"
+      (retry)="product.reload()"
+    />
+  </div>
+} @else if (detail(); as item) {
+  <article class="container product-detail" aria-labelledby="produkt-titel">
+    <nav aria-label="Brotkrumen">
+      <ol class="breadcrumb detail-breadcrumb">
+        <li class="breadcrumb-item"><a routerLink="/">Startseite</a></li>
+        @for (category of breadcrumb(); track category.id) {
+          <li class="breadcrumb-item">
+            <a [routerLink]="['/kategorien', category.slug]">{{ category.name }}</a>
+          </li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">{{ item.name }}</li>
+      </ol>
+    </nav>
+
+    <div class="row g-4 g-lg-5">
+      <div class="col-12 col-md-6 col-lg-7">
+        <app-product-gallery [images]="item.images" [seed]="item.slug" />
+      </div>
+      <div class="col-12 col-md-6 col-lg-5">
+        <div class="buy-box">
+          <h1 id="produkt-titel" class="detail-title">{{ item.name }}</h1>
+
+          @if (saleNotice(); as notice) {
+            <p class="sale-notice" role="status">{{ notice }}</p>
+          }
+
+          @if (selectedVariant(); as variant) {
+            <p class="detail-price price" aria-live="polite">{{ variant.price | money }}</p>
+            <p class="detail-stock" [attr.data-stock]="variant.stockStatus">
+              {{ stockLabels[variant.stockStatus] }}
+            </p>
+            <p class="detail-sku">
+              Artikelnummer <span class="detail-sku-value">{{ variant.sku }}</span>
+            </p>
+          }
+
+          @if (item.variants.length > 1) {
+            <app-variant-picker
+              class="detail-variants"
+              [variants]="item.variants"
+              [selectedSku]="selectedSku()"
+              (selectedSkuChange)="selectVariant($event)"
+            />
+          } @else if (item.variants.length === 1) {
+            <p class="detail-single-variant">Variante: {{ item.variants[0].label }}</p>
+          }
+
+          @if (item.saleStatus === 'unavailable' || item.saleStatus === 'discontinued') {
+            <a class="btn btn-outline-primary" [routerLink]="alternative().link">{{
+              alternative().label
+            }}</a>
+          }
+
+          <p class="preview-note">
+            Vorschau: Bestellungen sind noch nicht möglich. Preise und Verfügbarkeit können sich bis
+            zum Verkaufsstart ändern.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    @if (item.description) {
+      <section class="detail-description" aria-labelledby="beschreibung-titel">
+        <h2 id="beschreibung-titel">Beschreibung</h2>
+        <p>{{ item.description }}</p>
+      </section>
+    }
+  </article>
+}

@@ -1,0 +1,78 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+}
+
+.variant-picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.variant-legend {
+  margin-bottom: 0.6rem;
+  font-size: t.$size-base;
+  font-weight: 650;
+}
+
+.variant-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.variant-option {
+  position: relative;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #a9bcc6;
+  border-radius: t.$radius-sm;
+  background: t.$white;
+  cursor: pointer;
+
+  &:hover {
+    border-color: t.$fjord;
+  }
+
+  &.is-selected {
+    border-color: t.$fjord;
+    box-shadow: inset 0 0 0 1px t.$fjord;
+    background: t.$mist;
+  }
+
+  // Die native Radio-Schaltfläche bleibt fokussierbar; der Rahmen liegt am Feld.
+  &:has(.variant-input:focus-visible) {
+    outline: 3px solid var(--nw-focus);
+    outline-offset: 2px;
+  }
+}
+
+.variant-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.variant-label {
+  font-weight: 650;
+}
+
+.variant-price {
+  font-size: t.$size-sm;
+}
+
+.variant-stock {
+  color: t.$success;
+  font-size: 0.8rem;
+}
+
+.variant-option.is-sold-out .variant-stock {
+  color: t.$slate;
+}
+
+.variant-option.is-sold-out:not(.is-selected) {
+  border-style: dashed;
+}

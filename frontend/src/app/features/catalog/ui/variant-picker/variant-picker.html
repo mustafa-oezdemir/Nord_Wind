@@ -1,0 +1,27 @@
+<fieldset class="variant-picker">
+  <legend class="variant-legend">Variante wählen</legend>
+  <div class="variant-options">
+    @for (variant of variants(); track variant.id) {
+      <label
+        class="variant-option"
+        [class.is-selected]="variant.sku === selectedSku()"
+        [class.is-sold-out]="variant.stockStatus === 'out_of_stock'"
+      >
+        <input
+          class="variant-input"
+          type="radio"
+          [name]="groupName"
+          [value]="variant.sku"
+          [checked]="variant.sku === selectedSku()"
+          (change)="selectedSku.set(variant.sku)"
+        />
+        <!-- Die unsichtbaren Kommas trennen die Teile im zugänglichen Namen der Option. -->
+        <span class="variant-label">{{ variant.label }}</span>
+        <span class="visually-hidden">, </span>
+        <span class="variant-price price">{{ variant.price | money }}</span>
+        <span class="visually-hidden">, </span>
+        <span class="variant-stock">{{ stockLabels[variant.stockStatus] }}</span>
+      </label>
+    }
+  </div>
+</fieldset>

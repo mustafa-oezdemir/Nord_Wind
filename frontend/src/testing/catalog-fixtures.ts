@@ -4,7 +4,9 @@ import {
   CategoryDto,
   PageDto,
   PaginationDto,
+  ProductDetailDto,
   ProductDto,
+  VariantOfferDto,
 } from '../app/features/catalog/data-access/catalog.dto';
 import { ProductSummary } from '../app/features/catalog/models/catalog.models';
 
@@ -30,6 +32,54 @@ export function categoryDto(overrides: Partial<CategoryDto> = {}): CategoryDto {
     name: 'Küche & Haushalt',
     description: 'Alles für die Küche.',
     sort_order: 1,
+    ...overrides,
+  };
+}
+
+export function variantDto(overrides: Partial<VariantOfferDto> = {}): VariantOfferDto {
+  return {
+    id: 'v-28',
+    sku: 'NW-PFANNE-28',
+    label: '28 cm',
+    price_cents: 5_990,
+    currency: 'EUR',
+    stock_status: 'in_stock',
+    ...overrides,
+  };
+}
+
+/** Pfanne mit drei Varianten: ausverkauft, knapp und auf Lager. */
+export function productDetailDto(overrides: Partial<ProductDetailDto> = {}): ProductDetailDto {
+  return {
+    id: '7d8c2c1e-0b7a-4c55-9a31-3b2f1c4d5e60',
+    slug: 'gusseisenpfanne',
+    name: 'Gusseisenpfanne',
+    description: 'Für Herd und Backofen.',
+    sale_status: 'available',
+    categories: [{ id: 'c-pfannen', slug: 'pfannen', name: 'Pfannen' }],
+    variants: [
+      variantDto({
+        id: 'v-24',
+        sku: 'NW-PFANNE-24',
+        label: '24 cm',
+        price_cents: 4_990,
+        stock_status: 'out_of_stock',
+      }),
+      variantDto({
+        id: 'v-28',
+        sku: 'NW-PFANNE-28',
+        label: '28 cm',
+        price_cents: 5_990,
+        stock_status: 'low_stock',
+      }),
+      variantDto({
+        id: 'v-32',
+        sku: 'NW-PFANNE-32',
+        label: '32 cm',
+        price_cents: 7_490,
+        stock_status: 'in_stock',
+      }),
+    ],
     ...overrides,
   };
 }

@@ -22,6 +22,20 @@ export class CategoryStore {
     return this.categories().find((category) => category.slug.toLowerCase() === wanted);
   }
 
+  /** Pfad von der Hauptkategorie bis zur angegebenen Kategorie, z. B. für Brotkrumen. */
+  path(slug: string): readonly Category[] {
+    const byId = new Map(this.categories().map((category) => [category.id, category]));
+    const path: Category[] = [];
+    const visited = new Set<string>();
+    let current = this.bySlug(slug);
+    while (current && !visited.has(current.id)) {
+      visited.add(current.id);
+      path.unshift(current);
+      current = current.parentId ? byId.get(current.parentId) : undefined;
+    }
+    return path;
+  }
+
   reload(): void {
     this.resource.reload();
   }

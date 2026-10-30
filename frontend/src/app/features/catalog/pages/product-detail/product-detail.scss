@@ -1,0 +1,107 @@
+@use 'tokens' as t;
+
+.product-detail {
+  padding-top: 1.5rem;
+}
+
+.detail-breadcrumb {
+  margin-bottom: 1.25rem;
+  font-size: t.$size-sm;
+}
+
+.buy-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.detail-title {
+  margin: 0 0 0.25rem;
+  font-size: clamp(t.$size-xl, 3.6vw, t.$size-2xl);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.sale-notice {
+  width: 100%;
+  margin: 0.25rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid t.$amber;
+  border-radius: t.$radius-sm;
+  background: t.$amber-soft;
+  font-weight: 600;
+}
+
+.detail-price {
+  margin: 0.25rem 0 0;
+  font-size: clamp(t.$size-lg, 3vw, t.$size-xl);
+}
+
+.detail-stock {
+  margin: 0;
+  color: t.$success;
+  font-weight: 600;
+
+  &[data-stock='out_of_stock'] {
+    color: t.$slate;
+  }
+}
+
+.detail-sku,
+.detail-single-variant {
+  margin: 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+.detail-sku-value {
+  font-variant-numeric: tabular-nums;
+  color: t.$ink;
+}
+
+.detail-variants {
+  width: 100%;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.preview-note {
+  width: 100%;
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid t.$line;
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+.detail-description {
+  max-width: 44rem;
+  margin-top: clamp(2rem, 5vw, 3rem);
+
+  h2 {
+    font-size: t.$size-lg;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    white-space: pre-line;
+  }
+}
+
+.detail-skeleton-visual {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: t.$radius-md;
+}
+
+.detail-skeleton-title {
+  display: block;
+  min-height: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.detail-skeleton-price {
+  display: block;
+  min-height: 2rem;
+  margin-bottom: 1rem;
+}

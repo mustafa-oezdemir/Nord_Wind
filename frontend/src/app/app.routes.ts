@@ -16,6 +16,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home-page/home-page').then((m) => m.HomePage),
       },
       { path: 'produkte', title: 'Alle Produkte', loadComponent: productList },
+      {
+        path: 'produkte/:slug',
+        title: 'Produkt',
+        loadComponent: () =>
+          import('./features/catalog/pages/product-detail/product-detail').then(
+            (m) => m.ProductDetailPage,
+          ),
+      },
       { path: 'kategorien/:slug', title: 'Kategorie', loadComponent: productList },
       {
         path: '**',
