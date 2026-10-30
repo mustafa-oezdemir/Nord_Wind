@@ -31,3 +31,28 @@ export interface PageDto<T> {
   readonly data: readonly T[];
   readonly pagination: PaginationDto;
 }
+
+export interface CategoryRefDto {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+}
+
+export interface VariantOfferDto {
+  readonly id: string;
+  readonly sku: string;
+  readonly label: string;
+  readonly price_cents: number;
+  readonly currency: 'EUR';
+  readonly stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
+}
+
+export interface ProductDetailDto {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string;
+  readonly sale_status: 'available' | 'sold_out' | 'unavailable' | 'discontinued';
+  readonly categories: readonly CategoryRefDto[];
+  readonly variants: readonly VariantOfferDto[];
+}

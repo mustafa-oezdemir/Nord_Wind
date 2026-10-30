@@ -40,6 +40,38 @@ paths:
           $ref: '#/components/responses/CategoryNotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/products/{slug}:
+    get:
+      summary: Ein öffentliches Produkt mit Varianten abrufen
+      description: >-
+        Liefert veröffentlichte und archivierte Produkte; Entwürfe ergeben 404. Der Slug wird
+        ohne Beachtung der Großschreibung verglichen, die Antwort enthält den gespeicherten Slug.
+        Varianten sind nur aktive Varianten, sortiert nach Preis und Bezeichnung. Archivierte
+        Produkte liefern keine Varianten. Exakte Lagermengen werden nicht veröffentlicht,
+        sondern als `stock_status` (knapp ab höchstens 5 Stück). Query-Parameter sind nicht
+        erlaubt.
+      operationId: getProduct
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        '200':
+          description: Produkt mit Verkaufsstatus, aktiven Kategorien und Varianten.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/ProductNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/categories:
     get:
       summary: Aktive Kategorien auflisten
@@ -128,6 +160,12 @@ components:
             $ref: '#/components/schemas/Problem'
     CategoryNotFound:
       description: Der angegebene aktive Kategorie-Slug existiert nicht.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ProductNotFound:
+      description: Kein veröffentlichtes oder archiviertes Produkt mit diesem Slug.
       content:
         application/problem+json:
           schema:
@@ -226,6 +264,68 @@ components:
             $ref: '#/components/schemas/Category'
         pagination:
           $ref: '#/components/schemas/Pagination'
+    ProductDetail:
+      type: object
+      required: [id, slug, name, description, sale_status, categories, variants]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sale_status:
+          type: string
+          enum: [available, sold_out, unavailable, discontinued]
+          description: >-
+            `available`: mindestens eine Variante hat Bestand; `sold_out`: aktive Varianten
+            ohne Bestand; `unavailable`: veröffentlicht, aber ohne aktive Variante;
+            `discontinued`: archiviert.
+        categories:
+          type: array
+          description: Aktive Kategorien in Pflegereihenfolge.
+          items:
+            $ref: '#/components/schemas/CategoryRef'
+        variants:
+          type: array
+          description: Aktive Varianten; auch ohne Einträge ein Array.
+          items:
+            $ref: '#/components/schemas/VariantOffer'
+    CategoryRef:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+    VariantOffer:
+      type: object
+      required: [id, sku, label, price_cents, currency, stock_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        label:
+          type: string
+        price_cents:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          enum: [EUR]
+        stock_status:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
     Problem:
       type: object
       required: [type, title, status, detail, code, request_id]

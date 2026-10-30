@@ -45,3 +45,42 @@ export interface ProductQuery {
   readonly page: number;
   readonly limit: number;
 }
+
+/** Bestand ohne exakte Menge, wie ihn die API veröffentlicht. */
+export type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
+
+/** Ob ein Produkt derzeit verkauft wird; die API entscheidet anhand von Status und Varianten. */
+export type SaleStatus = 'available' | 'sold_out' | 'unavailable' | 'discontinued';
+
+export interface CategoryRef {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+}
+
+export interface VariantOffer {
+  readonly id: string;
+  readonly sku: string;
+  readonly label: string;
+  readonly price: Money;
+  readonly stockStatus: StockStatus;
+}
+
+/** Produktbild für die Galerie; die API liefert Bilder erst mit NW-13. */
+export interface ProductImage {
+  readonly src: string;
+  readonly alt: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface ProductDetail {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string;
+  readonly saleStatus: SaleStatus;
+  readonly categories: readonly CategoryRef[];
+  readonly variants: readonly VariantOffer[];
+  readonly images: readonly ProductImage[];
+}

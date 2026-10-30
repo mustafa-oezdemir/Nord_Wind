@@ -1,6 +1,16 @@
 import { InvalidApiResponseError } from '../../../core/http/api-error';
 import { euros } from '../../../shared/money/money';
-import { Category, Page, Pagination, ProductSummary } from '../models/catalog.models';
+import {
+  Category,
+  CategoryRef,
+  Page,
+  Pagination,
+  ProductDetail,
+  ProductSummary,
+  SaleStatus,
+  StockStatus,
+  VariantOffer,
+} from '../models/catalog.models';
 
 // Die API ist eine Vertrauensgrenze: Antworten werden geprüft, bevor die Oberfläche
 // sie anzeigt. Abweichungen führen zu einem Fehlerzustand statt zu falschen Preisen.
@@ -13,6 +23,48 @@ export function parseProductPage(body: unknown): Page<ProductSummary> {
 
 export function parseCategoryPage(body: unknown): Page<Category> {
   return parsePage(body, parseCategory);
+}
+
+const SALE_STATUSES: readonly SaleStatus[] = [
+  'available',
+  'sold_out',
+  'unavailable',
+  'discontinued',
+];
+const STOCK_STATUSES: readonly StockStatus[] = ['in_stock', 'low_stock', 'out_of_stock'];
+
+export function parseProductDetail(body: unknown): ProductDetail {
+  const record = asRecord(body, 'product');
+  return {
+    id: text(record, 'id'),
+    slug: text(record, 'slug'),
+    name: text(record, 'name'),
+    description: text(record, 'description', true),
+    saleStatus: oneOf(record, 'sale_status', SALE_STATUSES),
+    categories: list(record, 'categories').map(parseCategoryRef),
+    variants: list(record, 'variants').map(parseVariant),
+    // Bilder liefert die API erst mit NW-13; bis dahin zeigt die Galerie das Platzhalter-Motiv.
+    images: [],
+  };
+}
+
+function parseCategoryRef(value: unknown): CategoryRef {
+  const record = asRecord(value, 'categories');
+  return { id: text(record, 'id'), slug: text(record, 'slug'), name: text(record, 'name') };
+}
+
+function parseVariant(value: unknown): VariantOffer {
+  const record = asRecord(value, 'variants');
+  if (record['currency'] !== 'EUR') {
+    throw new InvalidApiResponseError('currency');
+  }
+  return {
+    id: text(record, 'id'),
+    sku: text(record, 'sku'),
+    label: text(record, 'label'),
+    price: euros(integer(record, 'price_cents', 0)),
+    stockStatus: oneOf(record, 'stock_status', STOCK_STATUSES),
+  };
 }
 
 function parsePage<T>(body: unknown, parseItem: (item: unknown) => T): Page<T> {
@@ -87,6 +139,22 @@ function integer(record: JsonRecord, field: string, min: number): number {
     throw new InvalidApiResponseError(field);
   }
   return value;
+}
+
+function list(record: JsonRecord, field: string): readonly unknown[] {
+  const value = record[field];
+  if (!Array.isArray(value)) {
+    throw new InvalidApiResponseError(field);
+  }
+  return value;
+}
+
+function oneOf<T extends string>(record: JsonRecord, field: string, allowed: readonly T[]): T {
+  const value = record[field];
+  if (typeof value !== 'string' || !(allowed as readonly string[]).includes(value)) {
+    throw new InvalidApiResponseError(field);
+  }
+  return value as T;
 }
 
 function bool(record: JsonRecord, field: string): boolean {

@@ -60,6 +60,7 @@ func RegisterCatalogRoutes(router *gin.Engine, repository *catalog.Repository) {
 			Data: categories, Pagination: pagination(page, options.Limit, result.Total),
 		})
 	})
+	registerProductDetailRoute(router, repository)
 }
 
 func catalogOptions(c *gin.Context) (catalog.ListOptions, int, error) {

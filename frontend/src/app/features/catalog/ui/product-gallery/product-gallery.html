@@ -1,0 +1,44 @@
+<figure class="gallery">
+  <div class="gallery-stage">
+    @if (activeImage(); as image) {
+      <img
+        class="gallery-image"
+        [src]="image.src"
+        [alt]="image.alt"
+        [width]="image.width"
+        [height]="image.height"
+        decoding="async"
+      />
+    } @else {
+      <app-product-visual class="gallery-placeholder" [seed]="seed()" />
+    }
+  </div>
+  @if (images().length > 1) {
+    <ul class="gallery-thumbs" aria-label="Produktbilder">
+      @for (image of images(); track image.src; let index = $index) {
+        <li>
+          <button
+            class="gallery-thumb"
+            type="button"
+            [class.is-active]="index === activeIndex()"
+            [attr.aria-pressed]="index === activeIndex()"
+            [attr.aria-label]="'Bild ' + (index + 1) + ' von ' + images().length + ' anzeigen'"
+            (click)="select(index)"
+          >
+            <img
+              [src]="image.src"
+              alt=""
+              [width]="image.width"
+              [height]="image.height"
+              loading="lazy"
+              decoding="async"
+            />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+  @if (images().length === 0) {
+    <figcaption class="gallery-note">Produktfotos folgen.</figcaption>
+  }
+</figure>

@@ -2,8 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config/api-config';
-import { Category, Page, ProductQuery, ProductSummary } from '../models/catalog.models';
-import { parseCategoryPage, parseProductPage } from './catalog.mapper';
+import {
+  Category,
+  Page,
+  ProductDetail,
+  ProductQuery,
+  ProductSummary,
+} from '../models/catalog.models';
+import { parseCategoryPage, parseProductDetail, parseProductPage } from './catalog.mapper';
 
 /** Höchstwert der API für `limit`; die Navigation lädt alle Kategorien auf einer Seite. */
 export const MAX_PAGE_SIZE = 100;
@@ -18,6 +24,13 @@ export class CatalogApi {
     return this.http
       .get<unknown>(`${this.baseUrl}/products`, { params: productParams(query) })
       .pipe(map(parseProductPage));
+  }
+
+  /** Produkt mit aktiven Varianten; Preis und Bestand kommen ausschließlich von der API. */
+  getProduct(slug: string): Observable<ProductDetail> {
+    return this.http
+      .get<unknown>(`${this.baseUrl}/products/${encodeURIComponent(slug)}`)
+      .pipe(map(parseProductDetail));
   }
 
   /** Alle aktiven Kategorien in Pflegereihenfolge (derzeit höchstens 100). */
