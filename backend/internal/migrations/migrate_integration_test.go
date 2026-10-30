@@ -77,6 +77,23 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ($1, $2, 'Telefon', 'NW-SKU-1', 0, 100, '{}'::jsonb)`, "23514", orderID, variantID)
 	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ('00000000-0000-0000-0000-000000000000', $1, 'Telefon', 'NW-SKU-1', 1, 100, '{}'::jsonb)`, "23503", variantID)
 
+	mustExec(t, ctx, db, `INSERT INTO admin_audit_events (actor_customer_id, entity_type, entity_id, action)
+		VALUES ($1, 'category', $2, 'update')`, customerID, categoryID)
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Audit-Down darf vorhandene Ereignisse nicht entfernen")
+	}
+	mustExec(t, ctx, db, `DELETE FROM admin_audit_events`)
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 5 mit Domain-Daten: %v", err)
+	}
+	mustExec(t, ctx, db, `UPDATE customers SET password_hash = $1 WHERE id = $2`, strings.Repeat("x", 60), customerID)
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Identity-Down darf vorhandene Passwort-Hashes nicht entfernen")
+	}
+	mustExec(t, ctx, db, `UPDATE customers SET password_hash = NULL WHERE id = $1`, customerID)
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 4 mit Domain-Daten: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down der Suchindizes mit Domain-Daten: %v", err)
 	}
@@ -99,6 +116,12 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 5: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 4: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 3: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -114,6 +137,12 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Status nach Up/Down/Up: %v", err)
 	}
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 5 vor Bootstrap-Test: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 4 vor Bootstrap-Test: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 3 vor Bootstrap-Test: %v", err)
 	}
@@ -144,6 +173,12 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	var legacyValue string
 	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'legacy'`).Scan(&legacyValue); err != nil || legacyValue != "bleibt" {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 5 mit bestehendem app_settings: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 4 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 3 mit bestehendem app_settings: %v", err)

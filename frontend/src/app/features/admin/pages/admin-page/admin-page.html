@@ -1,0 +1,507 @@
+<main class="admin-shell container py-4 py-lg-5">
+  <header class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <a routerLink="/" class="text-decoration-none">← Zum Shop</a>
+      <h1 class="mt-2 mb-1">NordWinds Verwaltung</h1>
+      <p class="text-secondary mb-0">Kategorien, Produkte und Varianten pflegen</p>
+    </div>
+    @if (session()) {
+      <div class="text-end">
+        <div class="small text-secondary mb-2">{{ session()!.customer.email }}</div>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          [disabled]="busy()"
+          (click)="logout()"
+        >
+          Abmelden
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+  @if (notice()) {
+    <div class="alert alert-success" role="status">{{ notice() }}</div>
+  }
+
+  @if (!session()) {
+    <section class="card admin-login p-4" aria-labelledby="login-title">
+      <h2 id="login-title" class="h4">Admin-Anmeldung</h2>
+      <form (ngSubmit)="login()">
+        <div class="mb-3">
+          <label class="form-label" for="admin-email">E-Mail</label>
+          <input
+            id="admin-email"
+            name="email"
+            type="email"
+            class="form-control"
+            autocomplete="username"
+            required
+            [(ngModel)]="email"
+          />
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="admin-password">Passwort</label>
+          <input
+            id="admin-password"
+            name="password"
+            type="password"
+            class="form-control"
+            autocomplete="current-password"
+            required
+            [(ngModel)]="password"
+          />
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="busy()">Anmelden</button>
+      </form>
+    </section>
+  } @else if (session()!.customer.role !== 'admin') {
+    <div class="alert alert-warning" role="alert">Dieses Konto hat keine Adminberechtigung.</div>
+  } @else {
+    <div class="row g-4">
+      <section class="col-12 col-xl-5" aria-labelledby="categories-title">
+        <div class="card p-3 p-lg-4 h-100">
+          <h2 id="categories-title" class="h4">Kategoriebaum</h2>
+          @if (categoryTree().length === 0) {
+            <p class="text-secondary">Noch keine Kategorien vorhanden.</p>
+          } @else {
+            <ul class="list-group mb-4">
+              @for (entry of categoryTree(); track entry.category.id) {
+                <li class="list-group-item d-flex align-items-center justify-content-between gap-2">
+                  <span [style.padding-left.px]="entry.depth * 18">
+                    {{ entry.category.name }}
+                    @if (entry.category.status === 'inactive') {
+                      <small class="text-secondary">(inaktiv)</small>
+                    }
+                  </span>
+                  <span class="d-flex gap-1">
+                    <button
+                      class="btn btn-outline-primary btn-sm"
+                      type="button"
+                      (click)="editCategory(entry.category)"
+                    >
+                      Bearbeiten
+                    </button>
+                    <button
+                      class="btn btn-outline-danger btn-sm"
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="deleteCategory(entry.category)"
+                    >
+                      Löschen
+                    </button>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+          <h3 class="h5">{{ categoryForm.id ? 'Kategorie bearbeiten' : 'Kategorie anlegen' }}</h3>
+          <form #categoryNgForm="ngForm" (ngSubmit)="saveCategory()" class="admin-form">
+            <label class="form-label" for="category-name">Name</label>
+            <input
+              id="category-name"
+              name="categoryName"
+              class="form-control mb-2"
+              required
+              maxlength="200"
+              [(ngModel)]="categoryForm.name"
+            />
+            <label class="form-label" for="category-slug">Slug</label>
+            <input
+              id="category-slug"
+              name="categorySlug"
+              class="form-control mb-2"
+              required
+              maxlength="120"
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              [(ngModel)]="categoryForm.slug"
+            />
+            <label class="form-label" for="category-parent">Übergeordnete Kategorie</label>
+            <select
+              id="category-parent"
+              name="categoryParent"
+              class="form-select mb-2"
+              [(ngModel)]="categoryForm.parent_id"
+            >
+              <option [ngValue]="null">Keine</option>
+              @for (entry of categoryTree(); track entry.category.id) {
+                @if (entry.category.id !== categoryForm.id) {
+                  <option [ngValue]="entry.category.id">{{ entry.category.name }}</option>
+                }
+              }
+            </select>
+            <label class="form-label" for="category-description">Beschreibung</label>
+            <textarea
+              id="category-description"
+              name="categoryDescription"
+              class="form-control mb-2"
+              rows="2"
+              maxlength="5000"
+              [(ngModel)]="categoryForm.description"
+            ></textarea>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label" for="category-status">Status</label>
+                <select
+                  id="category-status"
+                  name="categoryStatus"
+                  class="form-select"
+                  [(ngModel)]="categoryForm.status"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="category-order">Sortierung</label>
+                <input
+                  id="category-order"
+                  name="categoryOrder"
+                  type="number"
+                  min="0"
+                  class="form-control"
+                  [(ngModel)]="categoryForm.sort_order"
+                />
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-primary"
+                type="submit"
+                [disabled]="busy() || categoryNgForm.invalid"
+              >
+                Speichern
+              </button>
+              <button class="btn btn-outline-secondary" type="button" (click)="resetCategory()">
+                Zurücksetzen
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="col-12 col-xl-7" aria-labelledby="products-title">
+        <div class="card p-3 p-lg-4 h-100">
+          <h2 id="products-title" class="h4">Produkte</h2>
+          @if (products().length === 0) {
+            <p class="text-secondary">Noch keine Produkte vorhanden.</p>
+          } @else {
+            <div class="table-responsive mb-4">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th scope="col">Produkt</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (product of products(); track product.id) {
+                    <tr>
+                      <td>
+                        {{ product.name
+                        }}<small class="d-block text-secondary">{{ product.slug }}</small>
+                      </td>
+                      <td>{{ product.status }}</td>
+                      <td class="text-nowrap">
+                        <button
+                          class="btn btn-outline-primary btn-sm me-1"
+                          type="button"
+                          (click)="editProduct(product)"
+                        >
+                          Bearbeiten
+                        </button>
+                        <button
+                          class="btn btn-outline-secondary btn-sm me-1"
+                          type="button"
+                          (click)="selectProduct(product.id)"
+                        >
+                          Varianten
+                        </button>
+                        <button
+                          class="btn btn-outline-danger btn-sm"
+                          type="button"
+                          [disabled]="busy()"
+                          (click)="deleteProduct(product)"
+                        >
+                          Löschen
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <h3 class="h5">{{ productForm.id ? 'Produkt bearbeiten' : 'Produkt anlegen' }}</h3>
+          <form #productNgForm="ngForm" (ngSubmit)="saveProduct()" class="admin-form">
+            <label class="form-label" for="product-name">Name</label>
+            <input
+              id="product-name"
+              name="productName"
+              class="form-control mb-2"
+              required
+              maxlength="200"
+              [(ngModel)]="productForm.name"
+            />
+            <label class="form-label" for="product-slug">Slug</label>
+            <input
+              id="product-slug"
+              name="productSlug"
+              class="form-control mb-2"
+              required
+              maxlength="120"
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              [(ngModel)]="productForm.slug"
+            />
+            <label class="form-label" for="product-description">Beschreibung</label>
+            <textarea
+              id="product-description"
+              name="productDescription"
+              class="form-control mb-2"
+              rows="2"
+              maxlength="10000"
+              [(ngModel)]="productForm.description"
+            ></textarea>
+            <label class="form-label" for="product-status">Status</label>
+            <select
+              id="product-status"
+              name="productStatus"
+              class="form-select mb-3"
+              [(ngModel)]="productForm.status"
+            >
+              <option value="draft">Entwurf</option>
+              <option value="published">Veröffentlicht</option>
+              <option value="archived">Archiviert</option>
+            </select>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-primary"
+                type="submit"
+                [disabled]="busy() || productNgForm.invalid"
+              >
+                Speichern
+              </button>
+              <button class="btn btn-outline-secondary" type="button" (click)="resetProduct()">
+                Zurücksetzen
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    @if (selectedProduct(); as product) {
+      <section class="card p-3 p-lg-4 mt-4" aria-labelledby="variants-title">
+        <h2 id="variants-title" class="h4">{{ product.name }}: Varianten und Kategorien</h2>
+        <div class="row g-4">
+          <div class="col-12 col-lg-5">
+            <h3 class="h5">Kategoriezuordnung</h3>
+            <ul class="list-group mb-3">
+              @for (category of linkedCategories(); track category.id) {
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                  {{ category.name }}
+                  <button
+                    class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="detachCategory(category.id)"
+                  >
+                    Entfernen
+                  </button>
+                </li>
+              } @empty {
+                <li class="list-group-item text-secondary">Noch keine Kategorie zugeordnet.</li>
+              }
+            </ul>
+            <label class="form-label" for="attach-category">Kategorie hinzufügen</label>
+            <div class="d-flex gap-2">
+              <select
+                id="attach-category"
+                name="attachCategory"
+                class="form-select"
+                [(ngModel)]="categoryToAttach"
+              >
+                <option value="">Kategorie wählen</option>
+                @for (category of categories(); track category.id) {
+                  <option [value]="category.id">{{ category.name }}</option>
+                }
+              </select>
+              <button
+                class="btn btn-outline-primary"
+                type="button"
+                [disabled]="busy() || !categoryToAttach"
+                (click)="attachCategory()"
+              >
+                Zuordnen
+              </button>
+            </div>
+          </div>
+          <div class="col-12 col-lg-7">
+            <h3 class="h5">Varianten</h3>
+            <div class="table-responsive mb-3">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th scope="col">SKU</th>
+                    <th scope="col">Preis</th>
+                    <th scope="col">Bestand</th>
+                    <th scope="col">Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (variant of variants(); track variant.id) {
+                    <tr>
+                      <td>
+                        {{ variant.sku }}
+                        @if (!variant.is_active) {
+                          <small>(inaktiv)</small>
+                        }
+                      </td>
+                      <td>{{ (variant.price_cents / 100).toFixed(2) }} €</td>
+                      <td>{{ variant.stock_quantity }}</td>
+                      <td class="text-nowrap">
+                        <button
+                          class="btn btn-outline-primary btn-sm me-1"
+                          type="button"
+                          (click)="editVariant(variant)"
+                        >
+                          Bearbeiten
+                        </button>
+                        <button
+                          class="btn btn-outline-danger btn-sm"
+                          type="button"
+                          [disabled]="busy()"
+                          (click)="deleteVariant(variant)"
+                        >
+                          Löschen
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="text-secondary">Noch keine Varianten vorhanden.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <h4 class="h6">{{ variantForm.id ? 'Variante bearbeiten' : 'Variante anlegen' }}</h4>
+            <form #variantNgForm="ngForm" (ngSubmit)="saveVariant()" class="admin-form">
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label class="form-label" for="variant-sku">SKU</label>
+                  <input
+                    id="variant-sku"
+                    name="variantSku"
+                    class="form-control"
+                    required
+                    maxlength="120"
+                    [(ngModel)]="variantForm.sku"
+                  />
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label" for="variant-label">Bezeichnung</label>
+                  <input
+                    id="variant-label"
+                    name="variantLabel"
+                    class="form-control"
+                    required
+                    maxlength="200"
+                    [(ngModel)]="variantForm.label"
+                  />
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label" for="variant-price">Preis in Cent</label>
+                  <input
+                    id="variant-price"
+                    name="variantPrice"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control"
+                    required
+                    [(ngModel)]="variantForm.price_cents"
+                  />
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label" for="variant-stock">Bestand</label>
+                  <input
+                    id="variant-stock"
+                    name="variantStock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control"
+                    required
+                    [(ngModel)]="variantForm.stock_quantity"
+                  />
+                </div>
+              </div>
+              <div class="form-check my-3">
+                <input
+                  id="variant-active"
+                  name="variantActive"
+                  type="checkbox"
+                  class="form-check-input"
+                  [(ngModel)]="variantForm.is_active"
+                />
+                <label class="form-check-label" for="variant-active">Aktiv</label>
+              </div>
+              <div class="d-flex gap-2">
+                <button
+                  class="btn btn-primary"
+                  type="submit"
+                  [disabled]="busy() || variantNgForm.invalid"
+                >
+                  Speichern
+                </button>
+                <button class="btn btn-outline-secondary" type="button" (click)="resetVariant()">
+                  Zurücksetzen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    }
+
+    <section class="card p-3 p-lg-4 mt-4" aria-labelledby="audit-title">
+      <h2 id="audit-title" class="h4">Letzte Änderungen</h2>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th scope="col">Zeitpunkt</th>
+              <th scope="col">Aktion</th>
+              <th scope="col">Objekt</th>
+              <th scope="col">Akteur</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of events(); track event.id) {
+              <tr>
+                <td>{{ event.created_at }}</td>
+                <td>{{ event.action }}</td>
+                <td>
+                  {{ event.entity_type }}: {{ event.entity_id }}
+                  @if (event.related_id) {
+                    / {{ event.related_id }}
+                  }
+                </td>
+                <td>{{ event.actor_customer_id }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="text-secondary">Noch keine Änderungen protokolliert.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</main>

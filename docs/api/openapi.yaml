@@ -1,11 +1,348 @@
 openapi: 3.0.3
 info:
-  title: NordWinds Katalog-API
+  title: NordWinds API
   version: 1.0.0
   description: >-
-    Öffentliche, lesende Katalog-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge
-    ist auf 512 Bytes begrenzt; unbekannte oder mehrfach übergebene Parameter werden abgewiesen.
+    Öffentliche, lesende Katalog-Endpunkte sowie geschützte Authentifizierungs- und
+    Verwaltungs-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge öffentlicher
+    Kataloglisten ist auf 512 Bytes begrenzt; unbekannte oder mehrfach übergebene
+    Parameter werden dort abgewiesen.
 paths:
+  /api/v1/admin/categories:
+    get:
+      summary: Alle Kategorien für die Verwaltung auflisten
+      operationId: adminListCategories
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategoryList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+    post:
+      summary: Kategorie anlegen
+      operationId: adminCreateCategory
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminCategory' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/categories/{id}:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Kategorie lesen
+      operationId: adminGetCategory
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategory' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    put:
+      summary: Kategorie vollständig ersetzen
+      operationId: adminUpdateCategory
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategory' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+    delete:
+      summary: Unbenutzte Kategorie löschen
+      operationId: adminDeleteCategory
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Kategorie gelöscht und Audit-Ereignis geschrieben. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/products:
+    get:
+      summary: Alle Produkte einschließlich Entwürfen auflisten
+      operationId: adminListProducts
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminProductList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+    post:
+      summary: Produkt anlegen
+      operationId: adminCreateProduct
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminProduct' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/products/{id}:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Produkt lesen
+      operationId: adminGetProduct
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    put:
+      summary: Produkt vollständig ersetzen und Status setzen
+      operationId: adminUpdateProduct
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+    delete:
+      summary: Unbenutztes Produkt löschen
+      operationId: adminDeleteProduct
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Produkt gelöscht und Audit-Ereignis geschrieben. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/products/{id}/categories:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Zugeordnete Kategorien lesen
+      operationId: adminListProductCategories
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategoryList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    post:
+      summary: Kategorie einem Produkt zuordnen
+      operationId: adminAttachCategory
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category_id]
+              properties:
+                category_id: { type: string, format: uuid }
+      responses:
+        '204': { description: Kategorie zugeordnet und Audit-Ereignis geschrieben. }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/products/{id}/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/AdminID'
+      - name: categoryId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      summary: Kategoriezuordnung entfernen
+      operationId: adminDetachCategory
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Zuordnung entfernt und Audit-Ereignis geschrieben. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/admin/products/{id}/variants:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Varianten eines Produkts lesen
+      operationId: adminListVariants
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminVariantList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    post:
+      summary: Variante anlegen
+      operationId: adminCreateVariant
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VariantWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminVariant' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/variants/{id}:
+    parameters: [{ $ref: '#/components/parameters/AdminID' }]
+    get:
+      summary: Variante lesen
+      operationId: adminGetVariant
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminVariant' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    put:
+      summary: Variante vollständig ersetzen, Preis und Bestand aktualisieren
+      operationId: adminUpdateVariant
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VariantWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminVariant' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+    delete:
+      summary: Unbenutzte Variante löschen
+      operationId: adminDeleteVariant
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Variante gelöscht und Audit-Ereignis geschrieben. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/audit:
+    get:
+      summary: Die letzten 100 Adminänderungen lesen
+      operationId: adminListAudit
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminAuditList' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/register:
+    post:
+      summary: Kundenkonto registrieren
+      operationId: registerCustomer
+      description: Erstellt ausschließlich eine Kundenrolle; eine Adminrolle wird nicht über diese API vergeben.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '201':
+          description: Konto erstellt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/login:
+    post:
+      summary: Anmelden und neue Session ausstellen
+      operationId: loginCustomer
+      description: Gleiche Fehlerantwort für unbekannte E-Mail und falsches Passwort; ersetzt eine vorhandene Session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Session-Cookie und CSRF-Token für geschützte Schreibzugriffe.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '429': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/session:
+    get:
+      summary: Aktuelle Session und CSRF-Token lesen
+      operationId: getAuthSession
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Aktuelle Session; nicht zwischenspeichern.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/auth/logout:
+    post:
+      summary: Session serverseitig widerrufen
+      operationId: logoutCustomer
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRFToken'
+      responses:
+        '204': { description: Session widerrufen und Cookie gelöscht. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/customer/me:
+    get:
+      summary: Kundenprofil lesen
+      operationId: getCustomerProfile
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Aktueller Kunde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEnvelope'
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/products:
     get:
       summary: Veröffentlichte Produkte auflisten
@@ -105,7 +442,25 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-nordwinds_session
   parameters:
+    AdminID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CSRFToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 43
+        maxLength: 43
     ProductCategory:
       name: category
       in: query
@@ -152,6 +507,73 @@ components:
         maximum: 100
         default: 20
   responses:
+    AdminCategory:
+      description: Kategorie.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AdminCategory' }
+    AdminCategoryList:
+      description: Kategorien einschließlich inaktiver Einträge.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/AdminCategory' } }
+    AdminProduct:
+      description: Produkt.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AdminProduct' }
+    AdminProductList:
+      description: Produkte einschließlich Entwürfen und archivierter Einträge.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/AdminProduct' } }
+    AdminVariant:
+      description: Variante.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AdminVariant' }
+    AdminVariantList:
+      description: Varianten einschließlich inaktiver Einträge.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/AdminVariant' } }
+    AdminAuditList:
+      description: Letzte 100 Änderungen.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/AdminAuditEvent' } }
+    AdminConflict:
+      description: Unique- oder Fremdschlüsselkonflikt; keine Änderung oder Audit-Eintrag geschrieben.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    AdminNotFound:
+      description: Datensatz nicht gefunden.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    AuthProblem:
+      description: Authentifizierung, Berechtigung, CSRF oder Rate-Limit fehlgeschlagen.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
     InvalidRequest:
       description: Ungültiger, doppelter oder nicht unterstützter Abfrageparameter.
       content:
@@ -177,6 +599,110 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    CategoryWrite:
+      type: object
+      required: [name, slug, status, sort_order]
+      properties:
+        parent_id: { type: string, format: uuid, nullable: true }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        slug: { type: string, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', maxLength: 120 }
+        description: { type: string, maxLength: 5000 }
+        status: { type: string, enum: [active, inactive] }
+        sort_order: { type: integer, format: int32, minimum: 0 }
+    ProductWrite:
+      type: object
+      required: [name, slug, status]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        slug: { type: string, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', maxLength: 120 }
+        description: { type: string, maxLength: 10000 }
+        status: { type: string, enum: [draft, published, archived] }
+    VariantWrite:
+      type: object
+      required: [sku, label, price_cents, stock_quantity, is_active]
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 120 }
+        label: { type: string, minLength: 1, maxLength: 200 }
+        price_cents: { type: integer, format: int64, minimum: 0 }
+        stock_quantity: { type: integer, format: int32, minimum: 0 }
+        is_active: { type: boolean }
+    AdminCategory:
+      allOf:
+        - $ref: '#/components/schemas/CategoryWrite'
+        - type: object
+          required: [id, created_at, updated_at]
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    AdminProduct:
+      allOf:
+        - $ref: '#/components/schemas/ProductWrite'
+        - type: object
+          required: [id, created_at, updated_at]
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    AdminVariant:
+      allOf:
+        - $ref: '#/components/schemas/VariantWrite'
+        - type: object
+          required: [id, product_id, currency, created_at, updated_at]
+          properties:
+            id: { type: string, format: uuid }
+            product_id: { type: string, format: uuid }
+            currency: { type: string, enum: [EUR] }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    AdminAuditEvent:
+      type: object
+      required: [id, actor_customer_id, entity_type, entity_id, related_id, action, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        actor_customer_id: { type: string, format: uuid }
+        entity_type: { type: string, enum: [category, product, variant, product_category] }
+        entity_id: { type: string, format: uuid }
+        related_id: { type: string, format: uuid, nullable: true }
+        action: { type: string, enum: [create, update, delete, attach, detach] }
+        created_at: { type: string, format: date-time }
+    Credentials:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 1024
+    CustomerAccount:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [customer, admin] }
+    CustomerEnvelope:
+      type: object
+      required: [customer]
+      properties:
+        customer:
+          $ref: '#/components/schemas/CustomerAccount'
+    AuthSession:
+      type: object
+      required: [customer, csrf_token, expires_at]
+      properties:
+        customer:
+          $ref: '#/components/schemas/CustomerAccount'
+        csrf_token:
+          type: string
+          description: Nur in JSON-Antworten an denselben Origin; niemals in URL oder Log.
+        expires_at: { type: string, format: date-time }
     Pagination:
       type: object
       required: [page, limit, total, total_pages]
@@ -341,7 +867,7 @@ components:
           type: string
         code:
           type: string
-          enum: [INVALID_REQUEST, NOT_FOUND, INTERNAL_ERROR]
+          enum: [INVALID_REQUEST, NOT_FOUND, CONFLICT, UNAUTHENTICATED, FORBIDDEN, RATE_LIMITED, BODY_TOO_LARGE, URI_TOO_LONG, METHOD_NOT_ALLOWED, REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, INTERNAL_ERROR]
         request_id:
           type: string
           description: Serverseitig erzeugte Kennung aus `X-Request-ID`.

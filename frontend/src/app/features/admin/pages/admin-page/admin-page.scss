@@ -1,0 +1,26 @@
+.admin-shell {
+  max-width: 1480px;
+}
+
+.admin-login {
+  max-width: 480px;
+}
+
+.admin-form {
+  max-width: 640px;
+}
+
+.list-group-item {
+  min-width: 0;
+}
+
+.table {
+  min-width: 520px;
+}
+
+@media (max-width: 575px) {
+  .list-group-item {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+}

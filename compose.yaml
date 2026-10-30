@@ -48,6 +48,7 @@ services:
       <<: *database-environment
       APP_NAME: ${APP_NAME:-NordWinds}
       APP_ENV: ${APP_ENV:-development}
+      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:-http://localhost:8080}
       API_HTTP_PORT: ${API_HTTP_PORT:-8080}
     depends_on:
       migrate:

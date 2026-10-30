@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
 
@@ -48,6 +50,21 @@ func main() {
 		os.Exit(1)
 	}
 	server.RegisterCatalogRoutes(router, catalog.NewRepository(connection.SQL))
+	publicOrigin := os.Getenv("APP_PUBLIC_ORIGIN")
+	if appEnv != "development" {
+		parsed, err := url.Parse(publicOrigin)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			logger.Error("Öffentliche HTTPS-Origin fehlt oder ist ungültig", "event", "config.invalid")
+			os.Exit(1)
+		}
+	}
+	identityService, err := identity.NewService(identity.NewRepository(connection.SQL))
+	if err != nil {
+		logger.Error("Authentifizierung konnte nicht initialisiert werden", "event", "auth.init.failed")
+		os.Exit(1)
+	}
+	authHandler := server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
+	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"
