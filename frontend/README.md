@@ -21,7 +21,7 @@ npm run build
 - `src/app/layouts/storefront-layout`: Kopfbereich, mobiles Menü (natives `<dialog>`), Fußzeile und Fokusführung.
 - `src/app/features/catalog`: API-Zugriff mit Antwortprüfung, Modelle, Kategorien-Store, Produktliste, Produktdetail (`/produkte/:slug` mit Galerie und Variantenauswahl), sichere Bildpfade und lokale Bild-Fallbacks.
 - `src/app/features/home`: Startseite.
-- `src/app/features/cart`: Kundenanmeldung, Registrierung und persistenter Warenkorb. Preise und Bestände stammen bei jedem Laden aus der API.
+- `src/app/features/cart`: Kundenanmeldung, Registrierung mit Passwortbestätigung und lokalem 24-Zeichen-Passwortgenerator sowie persistenter Warenkorb. Der Generator verwendet `crypto.getRandomValues`; der generierte Klartext wird weder im Browser-Storage gespeichert noch protokolliert. Preise und Bestände stammen bei jedem Laden aus der API.
 - `src/app/features/admin`: Admin-Anmeldung, Kategoriebaum, Produkt-/Variantenpflege und Audit-Ansicht. Schreibzugriffe senden den Session-CSRF-Token nur im Header; Berechtigungen werden in der Go-API erzwungen.
 - `src/app/shared`: Geldformatierung (`de-DE`, EUR) sowie Leer-, Fehler-, 404- und Seitenbausteine.
 - `src/styles`: Design-Tokens und Bootstrap-Sass-Konfiguration. Komponenten binden die Tokens mit `@use 'tokens' as t;` ein.

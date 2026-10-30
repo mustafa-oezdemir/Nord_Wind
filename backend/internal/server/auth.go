@@ -209,12 +209,35 @@ func (h *AuthHandler) safeOrigin(c *gin.Context) bool {
 			continue
 		}
 		parsed, err := url.Parse(raw)
-		if err != nil || parsed.Scheme == "" || parsed.Host == "" ||
-			!strings.EqualFold(parsed.Scheme+"://"+parsed.Host, expected) {
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			return false
+		}
+		origin := parsed.Scheme + "://" + parsed.Host
+		if !strings.EqualFold(origin, expected) && !h.localOriginAlias(c, expected, origin) {
 			return false
 		}
 	}
 	return true
+}
+
+// Im HTTP-Entwicklungsbetrieb darf derselbe lokale Shop-Port sowohl über
+// localhost als auch über 127.0.0.1 geöffnet werden. Der Request-Host muss
+// weiterhin exakt zum gesendeten Origin passen; HTTPS bleibt strikt.
+func (h *AuthHandler) localOriginAlias(c *gin.Context, expected, origin string) bool {
+	if h.config.SecureCookie {
+		return false
+	}
+	configured, configuredErr := url.Parse(expected)
+	requested, requestedErr := url.Parse(origin)
+	return configuredErr == nil && requestedErr == nil &&
+		configured.Scheme == "http" && requested.Scheme == "http" &&
+		configured.Port() == requested.Port() &&
+		localHost(configured.Hostname()) && localHost(requested.Hostname()) &&
+		strings.EqualFold(c.Request.Host, requested.Host)
+}
+
+func localHost(host string) bool {
+	return strings.EqualFold(host, "localhost") || host == "127.0.0.1" || host == "::1"
 }
 
 func readJSON(c *gin.Context, target any) error {
