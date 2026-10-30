@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { IsActiveMatchOptions, RouterLink, RouterLinkActive } from '@angular/router';
 import { CategoryStore } from '../../state/category-store';
 
-/** Horizontale Kategorienavigation ab Tablet-Querformat; nutzt die Hauptkategorien. */
+/** Sichtbare Kategorienavigation für alle Bildschirmgrößen; nutzt die Hauptkategorien. */
 @Component({
   selector: 'app-category-nav',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -39,3 +39,10 @@
     }
   }
 }
+
+@media (min-width: t.$bp-lg) {
+  .category-nav-list {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
