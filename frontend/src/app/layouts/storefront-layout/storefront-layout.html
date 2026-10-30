@@ -1,7 +1,7 @@
 <a class="skip-link" href="#inhalt" (click)="skipToContent($event)">Zum Inhalt springen</a>
 <p class="preview-bar">Vorschau – Bestellungen sind noch nicht möglich.</p>
 <app-site-header [menuOpen]="menu.isOpen()" (menuRequested)="menu.open($event)" />
-<app-category-nav class="d-none d-lg-block" />
+<app-category-nav />
 <main id="inhalt" class="storefront-main" tabindex="-1" #main>
   <router-outlet />
 </main>
