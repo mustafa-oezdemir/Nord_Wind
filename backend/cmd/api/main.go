@@ -17,6 +17,7 @@ import (
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/notification"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
 
@@ -64,7 +65,17 @@ func main() {
 		logger.Error("Authentifizierung konnte nicht initialisiert werden", "event", "auth.init.failed")
 		os.Exit(1)
 	}
-	authHandler := server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
+	authConfig := server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development", Logger: logger}
+	if appEnv == "development" {
+		if host := os.Getenv("SMTP_HOST"); host != "" {
+			port := os.Getenv("SMTP_PORT")
+			if port == "" {
+				port = "1025"
+			}
+			authConfig.RegistrationNotifier = notification.SMTP{Address: net.JoinHostPort(host, port), From: "no-reply@nordwinds.local"}
+		}
+	}
+	authHandler := server.RegisterAuthRoutes(router, identityService, authConfig)
 	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))

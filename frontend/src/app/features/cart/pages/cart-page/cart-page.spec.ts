@@ -221,7 +221,8 @@ describe('CartPage', () => {
       ) as HTMLButtonElement
     ).click();
     await fixture.whenStable();
-    expect(/^[a-zA-Z0-9_-]{24}$/.test(password.value)).toBe(true);
+    expect(/^[a-zA-Z0-9!?]{24}$/.test(password.value)).toBe(true);
+    expect(/[!?]/.test(password.value)).toBe(true);
     expect(confirmation.value === password.value).toBe(true);
     expect(submit.disabled).toBe(false);
     expect(root.textContent).toContain('Bitte in einem Passwortmanager');

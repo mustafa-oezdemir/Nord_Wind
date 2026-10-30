@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -17,8 +19,12 @@ import (
 )
 
 type AuthConfig struct {
-	PublicOrigin string
-	SecureCookie bool
+	PublicOrigin         string
+	SecureCookie         bool
+	RegistrationNotifier interface {
+		SendWelcome(ctx context.Context, recipient string) error
+	}
+	Logger *slog.Logger
 }
 
 type AuthHandler struct {
@@ -63,6 +69,11 @@ func (h *AuthHandler) register(c *gin.Context) {
 	case err != nil:
 		HandleError(c, err)
 	default:
+		if h.config.RegistrationNotifier != nil {
+			if notifyErr := h.config.RegistrationNotifier.SendWelcome(c.Request.Context(), customer.Email); notifyErr != nil && h.config.Logger != nil {
+				h.config.Logger.Error("Registrierungs-E-Mail konnte nicht gesendet werden", "event", "registration.mail.failed")
+			}
+		}
 		c.Header("Cache-Control", "no-store")
 		c.JSON(http.StatusCreated, gin.H{"customer": customer})
 	}

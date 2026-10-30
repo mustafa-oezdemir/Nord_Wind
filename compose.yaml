@@ -18,6 +18,17 @@ services:
     networks:
       - private
 
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "127.0.0.1:${HOST_MAILHOG_PORT:-8025}:8025"
+    expose:
+      - "1025"
+    networks:
+      - public
+    security_opt:
+      - no-new-privileges:true
+
   migrate:
     image: nordwinds-api:local
     build:
@@ -50,9 +61,13 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:-http://localhost:8080}
       API_HTTP_PORT: ${API_HTTP_PORT:-8080}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
     depends_on:
       migrate:
         condition: service_completed_successfully
+      mailhog:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${API_HTTP_PORT:-8080}/health/ready"]
       interval: 5s

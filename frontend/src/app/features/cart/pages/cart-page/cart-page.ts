@@ -232,13 +232,16 @@ export class CartPage implements OnInit {
   }
 }
 
-const passwordAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+const passwordAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?';
+const passwordSymbols = '!?';
 
-/** 24 kryptografisch zufällige Zeichen aus einem 64-Zeichen-Alphabet (144 Bit). */
+/** 24 kryptografisch zufällige Zeichen, darunter garantiert ein Sonderzeichen. */
 export function generateStrongPassword(): string {
-  const bytes = new Uint8Array(24);
+  const bytes = new Uint8Array(25);
   globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes, (value) => passwordAlphabet[value & 63]).join('');
+  const characters = Array.from(bytes.subarray(0, 24), (value) => passwordAlphabet[value & 63]);
+  characters[bytes[24] % characters.length] = passwordSymbols[bytes[24] & 1];
+  return characters.join('');
 }
 
 /** Fachliche Meldung für Rabattcodes; wird nicht als Artikel-Fehler behandelt. */

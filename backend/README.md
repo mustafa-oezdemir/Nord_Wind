@@ -54,6 +54,8 @@ Für HTTPS-Umgebungen muss `APP_PUBLIC_ORIGIN` auf den exakten öffentlichen Ori
 
 Der Authentifizierungs-Integrationstest benötigt `NORDWINDS_AUTH_TEST_URL` für eine **separate** zunächst leere PostgreSQL-Datenbank mit Namen `nordwinds_test_*`. Er prüft Registrierung, falsche Passwörter, CSRF, Session-Fixation und -Ablauf, Rate-Limit, Rollenwechsel und Redaction. Ohne die Variable wird nur dieser Test übersprungen. Bei einem parallelen Gesamtlauf benötigt jeder PostgreSQL-Integrationstest eine eigene Datenbank.
 
+Im lokalen Compose-Betrieb sendet die API nach erfolgreicher Registrierung eine Begrüßungsnachricht an MailHog (`SMTP_HOST=mailhog`, `SMTP_PORT=1025`). Die Nachricht enthält kein Passwort. Ein SMTP-Fehler wird ohne E-Mail-Adresse protokolliert und macht ein bereits erstelltes Konto nicht rückgängig. Außerhalb von `APP_ENV=development` ist dieser lokale Versand deaktiviert; für echte Zustellung ist ein gesonderter Maildienst erforderlich.
+
 ## Geschützte Katalogverwaltung
 
 Die Admin-API unter `/api/v1/admin` bietet Kategorie-, Produkt- und Varianten-CRUD, Produkt-Kategorie-Zuordnungen sowie `GET /api/v1/admin/audit` für die letzten 100 Änderungen. Alle Routen erfordern die Rolle `admin`; POST, PUT und DELETE zusätzlich den Session-CSRF-Token. Die Angular-Verwaltungsseite liegt unter `/admin`. Der [OpenAPI-Vertrag](../docs/api/openapi.yaml) enthält die einzelnen Routen und vollständigen Schreibfelder. Fehlende Datensätze liefern 404, ungültige Eingaben 400 und Unique-/FK-Konflikte 409.

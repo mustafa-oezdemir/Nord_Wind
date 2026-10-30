@@ -45,6 +45,8 @@ go mod download
 go test ./...
 ```
 
+MailHog fängt Registrierungs-E-Mails im lokalen Entwicklungsbetrieb ab. Seine Oberfläche ist unter `http://127.0.0.1:8025` erreichbar; `HOST_MAILHOG_PORT` ändert den UI-Port. Der SMTP-Port ist nicht am Host veröffentlicht. Diese Nachrichten werden nicht an echte Postfächer zugestellt.
+
 Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und der [priorisierte Backlog](docs/requirements/backlog.md) halten Anforderungen, Widersprüche und die nächsten Entwicklungsschritte fest.
 Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Prüfungen derzeit bestehen und welche wegen des fehlenden Starters noch nicht ausführbar sind.
 Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die damals noch ausstehenden Prüfungen.

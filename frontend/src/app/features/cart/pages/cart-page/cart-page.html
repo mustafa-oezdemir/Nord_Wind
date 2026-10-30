@@ -11,80 +11,112 @@
   }
 
   @if (!session()) {
-    <section class="card p-3 p-lg-4" aria-labelledby="cart-login-title">
-      <h2 id="cart-login-title" class="h4">{{ registerMode ? 'Konto erstellen' : 'Anmelden' }}</h2>
-      <form #authForm="ngForm" (ngSubmit)="authenticate()">
-        <label class="form-label" for="cart-email">E-Mail</label>
-        <input
-          id="cart-email"
-          name="email"
-          type="email"
-          class="form-control mb-3"
-          autocomplete="username"
-          required
-          [(ngModel)]="email"
-        />
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-          <label class="form-label mb-0" for="cart-password">Passwort</label>
-          @if (registerMode) {
-            <button
-              class="btn btn-outline-primary btn-sm"
-              type="button"
-              (click)="generatePassword()"
-            >
-              Sicheres Passwort erstellen
-            </button>
-          }
+    <section class="auth-shell" aria-labelledby="cart-login-title">
+      <div class="auth-intro">
+        <span class="auth-mark" aria-hidden="true">NW</span>
+        <p class="auth-eyebrow">NordWinds Kundenkonto</p>
+        <h2>{{ registerMode ? 'Alles bereit für Ihren Einkauf.' : 'Willkommen zurück.' }}</h2>
+        <p>
+          {{
+            registerMode
+              ? 'Erstellen Sie Ihr Konto und behalten Sie Ihren Warenkorb jederzeit im Blick.'
+              : 'Melden Sie sich an und machen Sie dort weiter, wo Sie aufgehört haben.'
+          }}
+        </p>
+        <div class="auth-intro-note">
+          <span class="auth-note-icon" aria-hidden="true">✓</span>
+          Ihr Warenkorb bleibt mit Ihrem Konto verbunden.
         </div>
-        <input
-          id="cart-password"
-          name="password"
-          [type]="revealPassword ? 'text' : 'password'"
-          class="form-control"
-          [class.mb-3]="!registerMode"
-          [attr.autocomplete]="registerMode ? 'new-password' : 'current-password'"
-          minlength="12"
-          required
-          [(ngModel)]="password"
-          (ngModelChange)="generatedPassword = false"
-        />
-        @if (registerMode) {
-          <p class="form-text mb-3">
-            Mindestens 12 Zeichen; verwenden Sie ein einzigartiges Passwort.
+      </div>
+      <form class="auth-form" #authForm="ngForm" (ngSubmit)="authenticate()">
+        <div class="auth-form-heading">
+          <p class="auth-eyebrow">{{ registerMode ? 'In wenigen Schritten' : 'Ihr Konto' }}</p>
+          <h2 id="cart-login-title">{{ registerMode ? 'Konto erstellen' : 'Anmelden' }}</h2>
+          <p>
+            {{
+              registerMode
+                ? 'Geben Sie Ihre E-Mail-Adresse ein und wählen Sie ein sicheres Passwort.'
+                : 'Geben Sie Ihre Zugangsdaten ein, um Ihren Warenkorb zu öffnen.'
+            }}
           </p>
-          <label class="form-label" for="cart-confirm-password">Passwort bestätigen</label>
+        </div>
+        <div class="auth-field">
+          <label class="form-label" for="cart-email">E-Mail-Adresse</label>
           <input
-            id="cart-confirm-password"
-            name="confirmPassword"
+            id="cart-email"
+            name="email"
+            type="email"
+            class="form-control"
+            autocomplete="username"
+            placeholder="name@beispiel.de"
+            required
+            [(ngModel)]="email"
+          />
+        </div>
+        <div class="auth-field">
+          <div class="auth-label-row">
+            <label class="form-label" for="cart-password">Passwort</label>
+            @if (registerMode) {
+              <button class="auth-generate" type="button" (click)="generatePassword()">
+                Sicheres Passwort erstellen
+              </button>
+            }
+          </div>
+          <input
+            id="cart-password"
+            name="password"
             [type]="revealPassword ? 'text' : 'password'"
             class="form-control"
-            autocomplete="new-password"
+            [attr.autocomplete]="registerMode ? 'new-password' : 'current-password'"
+            [attr.aria-describedby]="registerMode ? 'cart-password-hint' : null"
+            minlength="12"
             required
-            [attr.aria-invalid]="confirmPassword && password !== confirmPassword ? true : null"
-            [(ngModel)]="confirmPassword"
+            [(ngModel)]="password"
+            (ngModelChange)="generatedPassword = false"
           />
-          @if (confirmPassword && password !== confirmPassword) {
-            <p class="text-danger mt-2 mb-0" role="alert">Die Passwörter stimmen nicht überein.</p>
+          @if (registerMode) {
+            <p id="cart-password-hint" class="auth-hint">
+              Mindestens 12 Zeichen; am besten mit Buchstaben, Zahlen und Sonderzeichen.
+            </p>
           }
-          <div class="mt-2 mb-3">
+        </div>
+        @if (registerMode) {
+          <div class="auth-field">
+            <label class="form-label" for="cart-confirm-password">Passwort bestätigen</label>
+            <input
+              id="cart-confirm-password"
+              name="confirmPassword"
+              [type]="revealPassword ? 'text' : 'password'"
+              class="form-control"
+              autocomplete="new-password"
+              required
+              [attr.aria-invalid]="confirmPassword && password !== confirmPassword ? true : null"
+              [(ngModel)]="confirmPassword"
+            />
+            @if (confirmPassword && password !== confirmPassword) {
+              <p class="auth-error" role="alert">Die Passwörter stimmen nicht überein.</p>
+            }
+          </div>
+          <div class="auth-options">
             <button
-              class="btn btn-link btn-sm px-0"
+              class="auth-reveal"
               type="button"
+              [attr.aria-pressed]="revealPassword"
               (click)="revealPassword = !revealPassword"
             >
               {{ revealPassword ? 'Passwörter verbergen' : 'Passwörter anzeigen' }}
             </button>
           </div>
           @if (generatedPassword) {
-            <p class="text-secondary small" role="status">
+            <p class="auth-generated" role="status">
               Das generierte Passwort wurde in beide Felder eingetragen. Bitte in einem
               Passwortmanager speichern.
             </p>
           }
         }
-        <div class="d-flex gap-2">
+        <div class="auth-actions">
           <button
-            class="btn btn-primary"
+            class="btn btn-primary auth-submit"
             type="submit"
             [disabled]="
               busy() || authForm.invalid || (registerMode && password !== confirmPassword)
@@ -92,10 +124,13 @@
           >
             {{ registerMode ? 'Konto erstellen und anmelden' : 'Anmelden' }}
           </button>
-          <button class="btn btn-outline-secondary" type="button" (click)="toggleMode()">
+        </div>
+        <p class="auth-switch">
+          {{ registerMode ? 'Sie haben bereits ein Konto?' : 'Noch kein Konto?' }}
+          <button type="button" (click)="toggleMode()">
             {{ registerMode ? 'Bereits registriert?' : 'Neues Konto?' }}
           </button>
-        </div>
+        </p>
       </form>
     </section>
   } @else if (session()!.customer.role !== 'customer') {
