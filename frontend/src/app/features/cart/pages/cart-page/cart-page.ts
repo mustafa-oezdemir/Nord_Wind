@@ -23,6 +23,9 @@ export class CartPage implements OnInit {
   protected readonly quantities = signal<Record<string, number>>({});
   protected email = '';
   protected password = '';
+  protected confirmPassword = '';
+  protected revealPassword = false;
+  protected generatedPassword = false;
   protected registerMode = false;
 
   async ngOnInit(): Promise<void> {
@@ -36,13 +39,40 @@ export class CartPage implements OnInit {
   }
 
   protected async authenticate(): Promise<void> {
+    if (this.registerMode && this.password !== this.confirmPassword) {
+      this.error.set('Die Passwörter stimmen nicht überein.');
+      return;
+    }
     await this.run(async () => {
       if (this.registerMode) await firstValueFrom(this.api.register(this.email, this.password));
       const session = await firstValueFrom(this.api.login(this.email, this.password));
       this.password = '';
+      this.confirmPassword = '';
+      this.revealPassword = false;
+      this.generatedPassword = false;
       this.session.set(session);
       if (session.customer.role === 'customer') await this.load();
     });
+  }
+
+  protected generatePassword(): void {
+    try {
+      this.password = generateStrongPassword();
+      this.confirmPassword = this.password;
+      this.generatedPassword = true;
+      this.error.set('');
+    } catch {
+      this.error.set('Ein sicheres Passwort konnte nicht erzeugt werden. Bitte selbst eingeben.');
+    }
+  }
+
+  protected toggleMode(): void {
+    this.registerMode = !this.registerMode;
+    this.password = '';
+    this.confirmPassword = '';
+    this.revealPassword = false;
+    this.generatedPassword = false;
+    this.error.set('');
   }
 
   protected async logout(): Promise<void> {
@@ -151,4 +181,13 @@ export class CartPage implements OnInit {
     }
     this.error.set('Die Anfrage konnte nicht verarbeitet werden. Bitte später erneut versuchen.');
   }
+}
+
+const passwordAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+
+/** 24 kryptografisch zufällige Zeichen aus einem 64-Zeichen-Alphabet (144 Bit). */
+export function generateStrongPassword(): string {
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => passwordAlphabet[value & 63]).join('');
 }
