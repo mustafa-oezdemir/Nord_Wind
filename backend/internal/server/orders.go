@@ -18,8 +18,19 @@ func RegisterOrderRoutes(router *gin.Engine, auth *AuthHandler, repository *orde
 	handler := &ordersHandler{repository: repository}
 	group := router.Group("/api/v1/orders", auth.RequireSession(), auth.RequireRole(identity.CustomerRole))
 	group.POST("", auth.RequireCSRF(), handler.create)
+	group.GET("", handler.list)
 	group.GET("/:orderNumber", handler.get)
 	group.POST("/:orderNumber/cancel", auth.RequireCSRF(), handler.cancel)
+}
+
+func (h *ordersHandler) list(c *gin.Context) {
+	data, err := h.repository.List(c.Request.Context(), CurrentSession(c).Customer.ID)
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
 type orderCreateInput struct {

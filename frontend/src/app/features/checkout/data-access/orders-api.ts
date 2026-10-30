@@ -135,6 +135,10 @@ export class OrdersApi {
     return this.http.get<Order>(`${this.base}/orders/${encodeURIComponent(orderNumber)}`);
   }
 
+  list(): Observable<{ data: Order[] }> {
+    return this.http.get<{ data: Order[] }>(`${this.base}/orders`);
+  }
+
   cancel(orderNumber: string): Observable<Order> {
     return this.cart
       .session()

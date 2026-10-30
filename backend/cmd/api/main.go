@@ -87,6 +87,7 @@ func main() {
 	orderRepository := orders.NewRepository(connection.SQL)
 	server.RegisterOrderRoutes(router, authHandler, orderRepository)
 	server.RegisterAdminOrderRoutes(router, authHandler, orderRepository, logger)
+	server.RegisterAccountRoutes(router, authHandler, orderRepository)
 	mockPayments := payment.NewRepository(connection.SQL)
 	if appEnv == "development" {
 		secret := make([]byte, 32)

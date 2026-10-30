@@ -84,6 +84,12 @@ Der Mock-Webhook unter `POST /api/v1/mock-payments/webhook` prüft `X-Nordwinds-
 
 Die PostgreSQL-Tests für Reservierung und Mock-Zahlung benötigen jeweils eine **eigene**, zunächst leere Datenbank mit Namen `nordwinds_test_*` über `NORDWINDS_INVENTORY_TEST_URL` beziehungsweise `NORDWINDS_MOCK_PAYMENT_TEST_URL`. Sie prüfen unter anderem zwei gleichzeitige Zugriffe auf das letzte Stück, Ablauf, Stornierung, Deadlock-Retry, signierte Webhooks, Duplikate, Fehler und Erstattung. Ohne die Variablen werden nur diese Integrationstests übersprungen.
 
+## Versand und Kundenkonto
+
+Migration 12 ergänzt manuelle Sendungsnummern und Versandversuchszähler; Migration 13 ergänzt ein kundengebundenes Adressbuch. `GET /api/v1/orders` und `GET /api/v1/orders/{orderNumber}` zeigen ausschließlich eigene Bestellungen mit Statusverlauf und Sendung. Admins verwenden `GET /api/v1/admin/orders`, `PATCH /api/v1/admin/orders/{orderNumber}/status` und `GET /api/v1/admin/orders/shipment-metrics`; Schreibzugriffe benötigen CSRF. Gültige Adminübergänge sind `PAID` → `PROCESSING` → `SHIPPED` → `DELIVERED`; für `SHIPPED` ist `tracking_number` erforderlich. Es gibt noch keine Anbindung an einen Versanddienst.
+
+`GET/POST /api/v1/customer/addresses` sowie `PUT/DELETE /api/v1/customer/addresses/{id}` verwalten eigene deutsche Adressen. `GET /api/v1/customer/export` exportiert alle eigenen Adressen und Bestellungen. `DELETE /api/v1/customer/me` schließt ein Konto ohne offene Bestellungen, entfernt Sessions, Warenkorb und Adressbuch und ersetzt die Konto-E-Mail. Bestellsnapshots mit personenbezogenen Daten bleiben erhalten; Wirkung und offene Aufbewahrungsentscheidung stehen in [NW-20](../docs/progress/NW-20.md). Der PostgreSQL-HTTP-Test verwendet eine weitere separate, zunächst leere Datenbank über `NORDWINDS_SHIPPING_TEST_URL`.
+
 ## Beispielkatalog
 
 `seeds/demo_catalog.sql` enthält 10 Kategorien mit je 2 veröffentlichten Beispielprodukten und einer aktiven Variante pro Produkt. Preise und Bestände sind erfundene Entwicklungsdaten; Produktbilder sind nicht enthalten. Das Skript ergänzt nur fehlende Datensätze, überschreibt bestehende Einträge nicht und bricht bei Slug-, SKU- oder ID-Kollisionen transaktional ab. Es wird bewusst nicht bei jeder Migration ausgeführt.

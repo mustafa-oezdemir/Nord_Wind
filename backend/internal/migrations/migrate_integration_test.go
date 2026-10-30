@@ -108,6 +108,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	}
 	mustExec(t, ctx, db, `INSERT INTO order_status_events (order_id, to_status, actor) VALUES ($1, 'CREATED', 'customer')`, orderID)
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 13: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 12: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -199,6 +202,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 13: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 12: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -241,6 +247,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Status nach Up/Down/Up: %v", err)
 	}
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 13 vor Bootstrap-Test: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 12 vor Bootstrap-Test: %v", err)
 	}
@@ -298,6 +307,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	var legacyValue string
 	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'legacy'`).Scan(&legacyValue); err != nil || legacyValue != "bleibt" {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 13 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 12 mit bestehendem app_settings: %v", err)

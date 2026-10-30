@@ -72,6 +72,7 @@ describe('MobileMenu', () => {
       '/',
       '/produkte',
       '/warenkorb',
+      '/konto',
       '/kategorien/kueche-haushalt',
       '/kategorien/kochgeschirr',
     ]);

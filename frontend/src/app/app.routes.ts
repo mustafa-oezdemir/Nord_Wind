@@ -51,6 +51,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'konto',
+        title: 'Kundenkonto',
+        loadComponent: () => import('./features/account/account-page').then((m) => m.AccountPage),
+      },
+      {
         path: 'produkte/:slug',
         title: 'Produkt',
         loadComponent: () =>

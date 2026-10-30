@@ -33,6 +33,27 @@
           <p class="checkout-lead">
             Wir liefern innerhalb Deutschlands. Die Rechnung geht an dieselbe Adresse.
           </p>
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm mb-3"
+            (click)="loadSavedAddresses()"
+          >
+            Gespeicherte Adressen laden
+          </button>
+          @if (savedAddresses().length) {
+            <label class="form-label" for="saved-address">Gespeicherte Adresse übernehmen</label>
+            <select
+              class="form-select mb-3"
+              id="saved-address"
+              #savedAddress
+              (change)="useSavedAddress(savedAddress.value)"
+            >
+              <option value="">Bitte wählen</option>
+              @for (item of savedAddresses(); track item.id) {
+                <option [value]="item.id">{{ item.label }}</option>
+              }
+            </select>
+          }
 
           @for (group of groups; track group.legend) {
             <fieldset class="checkout-group">

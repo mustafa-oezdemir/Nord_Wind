@@ -1,0 +1,229 @@
+<div class="container py-4 py-lg-5">
+  <h1>Kundenkonto</h1>
+  @switch (state()) {
+    @case ('loading') {
+      <p role="status">Konto wird geladen …</p>
+    }
+    @case ('signed-out') {
+      <p>Bitte melden Sie sich über den <a routerLink="/warenkorb">Warenkorb</a> an.</p>
+    }
+    @case ('error') {
+      <p role="alert">Das Konto konnte nicht geladen werden.</p>
+      <button class="btn btn-outline-primary" type="button" (click)="load()">Erneut laden</button>
+    }
+    @case ('closed') {
+      <p role="status">Ihr Konto wurde geschlossen. Adressbuch und Zugang wurden entfernt.</p>
+    }
+    @case ('ready') {
+      <p>
+        Angemeldet als <strong>{{ email() }}</strong>
+      </p>
+      @if (notice()) {
+        <p role="status" class="alert alert-info">{{ notice() }}</p>
+      }
+
+      <section class="mb-5" aria-labelledby="history-title">
+        <h2 id="history-title">Bestellverlauf</h2>
+        @if (orders().length === 0) {
+          <p>Noch keine Bestellungen.</p>
+        } @else {
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nummer</th>
+                  <th>Datum</th>
+                  <th>Status</th>
+                  <th>Summe</th>
+                  <th>Sendung</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (order of orders(); track order.id) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/bestellung', order.order_number]">{{
+                        order.order_number
+                      }}</a>
+                    </td>
+                    <td>{{ order.created_at | date: 'dd.MM.yyyy' }}</td>
+                    <td>{{ statusLabel(order.status) }}</td>
+                    <td>{{ (order.pricing.total_cents / 100).toFixed(2) }} €</td>
+                    <td>{{ order.shipment?.tracking_number || 'Noch keine' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="small text-secondary">
+            Die Preise und Artikel stammen aus dem gespeicherten Bestellsnapshot.
+          </p>
+        }
+      </section>
+
+      <section class="mb-5" aria-labelledby="addresses-title">
+        <h2 id="addresses-title">Adressbuch</h2>
+        @if (addresses().length === 0) {
+          <p>Noch keine gespeicherten Adressen.</p>
+        }
+        <ul class="list-group mb-4">
+          @for (item of addresses(); track item.id) {
+            <li class="list-group-item d-flex justify-content-between gap-3">
+              <span
+                ><strong>{{ item.label }}</strong
+                ><br />{{ item.address.first_name }} {{ item.address.last_name }},
+                {{ item.address.street }} {{ item.address.house_number }},
+                {{ item.address.postal_code }} {{ item.address.city }}</span
+              >
+              <span class="d-flex gap-2 align-items-start">
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">
+                  Bearbeiten
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger btn-sm"
+                  [disabled]="busy()"
+                  (click)="remove(item.id)"
+                >
+                  Entfernen
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+        <form (ngSubmit)="save()" class="card p-3 p-lg-4">
+          <h3 class="h5">{{ editingID ? 'Adresse bearbeiten' : 'Adresse hinzufügen' }}</h3>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="address-label">Bezeichnung</label
+              ><input
+                class="form-control"
+                id="address-label"
+                name="label"
+                maxlength="60"
+                required
+                [(ngModel)]="label"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="first-name">Vorname</label
+              ><input
+                class="form-control"
+                id="first-name"
+                name="first_name"
+                required
+                [(ngModel)]="address.first_name"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="last-name">Nachname</label
+              ><input
+                class="form-control"
+                id="last-name"
+                name="last_name"
+                required
+                [(ngModel)]="address.last_name"
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="company">Firma (optional)</label
+              ><input
+                class="form-control"
+                id="company"
+                name="company"
+                [(ngModel)]="address.company"
+              />
+            </div>
+            <div class="col-md-8">
+              <label class="form-label" for="street">Straße</label
+              ><input
+                class="form-control"
+                id="street"
+                name="street"
+                required
+                [(ngModel)]="address.street"
+              />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="house-number">Hausnummer</label
+              ><input
+                class="form-control"
+                id="house-number"
+                name="house_number"
+                required
+                [(ngModel)]="address.house_number"
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="extra">Adresszusatz (optional)</label
+              ><input
+                class="form-control"
+                id="extra"
+                name="address_extra"
+                [(ngModel)]="address.address_extra"
+              />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="postal-code">Postleitzahl</label
+              ><input
+                class="form-control"
+                id="postal-code"
+                name="postal_code"
+                required
+                pattern="[0-9]{5}"
+                inputmode="numeric"
+                [(ngModel)]="address.postal_code"
+              />
+            </div>
+            <div class="col-md-8">
+              <label class="form-label" for="city">Ort</label
+              ><input
+                class="form-control"
+                id="city"
+                name="city"
+                required
+                [(ngModel)]="address.city"
+              />
+            </div>
+          </div>
+          <p class="small text-secondary mt-3">
+            Nur Adressen in Deutschland. Die Lieferadresse einer bestehenden Bestellung bleibt
+            unverändert.
+          </p>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()">Speichern</button>
+            @if (editingID) {
+              <button type="button" class="btn btn-outline-secondary" (click)="reset()">
+                Abbrechen
+              </button>
+            }
+          </div>
+        </form>
+      </section>
+
+      <section aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Datenexport und Kontoschließung</h2>
+        <button type="button" class="btn btn-outline-primary mb-3" (click)="exportData()">
+          Meine Daten als JSON herunterladen
+        </button>
+        <p>
+          Beim Schließen werden Zugang und Adressbuch entfernt. Bestellbelege mit Adresse und
+          Preisen bleiben für die geltende Aufbewahrung erhalten. Offene Bestellungen verhindern die
+          Schließung.
+        </p>
+        <label class="form-label" for="close-phrase"
+          >Zum Schließen „KONTO SCHLIESSEN“ eingeben</label
+        >
+        <input class="form-control mb-2" id="close-phrase" [(ngModel)]="closePhrase" />
+        <button
+          type="button"
+          class="btn btn-outline-danger"
+          [disabled]="closePhrase !== 'KONTO SCHLIESSEN' || busy()"
+          (click)="closeAccount()"
+        >
+          Konto schließen
+        </button>
+      </section>
+    }
+  }
+</div>

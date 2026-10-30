@@ -426,6 +426,21 @@ paths:
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/orders:
+    get:
+      summary: Eigene Bestellhistorie mit Snapshots, Statusverlauf und Sendung lesen
+      operationId: listOwnOrders
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Nur Bestellungen des angemeldeten Kunden, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Order' } }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
     post:
       summary: Bestellung aus dem Warenkorb anlegen (Kasse)
       description: >-
@@ -518,6 +533,123 @@ paths:
         '403': { $ref: '#/components/responses/AuthProblem' }
         '404': { $ref: '#/components/responses/AdminNotFound' }
         '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/orders:
+    get:
+      summary: Bestellungen für Admins auflisten
+      operationId: adminListOrders
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Bestellungen, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Order' } }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/admin/orders/{orderNumber}:
+    get:
+      summary: Bestellung für Admins lesen
+      operationId: adminGetOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: orderNumber, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Bestellung, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/admin/orders/{orderNumber}/status:
+    patch:
+      summary: Adminstatus entlang der erlaubten Übergänge ändern
+      description: Für SHIPPED ist eine manuelle Sendungsnummer nötig; es wird kein Versanddienst beauftragt.
+      operationId: adminTransitionOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: orderNumber, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/CSRFToken' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [PROCESSING, SHIPPED, DELIVERED] }
+                tracking_number: { type: string, description: Nur bei SHIPPED erforderlich. }
+      responses:
+        '200': { description: Aktualisierte Bestellung, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+  /api/v1/admin/orders/shipment-metrics:
+    get:
+      summary: Persistente Versandversuchszähler für Admins lesen
+      operationId: adminShipmentMetrics
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Anzahl nach outcome (success, invalid_state, invalid_tracking, shipment_failed).
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object, additionalProperties: { type: integer } } } }
+  /api/v1/customer/addresses:
+    get:
+      summary: Eigene Adressen auflisten
+      operationId: listOwnAddresses
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Eigenes Adressbuch.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/SavedAddress' } } } }
+    post:
+      summary: Eigene deutsche Adresse speichern
+      operationId: createOwnAddress
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressWrite' }
+      responses:
+        '201': { description: Gespeicherte Adresse, content: { application/json: { schema: { $ref: '#/components/schemas/SavedAddress' } } } }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+  /api/v1/customer/addresses/{id}:
+    put:
+      summary: Eigene Adresse ersetzen
+      operationId: updateOwnAddress
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/CSRFToken' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressWrite' }
+      responses:
+        '200': { description: Aktualisierte Adresse, content: { application/json: { schema: { $ref: '#/components/schemas/SavedAddress' } } } }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+    delete:
+      summary: Eigene Adresse entfernen
+      operationId: deleteOwnAddress
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/CSRFToken' }
+      responses:
+        '204': { description: Adresse entfernt. }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/customer/export:
+    get:
+      summary: Eigene Konto-, Adress- und Bestelldaten als JSON exportieren
+      operationId: exportOwnAccount
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { description: Vollständiger JSON-Export des angemeldeten Kunden. }
   /api/v1/admin/discount-codes:
     get:
       summary: Rabattcodes auflisten
@@ -668,6 +800,15 @@ paths:
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/customer/me:
+    delete:
+      summary: Konto ohne offene Bestellungen schließen
+      description: Zugang und Adressbuch werden entfernt; Bestellbelege bleiben erhalten.
+      operationId: closeOwnAccount
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Konto geschlossen. }
+        '409': { $ref: '#/components/responses/AdminConflict' }
     get:
       summary: Kundenprofil lesen
       operationId: getCustomerProfile
@@ -1541,7 +1682,7 @@ components:
         tax_rate_bp: { type: integer, enum: [1900, 700] }
     Order:
       type: object
-      required: [id, order_number, status, customer_email, address, items, pricing, discount, created_at]
+      required: [id, order_number, status, customer_email, address, items, pricing, discount, shipment, status_events, created_at]
       properties:
         id: { type: string, format: uuid }
         order_number: { type: string, example: NW-2026-100001 }
@@ -1573,7 +1714,35 @@ components:
           properties:
             code: { type: string }
             percent_bp: { type: integer }
+        shipment:
+          type: object
+          nullable: true
+          properties:
+            carrier: { type: string, enum: [MANUAL] }
+            tracking_number: { type: string }
+            created_at: { type: string, format: date-time }
+        status_events:
+          type: array
+          items:
+            type: object
+            properties:
+              from_status: { type: string, nullable: true }
+              to_status: { type: string }
+              created_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
+    AddressWrite:
+      type: object
+      required: [label, address]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 60 }
+        address: { $ref: '#/components/schemas/OrderAddress' }
+    SavedAddress:
+      type: object
+      required: [id, label, address]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        address: { $ref: '#/components/schemas/OrderAddress' }
     Problem:
       type: object
       required: [type, title, status, detail, code, request_id]

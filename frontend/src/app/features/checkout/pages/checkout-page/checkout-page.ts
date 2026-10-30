@@ -23,6 +23,7 @@ import { euros } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { CartApi, CartSnapshot, EMPTY_CART } from '../../../cart/data-access/cart-api';
 import { PriceSummary } from '../../../cart/ui/price-summary/price-summary';
+import { AccountApi, SavedAddress } from '../../../account/account-api';
 import { CheckoutSteps } from '../../ui/checkout-steps/checkout-steps';
 import {
   OrderAddress,
@@ -129,6 +130,7 @@ const GROUPS: FieldGroup[] = [
 export class CheckoutPage implements OnInit {
   private readonly cartApi = inject(CartApi);
   private readonly ordersApi = inject(OrdersApi);
+  private readonly accountApi = inject(AccountApi);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly noticeBox = viewChild<ElementRef<HTMLElement>>('noticeBox');
@@ -136,6 +138,7 @@ export class CheckoutPage implements OnInit {
   protected readonly state = signal<CheckoutState>('loading');
   protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
   protected readonly email = signal('');
+  protected readonly savedAddresses = signal<SavedAddress[]>([]);
   protected readonly busy = signal(false);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly submitted = signal(false);
@@ -185,6 +188,22 @@ export class CheckoutPage implements OnInit {
         error instanceof HttpErrorResponse && error.status === 401 ? 'signed-out' : 'error',
       );
     }
+  }
+
+  protected async loadSavedAddresses(): Promise<void> {
+    try {
+      this.savedAddresses.set((await firstValueFrom(this.accountApi.addresses())).data);
+    } catch {
+      this.showNotice('warning', 'Gespeicherte Adressen konnten nicht geladen werden.');
+    }
+  }
+
+  protected useSavedAddress(id: string): void {
+    const saved = this.savedAddresses().find((item) => item.id === id);
+    if (!saved) return;
+    this.form.patchValue(saved.address);
+    this.form.updateValueAndValidity();
+    this.serverErrors.set({});
   }
 
   /** Fehlertext eines Feldes, sobald er angezeigt werden soll; Serverfehler gehen vor. */
