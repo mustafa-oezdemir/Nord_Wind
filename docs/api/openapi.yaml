@@ -434,8 +434,9 @@ paths:
         Weicht die neu berechnete Gesamtsumme von `expected_total_cents` ab oder ist eine Position
         nicht mehr lieferbar, entsteht keine Bestellung (409 `CART_CHANGED` mit aktuellem Warenkorb).
         Dieselbe Anfrage mit demselben `Idempotency-Key` liefert die vorhandene Bestellung (200);
-        derselbe Schlüssel mit anderer Adresse oder Summe ergibt 422. Bestand wird geprüft, aber erst
-        mit NW-17 reserviert; eine Zahlung folgt mit NW-18.
+        derselbe Schlüssel mit anderer Adresse oder Summe ergibt 422. Der Bestand wird innerhalb
+        derselben Transaktion für 15 Minuten reserviert; konkurrierende Bestellungen können das
+        letzte Stück nur einmal erhalten.
       operationId: createOrder
       security: [{ SessionCookie: [] }]
       parameters:
@@ -496,6 +497,27 @@ paths:
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
         '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/orders/{orderNumber}/cancel:
+    post:
+      summary: Eigene offene Bestellung stornieren und Reservierung freigeben
+      operationId: cancelOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - name: orderNumber
+          in: path
+          required: true
+          schema: { type: string, pattern: '^NW-[0-9]{4}-[0-9]{6,12}$' }
+        - { $ref: '#/components/parameters/CSRFToken' }
+      responses:
+        '200':
+          description: Stornierte Bestellung; wiederholter Abbruch liefert denselben Zustand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
   /api/v1/admin/discount-codes:
     get:
       summary: Rabattcodes auflisten
@@ -659,6 +681,152 @@ paths:
                 $ref: '#/components/schemas/CustomerEnvelope'
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/mock-payments:
+    post:
+      summary: Simulierte Zahlung für eigene Bestellung initiieren
+      description: Nur bei `APP_ENV=development`; keine echte Zahlung und keine Annahme von Kartendaten.
+      operationId: initiateMockPayment
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, method]
+              additionalProperties: false
+              properties:
+                order_id: { type: string, format: uuid }
+                method: { $ref: '#/components/schemas/MockPaymentMethod' }
+      responses:
+        '200':
+          description: Zahlung neu erstellt oder idempotent wiedergefunden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MockPayment' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/mock-payments/methods:
+    get:
+      summary: Verfügbare simulierte Zahlungsarten lesen
+      description: Nur bei `APP_ENV=development`; sonst 404.
+      operationId: listMockPaymentMethods
+      responses:
+        '200':
+          description: Simulationsmodus und verfügbare Methoden.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mode, methods]
+                properties:
+                  mode: { type: string, enum: [mock] }
+                  methods:
+                    type: array
+                    items: { $ref: '#/components/schemas/MockPaymentMethod' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/mock-payments/by-order/{orderId}:
+    get:
+      summary: Simulierte Zahlung einer eigenen Bestellung lesen
+      description: Nur bei `APP_ENV=development`; fremde und unbekannte Zahlungen ergeben 404.
+      operationId: getMockPaymentByOrder
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Zahlung und aktueller Zustand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MockPayment' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/mock-payments/{paymentId}:
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema: { type: string, pattern: '^pay_[0-9a-f]{32}$' }
+    get:
+      summary: Eigene simulierte Zahlung lesen
+      description: Nur bei `APP_ENV=development`.
+      operationId: getMockPayment
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Zahlung und aktueller Zustand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MockPayment' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/mock-payments/{paymentId}/simulate:
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema: { type: string, pattern: '^pay_[0-9a-f]{32}$' }
+    post:
+      summary: Signiertes Mock-Ereignis für eigene Zahlung auslösen
+      description: Nur bei `APP_ENV=development` und mit Kunden-Session und CSRF-Token.
+      operationId: simulateMockPayment
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              additionalProperties: false
+              properties:
+                outcome: { type: string, enum: [succeeded, failed, refunded] }
+      responses:
+        '200':
+          description: Ereignis verarbeitet.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [event_id, payment]
+                properties:
+                  event_id: { type: string, pattern: '^evt_[0-9a-f]{32}$' }
+                  payment: { $ref: '#/components/schemas/MockPayment' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/mock-payments/webhook:
+    post:
+      summary: Signiertes Mock-Webhook-Ereignis empfangen
+      description: >-
+        Nur bei `APP_ENV=development`. Der Header `X-Nordwinds-Mock-Signature` enthält
+        `t=<Unix-Sekunden>,v1=<Hex-HMAC>` über `timestamp + "." + raw_body`.
+      operationId: receiveMockPaymentWebhook
+      parameters:
+        - name: X-Nordwinds-Mock-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MockPaymentEvent' }
+      responses:
+        '200': { description: Ereignis verarbeitet oder idempotent bestätigt. }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/products:
     get:
       summary: Veröffentlichte Produkte auflisten
@@ -945,6 +1113,32 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    MockPaymentMethod:
+      type: string
+      enum: [debit_card, klarna, paypal, bank_transfer]
+      description: Ausschließlich simulierte Zahlungsart.
+    MockPayment:
+      type: object
+      required: [id, order_id, method, state, amount_cents, currency]
+      properties:
+        id: { type: string, pattern: '^pay_[0-9a-f]{32}$' }
+        order_id: { type: string, format: uuid }
+        method: { $ref: '#/components/schemas/MockPaymentMethod' }
+        state: { type: string, enum: [pending, succeeded, failed, refunded] }
+        amount_cents: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [EUR] }
+    MockPaymentEvent:
+      type: object
+      required: [id, payment_id, order_id, method, outcome, amount_cents, currency]
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '^evt_[0-9a-f]{32}$' }
+        payment_id: { type: string, pattern: '^pay_[0-9a-f]{32}$' }
+        order_id: { type: string, format: uuid }
+        method: { $ref: '#/components/schemas/MockPaymentMethod' }
+        outcome: { type: string, enum: [succeeded, failed, refunded] }
+        amount_cents: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [EUR] }
     CategoryWrite:
       type: object
       required: [name, slug, status, sort_order]

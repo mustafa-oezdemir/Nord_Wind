@@ -35,7 +35,13 @@
           <path d="M15 27.5 22.5 35 37.5 18.5" />
         </svg>
         <div>
-          <h1 #heading tabindex="-1">Danke, {{ a.first_name }}!</h1>
+          <h1 #heading tabindex="-1">
+            {{
+              current.status === 'CANCELLED'
+                ? 'Bestellung storniert'
+                : 'Danke, ' + a.first_name + '!'
+            }}
+          </h1>
           <p class="order-lead">
             Ihre Bestellung ist gespeichert. Bitte notieren Sie die Bestellnummer für Rückfragen.
           </p>
@@ -53,11 +59,21 @@
         </li>
         <li>
           <strong>Zahlung</strong>
-          <span>In der Vorschau nicht aktiv – es wird nichts abgebucht.</span>
+          <span>
+            @if (methods().length) {
+              {{
+                current.status === 'PAID'
+                  ? 'Im Test erfolgreich simuliert.'
+                  : 'Wählen Sie unten eine simulierte Zahlungsart. Es wird nichts abgebucht.'
+              }}
+            } @else {
+              In der Vorschau nicht aktiv – es wird nichts abgebucht.
+            }
+          </span>
         </li>
         <li>
           <strong>Versand</strong>
-          <span>Startet erst nach der Zahlung.</span>
+          <span>In dieser Vorschau erfolgt kein Versand.</span>
         </li>
       </ol>
 
@@ -96,6 +112,77 @@
             </address>
             <p class="order-account">Kundenkonto {{ current.customer_email }}</p>
           </section>
+
+          @if (methods().length) {
+            <section class="order-card mock-payment" aria-labelledby="mock-payment-title">
+              <h2 id="mock-payment-title" class="order-card-title">Zahlung simulieren</h2>
+              <p class="mock-payment-note mb-3">
+                Testmodus: Debitkarte, Klarna, PayPal und Überweisung sind Simulationen. Es werden
+                weder Geld noch Karten- oder Bankdaten verarbeitet.
+              </p>
+
+              @if (payment(); as currentPayment) {
+                <p class="fw-semibold mb-3" data-testid="mock-payment-status">
+                  {{ methodLabel(currentPayment.method) }} ·
+                  {{ paymentLabel(currentPayment.state) }}
+                </p>
+                @if (currentPayment.state === 'pending' && current.status === 'PAYMENT_PENDING') {
+                  <div class="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      [disabled]="paymentBusy()"
+                      (click)="simulate('succeeded')"
+                    >
+                      Erfolg simulieren
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger"
+                      [disabled]="paymentBusy()"
+                      (click)="simulate('failed')"
+                    >
+                      Fehler simulieren
+                    </button>
+                  </div>
+                }
+                @if (currentPayment.state === 'succeeded') {
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    [disabled]="paymentBusy()"
+                    (click)="simulate('refunded')"
+                  >
+                    Erstattung simulieren
+                  </button>
+                }
+              } @else if (current.status === 'CREATED' || current.status === 'PAYMENT_PENDING') {
+                <fieldset class="mock-payment-methods" [disabled]="paymentBusy()">
+                  <legend>Zahlungsart wählen</legend>
+                  @for (method of methods(); track method) {
+                    <label class="mock-payment-method">
+                      <input
+                        type="radio"
+                        name="mock-payment-method"
+                        [value]="method"
+                        [checked]="selectedMethod() === method"
+                        (change)="selectMethod(method)"
+                      />
+                      <span>{{ methodLabel(method) }}</span>
+                    </label>
+                  }
+                </fieldset>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  [disabled]="paymentBusy()"
+                  (click)="initiatePayment()"
+                >
+                  Simulierte Zahlung starten
+                </button>
+              }
+            </section>
+          }
         </div>
 
         <section class="order-card order-summary" aria-labelledby="order-summary-title">
@@ -104,6 +191,19 @@
             Status <span data-testid="order-status">{{ statusLabel(current.status) }}</span>
           </p>
           <app-price-summary [pricing]="current.pricing" [discount]="current.discount" />
+          @if (paymentNotice()) {
+            <p class="mock-payment-feedback" role="status">{{ paymentNotice() }}</p>
+          }
+          @if (current.status === 'CREATED' || current.status === 'PAYMENT_PENDING') {
+            <button
+              type="button"
+              class="btn btn-outline-danger w-100 mb-2"
+              [disabled]="paymentBusy()"
+              (click)="cancelOrder()"
+            >
+              Bestellung stornieren
+            </button>
+          }
           <a class="btn btn-primary w-100" routerLink="/produkte">Weiter einkaufen</a>
         </section>
       </div>

@@ -238,6 +238,54 @@
   }
 }
 
+.mock-payment-note {
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+.mock-payment-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+
+  legend {
+    grid-column: 1 / -1;
+    margin-bottom: 0.6rem;
+    font-size: t.$size-sm;
+    font-weight: 600;
+  }
+}
+
+.mock-payment-method {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid t.$line;
+  border-radius: t.$radius-sm;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: t.$fjord;
+    background: t.$mist;
+  }
+
+  &:focus-within {
+    outline: 2px solid t.$fjord;
+    outline-offset: 2px;
+  }
+}
+
+.mock-payment-feedback {
+  padding: 0.7rem;
+  border-radius: t.$radius-sm;
+  background: t.$white;
+  font-size: t.$size-sm;
+}
+
 @media (min-width: t.$bp-md) {
   .order-next {
     grid-template-columns: repeat(3, minmax(0, 1fr));

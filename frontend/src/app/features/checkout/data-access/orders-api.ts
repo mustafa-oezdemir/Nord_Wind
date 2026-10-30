@@ -132,4 +132,18 @@ export class OrdersApi {
   get(orderNumber: string): Observable<Order> {
     return this.http.get<Order>(`${this.base}/orders/${encodeURIComponent(orderNumber)}`);
   }
+
+  cancel(orderNumber: string): Observable<Order> {
+    return this.cart
+      .session()
+      .pipe(
+        switchMap((session) =>
+          this.http.post<Order>(
+            `${this.base}/orders/${encodeURIComponent(orderNumber)}/cancel`,
+            {},
+            { headers: new HttpHeaders({ 'X-CSRF-Token': session.csrf_token }) },
+          ),
+        ),
+      );
+  }
 }
