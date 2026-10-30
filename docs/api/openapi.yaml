@@ -3,8 +3,8 @@ info:
   title: NordWinds API
   version: 1.0.0
   description: >-
-    Öffentliche, lesende Katalog-Endpunkte sowie geschützte Authentifizierungs- und
-    Verwaltungs-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge öffentlicher
+    Öffentliche, lesende Katalog-Endpunkte sowie geschützte Authentifizierungs-,
+    Verwaltungs- und Warenkorb-Endpunkte unter `/api/v1`. Die rohe Query-Zeichenfolge öffentlicher
     Kataloglisten ist auf 512 Bytes begrenzt; unbekannte oder mehrfach übergebene
     Parameter werden dort abgewiesen.
 paths:
@@ -319,6 +319,77 @@ paths:
             image/jpeg:
               schema: { type: string, format: binary }
         '404': { $ref: '#/components/responses/ProductNotFound' }
+  /api/v1/cart:
+    get:
+      summary: Warenkorb des angemeldeten Kunden mit aktuellen Preisen und Bestand lesen
+      operationId: getCart
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/CartSnapshot' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/cart/items:
+    post:
+      summary: Variante hinzufügen; vorhandene Menge wird atomar erhöht
+      operationId: addCartItem
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id, quantity]
+              additionalProperties: false
+              properties:
+                variant_id: { type: string, format: uuid }
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200': { $ref: '#/components/responses/CartSnapshot' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/cart/items/{variantId}:
+    parameters:
+      - name: variantId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      summary: Menge einer vorhandenen Variante vollständig setzen
+      operationId: setCartItemQuantity
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              additionalProperties: false
+              properties:
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200': { $ref: '#/components/responses/CartSnapshot' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+    delete:
+      summary: Variante aus dem Warenkorb entfernen
+      operationId: removeCartItem
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '204': { description: Position entfernt. }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
   /api/v1/auth/register:
     post:
       summary: Kundenkonto registrieren
@@ -632,6 +703,11 @@ components:
             required: [data]
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/ProductImage' } }
+    CartSnapshot:
+      description: Aktueller Warenkorb; Zwischensumme enthält nur lieferbare Positionen. Steuern und Versand sind noch nicht berechnet.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CartSnapshot' }
     AdminConflict:
       description: Unique- oder Fremdschlüsselkonflikt; keine Änderung oder Audit-Eintrag geschrieben.
       content:
@@ -745,6 +821,29 @@ components:
         related_id: { type: string, format: uuid, nullable: true }
         action: { type: string, enum: [create, update, delete, attach, detach] }
         created_at: { type: string, format: date-time }
+    CartItem:
+      type: object
+      required: [variant_id, product_id, product_slug, product_name, sku, label, quantity, unit_price_cents, line_total_cents, currency, available, unavailable_reason]
+      properties:
+        variant_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        product_slug: { type: string }
+        product_name: { type: string }
+        sku: { type: string }
+        label: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+        unit_price_cents: { type: integer, format: int64, minimum: 0 }
+        line_total_cents: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [EUR] }
+        available: { type: boolean }
+        unavailable_reason: { type: string, enum: ['', product_unavailable, insufficient_stock] }
+    CartSnapshot:
+      type: object
+      required: [items, subtotal_cents, currency]
+      properties:
+        items: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/CartItem' } }
+        subtotal_cents: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [EUR] }
     Credentials:
       type: object
       required: [email, password]

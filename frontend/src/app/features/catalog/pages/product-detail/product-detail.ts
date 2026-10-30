@@ -8,11 +8,15 @@ import {
   inject,
   input,
   linkedSignal,
+  signal,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { apiErrorMessage, toApiError } from '../../../../core/http/api-error';
+import { firstValueFrom } from 'rxjs';
+import { CartApi } from '../../../cart/data-access/cart-api';
 import { formatPageTitle } from '../../../../core/routing/page-title-strategy';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
@@ -43,6 +47,10 @@ export class ProductDetailPage {
   private readonly location = inject(Location);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
+  private readonly cartApi = inject(CartApi);
+
+  protected readonly cartBusy = signal(false);
+  protected readonly cartError = signal('');
 
   // Routen- und Query-Parameter über withComponentInputBinding().
   readonly slug = input<string>();
@@ -128,6 +136,28 @@ export class ProductDetailPage {
       queryParamsHandling: 'merge',
     });
     this.location.replaceState(this.router.serializeUrl(tree));
+  }
+
+  protected async addToCart(): Promise<void> {
+    const variant = this.selectedVariant();
+    if (!variant || variant.stockStatus === 'out_of_stock' || this.cartBusy()) return;
+    this.cartBusy.set(true);
+    this.cartError.set('');
+    try {
+      await firstValueFrom(this.cartApi.add(variant.id, 1));
+      await this.router.navigate(['/warenkorb']);
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        await this.router.navigate(['/warenkorb']);
+      } else if (error instanceof HttpErrorResponse && error.status === 409) {
+        this.cartError.set('Bestand oder Produktstatus hat sich geändert. Bitte erneut prüfen.');
+        this.product.reload();
+      } else {
+        this.cartError.set('Der Artikel konnte nicht hinzugefügt werden.');
+      }
+    } finally {
+      this.cartBusy.set(false);
+    }
   }
 }
 

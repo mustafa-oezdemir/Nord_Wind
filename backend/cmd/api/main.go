@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/cart"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
@@ -66,6 +67,7 @@ func main() {
 	authHandler := server.RegisterAuthRoutes(router, identityService, server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development"})
 	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
+	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"
