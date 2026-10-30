@@ -164,7 +164,7 @@ func TestOrdersOnPostgres(t *testing.T) {
 		return sessionCookie(t, response), csrfFromResponse(t, response)
 	}
 	customer, csrf := login("bestell-kunde@example.invalid", false)
-	other, _ := login("bestell-andere@example.invalid", false)
+	other, otherCSRF := login("bestell-andere@example.invalid", false)
 	admin, adminCSRF := login("bestell-admin@example.invalid", true)
 
 	getCart := func() cart.Snapshot {
@@ -470,5 +470,92 @@ func TestOrdersOnPostgres(t *testing.T) {
 			t.Fatalf("Rückwärtswechsel: %s", got)
 		}
 		assertProblem(t, authRequest(router, http.MethodDelete, "/api/v1/admin/variants/"+panVariant.ID, "", admin, adminCSRF), http.StatusConflict, "CONFLICT")
+	})
+
+	t.Run("Zwei Kunden reservieren das letzte Stück nur einmal", func(t *testing.T) {
+		last, err := products.CreateProduct(ctx, catalog.Product{
+			Name: "Letztes Stück", Slug: "letztes-stueck", Status: catalog.ProductPublished,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		variant, err := products.CreateVariant(ctx, catalog.ProductVariant{
+			ProductID: last.ID, SKU: "NW-LAST-ONE", Label: "Einzelstück",
+			PriceCents: 1000, StockQuantity: 1, IsActive: true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		users := []struct {
+			cookie *http.Cookie
+			csrf   string
+		}{
+			{customer, csrf}, {other, otherCSRF},
+		}
+		for _, user := range users {
+			response := authRequest(router, http.MethodPost, "/api/v1/cart/items",
+				fmt.Sprintf(`{"variant_id":%q,"quantity":1}`, variant.ID), user.cookie, user.csrf)
+			if response.Code != http.StatusOK {
+				t.Fatalf("Warenkorb vor Wettlauf: %d %s", response.Code, response.Body.String())
+			}
+		}
+		before := orderCount()
+		results := make([]*httptest.ResponseRecorder, 2)
+		start := make(chan struct{})
+		var concurrent sync.WaitGroup
+		for index, user := range users {
+			concurrent.Add(1)
+			go func(index int, user struct {
+				cookie *http.Cookie
+				csrf   string
+			}) { defer concurrent.Done(); <-start; results[index] = orderRequest(router, orderBody(1490), user.cookie, user.csrf,
+				key(fmt.Sprintf("letztes-%d", index))) }(index, user)
+		}
+		close(start)
+		concurrent.Wait()
+		winner, created := -1, 0
+		for index, response := range results {
+			switch response.Code {
+			case http.StatusCreated:
+				winner = index
+				created++
+			case http.StatusConflict:
+				decodeOrderProblem(t, response, http.StatusConflict, "CART_CHANGED")
+			default:
+				t.Fatalf("Unerwartetes Ergebnis %d: %s", response.Code, response.Body.String())
+			}
+		}
+		if created != 1 || winner < 0 || orderCount() != before+1 ||
+			count(`SELECT stock_quantity FROM product_variants WHERE id = $1`, variant.ID) != 0 ||
+			count(`SELECT count(*) FROM order_reservations WHERE variant_id = $1 AND state = 'active'`, variant.ID) != 1 {
+			t.Fatalf("Überverkauf: Ergebnisse %d/%d, Bestellungen %d", results[0].Code, results[1].Code, orderCount()-before)
+		}
+		var winnerOrder orders.Order
+		if err := json.Unmarshal(results[winner].Body.Bytes(), &winnerOrder); err != nil {
+			t.Fatal(err)
+		}
+		cancelPath := "/api/v1/orders/" + winnerOrder.OrderNumber + "/cancel"
+		assertProblem(t, authRequest(router, http.MethodPost, cancelPath, "", users[1-winner].cookie,
+			users[1-winner].csrf), http.StatusNotFound, "NOT_FOUND")
+		for attempt := 0; attempt < 2; attempt++ {
+			response := authRequest(router, http.MethodPost, cancelPath, "", users[winner].cookie,
+				users[winner].csrf)
+			if response.Code != http.StatusOK {
+				t.Fatalf("Stornierung %d: %d %s", attempt, response.Code, response.Body.String())
+			}
+		}
+		if count(`SELECT stock_quantity FROM product_variants WHERE id = $1`, variant.ID) != 1 ||
+			count(`SELECT count(*) FROM order_reservations WHERE variant_id = $1 AND state = 'released'`, variant.ID) != 1 ||
+			count(`SELECT count(*) FROM order_status_events WHERE order_id = $1 AND to_status = 'CANCELLED'`, winnerOrder.ID) != 1 {
+			t.Fatal("Stornierung gab Bestand nicht genau einmal frei")
+		}
+		loser := 1 - winner
+		retry := orderRequest(router, orderBody(1490), users[loser].cookie, users[loser].csrf,
+			key(fmt.Sprintf("letztes-%d", loser)))
+		decodeOrder(t, retry, http.StatusCreated)
+		if count(`SELECT stock_quantity FROM product_variants WHERE id = $1`, variant.ID) != 0 ||
+			count(`SELECT count(*) FROM order_reservations WHERE variant_id = $1 AND state = 'active'`, variant.ID) != 1 {
+			t.Fatal("Wiederholung nach Stornierung reservierte Bestand nicht erneut")
+		}
 	})
 }

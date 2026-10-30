@@ -7,8 +7,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/cart"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/inventory"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
 )
 
@@ -41,14 +43,24 @@ func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
 // alles in einer Transaktion. Ein bereits verarbeiteter Idempotency-Key liefert die
 // vorhandene Bestellung mit replayed = true.
 //
-// Die Sperre auf der Kundenzeile serialisiert Checkouts und Warenkorbänderungen desselben
-// Kunden. Bestand wird geprüft, aber erst mit NW-17 reserviert.
+// Die Kundensperre serialisiert Checkout und Warenkorbänderungen desselben Kunden.
+// Der atomare Bestandsabzug verhindert auch bei verschiedenen Kunden Überverkäufe.
 func (r *Repository) Create(ctx context.Context, in CreateInput) (order Order, replayed bool, err error) {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return Order{}, false, err
+	err = inventory.WithDeadlockRetry(ctx, r.db, func(tx *sql.Tx) error {
+		order, replayed, err = r.createTx(ctx, tx, in)
+		return err
+	})
+	if errors.Is(err, inventory.ErrUnavailable) {
+		fresh, loadErr := cart.Load(ctx, r.db, in.CustomerID)
+		if loadErr != nil {
+			return Order{}, false, loadErr
+		}
+		return Order{}, false, &CartChangedError{Reason: ReasonItemUnavailable, Cart: fresh}
 	}
-	defer tx.Rollback()
+	return order, replayed, err
+}
+
+func (r *Repository) createTx(ctx context.Context, tx *sql.Tx, in CreateInput) (order Order, replayed bool, err error) {
 
 	var email string
 	if err := tx.QueryRowContext(ctx, `SELECT email FROM customers WHERE id = $1 FOR UPDATE`,
@@ -132,6 +144,13 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (order Order, r
 			return Order{}, false, err
 		}
 	}
+	lines := make([]inventory.Line, 0, len(snapshot.Items))
+	for _, item := range snapshot.Items {
+		lines = append(lines, inventory.Line{VariantID: item.VariantID, Quantity: item.Quantity})
+	}
+	if err := inventory.Reserve(ctx, tx, orderID, lines, time.Now().Add(inventory.DefaultTTL)); err != nil {
+		return Order{}, false, err
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO order_status_events (order_id, from_status, to_status, actor)
 		VALUES ($1, NULL, $2, 'customer')`, orderID, Created); err != nil {
 		return Order{}, false, err
@@ -146,12 +165,24 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (order Order, r
 	if err != nil {
 		return Order{}, false, err
 	}
-	return order, false, tx.Commit()
+	return order, false, nil
 }
 
 // Get liefert eine Bestellung nur ihrem eigenen Kunden; fremde Bestellungen ergeben ErrNotFound.
 func (r *Repository) Get(ctx context.Context, customerID, orderNumber string) (Order, error) {
 	return get(ctx, r.db, customerID, orderNumber)
+}
+
+// Cancel gibt eine noch offene Reservierung frei; derselbe Abbruch darf wiederholt werden.
+func (r *Repository) Cancel(ctx context.Context, customerID, orderNumber string) (Order, error) {
+	order, err := r.Get(ctx, customerID, orderNumber)
+	if err != nil {
+		return Order{}, err
+	}
+	if err := inventory.Cancel(ctx, r.db, order.ID); err != nil {
+		return Order{}, err
+	}
+	return r.Get(ctx, customerID, orderNumber)
 }
 
 func get(ctx context.Context, q cart.Querier, customerID, orderNumber string) (Order, error) {

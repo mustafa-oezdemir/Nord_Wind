@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/inventory"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
 )
 
@@ -18,6 +19,7 @@ func RegisterOrderRoutes(router *gin.Engine, auth *AuthHandler, repository *orde
 	group := router.Group("/api/v1/orders", auth.RequireSession(), auth.RequireRole(identity.CustomerRole))
 	group.POST("", auth.RequireCSRF(), handler.create)
 	group.GET("/:orderNumber", handler.get)
+	group.POST("/:orderNumber/cancel", auth.RequireCSRF(), handler.cancel)
 }
 
 type orderCreateInput struct {
@@ -94,4 +96,24 @@ func (h *ordersHandler) get(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, order)
+}
+
+func (h *ordersHandler) cancel(c *gin.Context) {
+	number := c.Param("orderNumber")
+	if !orders.ValidOrderNumber(number) {
+		writeProblem(c, NotFound)
+		return
+	}
+	order, err := h.repository.Cancel(c.Request.Context(), CurrentSession(c).Customer.ID, number)
+	switch {
+	case errors.Is(err, orders.ErrNotFound):
+		writeProblem(c, NotFound)
+	case errors.Is(err, inventory.ErrState):
+		writeProblem(c, Conflict)
+	case err != nil:
+		HandleError(c, err)
+	default:
+		c.Header("Cache-Control", "no-store")
+		c.JSON(http.StatusOK, order)
+	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/inventory"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
@@ -90,6 +91,20 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			if _, err := inventory.ReleaseExpired(ctx, connection.SQL, time.Now(), 100); err != nil && ctx.Err() == nil {
+				logger.Error("Abgelaufene Reservierungen konnten nicht freigegeben werden", "event", "inventory.expiry.failed")
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- httpServer.Serve(listener) }()
 	logger.Info("API gestartet", "event", "app.started", "port", port)
