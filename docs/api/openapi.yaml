@@ -390,6 +390,120 @@ paths:
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
         '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/cart/discount:
+    put:
+      summary: Rabattcode im Warenkorb hinterlegen
+      description: >-
+        Ersetzt einen vorhandenen Code. Unbekannte, deaktivierte und abgelaufene Codes ergeben
+        einheitlich 404. Nach 10 Fehlversuchen je Kunde in 15 Minuten folgt 429.
+      operationId: applyCartDiscount
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code: { type: string, maxLength: 64, description: Groß-/Kleinschreibung und Leerraum am Rand werden ignoriert. }
+      responses:
+        '200': { $ref: '#/components/responses/CartSnapshot' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '429': { $ref: '#/components/responses/AuthProblem' }
+    delete:
+      summary: Rabattcode aus dem Warenkorb entfernen
+      operationId: removeCartDiscount
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      responses:
+        '200': { $ref: '#/components/responses/CartSnapshot' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/admin/discount-codes:
+    get:
+      summary: Rabattcodes auflisten
+      operationId: listDiscountCodes
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Alle Rabattcodes, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/DiscountCode' } }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+    post:
+      summary: Rabattcode anlegen
+      description: Der Code wird großgeschrieben gespeichert und ist danach unveränderlich; jede Änderung erzeugt ein Audit-Ereignis.
+      operationId: createDiscountCode
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, percent_bp]
+              properties:
+                code: { type: string, description: '3–32 Zeichen A–Z, 0–9 und Bindestrich; Kleinbuchstaben werden umgewandelt.' }
+                percent_bp: { type: integer, minimum: 1, maximum: 10000 }
+                is_active: { type: boolean, default: true }
+                valid_from: { type: string, format: date-time, nullable: true }
+                valid_until: { type: string, format: date-time, nullable: true, description: Muss nach `valid_from` liegen. }
+      responses:
+        '201':
+          description: Angelegter Code.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiscountCode' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/discount-codes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      summary: Prozentsatz, Aktivierung und Gültigkeit eines Codes ändern
+      operationId: updateDiscountCode
+      security: [{ SessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CSRFToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [percent_bp]
+              properties:
+                percent_bp: { type: integer, minimum: 1, maximum: 10000 }
+                is_active: { type: boolean, default: true }
+                valid_from: { type: string, format: date-time, nullable: true }
+                valid_until: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: Geänderter Code.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiscountCode' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
   /api/v1/auth/register:
     post:
       summary: Kundenkonto registrieren
@@ -704,7 +818,7 @@ components:
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/ProductImage' } }
     CartSnapshot:
-      description: Aktueller Warenkorb; Zwischensumme enthält nur lieferbare Positionen. Steuern und Versand sind noch nicht berechnet.
+      description: Aktueller Warenkorb mit serverseitiger Preisaufstellung; berechnet werden nur lieferbare Positionen.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/CartSnapshot' }
@@ -772,6 +886,11 @@ components:
         slug: { type: string, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', maxLength: 120 }
         description: { type: string, maxLength: 10000 }
         status: { type: string, enum: [draft, published, archived] }
+        tax_class:
+          type: string
+          enum: [standard, reduced]
+          default: standard
+          description: Umsatzsteuer aller Varianten; `standard` = 19 %, `reduced` = 7 % (ADR-007). Fehlt der Wert, gilt `standard`.
     VariantWrite:
       type: object
       required: [sku, label, price_cents, stock_quantity, is_active]
@@ -823,7 +942,7 @@ components:
         created_at: { type: string, format: date-time }
     CartItem:
       type: object
-      required: [variant_id, product_id, product_slug, product_name, sku, label, quantity, unit_price_cents, line_total_cents, currency, available, unavailable_reason]
+      required: [variant_id, product_id, product_slug, product_name, sku, label, quantity, unit_price_cents, line_total_cents, currency, available, unavailable_reason, tax_class, tax_rate_bp]
       properties:
         variant_id: { type: string, format: uuid }
         product_id: { type: string, format: uuid }
@@ -837,13 +956,68 @@ components:
         currency: { type: string, enum: [EUR] }
         available: { type: boolean }
         unavailable_reason: { type: string, enum: ['', product_unavailable, insufficient_stock] }
+        tax_class: { type: string, enum: [standard, reduced] }
+        tax_rate_bp: { type: integer, enum: [1900, 700], description: Steuersatz in Basispunkten (1900 = 19 %). }
     CartSnapshot:
       type: object
-      required: [items, subtotal_cents, currency]
+      required: [items, subtotal_cents, currency, discount, pricing]
       properties:
         items: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/CartItem' } }
-        subtotal_cents: { type: integer, format: int64, minimum: 0 }
+        subtotal_cents: { type: integer, format: int64, minimum: 0, description: Warenwert lieferbarer Positionen; gleich `pricing.goods_cents`. }
         currency: { type: string, enum: [EUR] }
+        discount:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/CartDiscount' }]
+        pricing: { $ref: '#/components/schemas/CartPricing' }
+    CartDiscount:
+      type: object
+      required: [code, percent_bp, applied]
+      properties:
+        code: { type: string }
+        percent_bp: { type: integer, minimum: 1, maximum: 10000 }
+        applied: { type: boolean, description: false, wenn der hinterlegte Code deaktiviert oder abgelaufen ist; er wird dann nicht angerechnet. }
+    CartPricing:
+      type: object
+      description: >-
+        Serverseitige Preisaufstellung nach ADR-007. Alle Beträge sind Bruttobeträge in Cent.
+        Rabatt = Warenwert × Prozentsatz (kaufmännisch gerundet), Versand 4,90 € unter 50,00 €
+        rabattiertem Warenwert, Umsatzsteuer je Satz aus der Bruttosumme herausgerechnet.
+        Es gilt `total_cents = goods_cents − discount_cents + shipping_cents = Σ taxes.gross_cents`.
+      required: [goods_cents, discount_cents, shipping_cents, total_cents, missing_for_free_shipping_cents, shipping_flat_cents, free_shipping_from_cents, currency, taxes]
+      properties:
+        goods_cents: { type: integer, format: int64, minimum: 0 }
+        discount_cents: { type: integer, format: int64, minimum: 0 }
+        shipping_cents: { type: integer, format: int64, minimum: 0 }
+        total_cents: { type: integer, format: int64, minimum: 0 }
+        missing_for_free_shipping_cents: { type: integer, format: int64, minimum: 0 }
+        shipping_flat_cents: { type: integer, format: int64, minimum: 0 }
+        free_shipping_from_cents: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [EUR] }
+        taxes:
+          type: array
+          description: Je Steuersatz eine Zeile, höchster Satz zuerst; leer bei leerem Warenkorb.
+          items: { $ref: '#/components/schemas/CartTaxLine' }
+    CartTaxLine:
+      type: object
+      required: [tax_class, rate_bp, gross_cents, net_cents, vat_cents]
+      properties:
+        tax_class: { type: string, enum: [standard, reduced] }
+        rate_bp: { type: integer, enum: [1900, 700] }
+        gross_cents: { type: integer, format: int64, minimum: 0 }
+        net_cents: { type: integer, format: int64, minimum: 0 }
+        vat_cents: { type: integer, format: int64, minimum: 0 }
+    DiscountCode:
+      type: object
+      required: [id, code, percent_bp, is_active, valid_from, valid_until, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, pattern: '^[A-Z0-9][A-Z0-9-]{2,31}$' }
+        percent_bp: { type: integer, minimum: 1, maximum: 10000 }
+        is_active: { type: boolean }
+        valid_from: { type: string, format: date-time, nullable: true }
+        valid_until: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
     Credentials:
       type: object
       required: [email, password]
@@ -973,7 +1147,7 @@ components:
           $ref: '#/components/schemas/Pagination'
     ProductDetail:
       type: object
-      required: [id, slug, name, description, sale_status, categories, variants, images]
+      required: [id, slug, name, description, sale_status, tax_class, tax_rate_bp, categories, variants, images]
       properties:
         id:
           type: string
@@ -991,6 +1165,13 @@ components:
             `available`: mindestens eine Variante hat Bestand; `sold_out`: aktive Varianten
             ohne Bestand; `unavailable`: veröffentlicht, aber ohne aktive Variante;
             `discontinued`: archiviert.
+        tax_class:
+          type: string
+          enum: [standard, reduced]
+        tax_rate_bp:
+          type: integer
+          enum: [1900, 700]
+          description: Alle Variantenpreise sind Bruttopreise inklusive dieses Steuersatzes.
         categories:
           type: array
           description: Aktive Kategorien in Pflegereihenfolge.

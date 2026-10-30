@@ -81,6 +81,8 @@ export interface ProductDetail {
   readonly name: string;
   readonly description: string;
   readonly saleStatus: SaleStatus;
+  /** Alle Variantenpreise sind Bruttopreise mit diesem Umsatzsteuersatz (ADR-007). */
+  readonly taxRateBp: number;
   readonly categories: readonly CategoryRef[];
   readonly variants: readonly VariantOffer[];
   readonly images: readonly ProductImage[];

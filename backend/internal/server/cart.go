@@ -18,6 +18,12 @@ func RegisterCartRoutes(router *gin.Engine, auth *AuthHandler, repository *cart.
 	group.POST("/items", auth.RequireCSRF(), handler.add)
 	group.PUT("/items/:variantId", auth.RequireCSRF(), handler.set)
 	group.DELETE("/items/:variantId", auth.RequireCSRF(), handler.remove)
+	group.PUT("/discount", auth.RequireCSRF(), handler.applyDiscount)
+	group.DELETE("/discount", auth.RequireCSRF(), handler.removeDiscount)
+}
+
+type cartDiscountInput struct {
+	Code string `json:"code"`
 }
 
 type cartQuantityInput struct {
@@ -33,8 +39,10 @@ func validCartQuantity(value int32) bool { return value >= 1 && value <= cart.Ma
 
 func cartError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, cart.ErrNotFound), errors.Is(err, cart.ErrVariantNotFound):
+	case errors.Is(err, cart.ErrNotFound), errors.Is(err, cart.ErrVariantNotFound), errors.Is(err, cart.ErrDiscountInvalid):
 		writeProblem(c, NotFound)
+	case errors.Is(err, cart.ErrRateLimited):
+		writeProblem(c, RateLimited)
 	case errors.Is(err, cart.ErrUnavailable), errors.Is(err, cart.ErrCartLimit):
 		writeProblem(c, Conflict)
 	default:
@@ -103,4 +111,31 @@ func (h *cartHandler) remove(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 	c.Status(http.StatusNoContent)
+}
+
+// applyDiscount hinterlegt einen Rabattcode. Unbekannte, deaktivierte und abgelaufene Codes
+// ergeben einheitlich 404, damit gültige Codes nicht erraten werden können.
+func (h *cartHandler) applyDiscount(c *gin.Context) {
+	var input cartDiscountInput
+	if err := readJSON(c, &input); err != nil {
+		HandleError(c, err)
+		return
+	}
+	if len(input.Code) > 64 {
+		writeProblem(c, InvalidRequest)
+		return
+	}
+	if err := h.repository.ApplyDiscount(c.Request.Context(), CurrentSession(c).Customer.ID, input.Code); err != nil {
+		cartError(c, err)
+		return
+	}
+	h.snapshot(c, http.StatusOK)
+}
+
+func (h *cartHandler) removeDiscount(c *gin.Context) {
+	if err := h.repository.RemoveDiscount(c.Request.Context(), CurrentSession(c).Customer.ID); err != nil {
+		cartError(c, err)
+		return
+	}
+	h.snapshot(c, http.StatusOK)
 }

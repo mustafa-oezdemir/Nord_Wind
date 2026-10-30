@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
 )
 
 // ErrNotFound bezeichnet einen fehlenden Katalogdatensatz.
@@ -59,22 +61,28 @@ func (r *Repository) CreateProduct(ctx context.Context, product Product) (Produc
 	if product.Status == "" {
 		product.Status = ProductDraft
 	}
-	err := r.db.QueryRowContext(ctx, `INSERT INTO products (name, slug, description, status)
-		VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at`, product.Name,
-		product.Slug, product.Description, product.Status,
+	if product.TaxClass == "" {
+		product.TaxClass = pricing.TaxStandard
+	}
+	err := r.db.QueryRowContext(ctx, `INSERT INTO products (name, slug, description, status, tax_class)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, updated_at`, product.Name,
+		product.Slug, product.Description, product.Status, product.TaxClass,
 	).Scan(&product.ID, &product.CreatedAt, &product.UpdatedAt)
 	return product, err
 }
 
 func (r *Repository) GetProduct(ctx context.Context, id string) (Product, error) {
 	return scanProduct(r.db.QueryRowContext(ctx, `SELECT id, name, slug, description, status,
-		created_at, updated_at FROM products WHERE id = $1`, id))
+		tax_class, created_at, updated_at FROM products WHERE id = $1`, id))
 }
 
 func (r *Repository) UpdateProduct(ctx context.Context, product Product) (Product, error) {
+	if product.TaxClass == "" {
+		product.TaxClass = pricing.TaxStandard
+	}
 	err := r.db.QueryRowContext(ctx, `UPDATE products SET name = $2, slug = $3, description = $4,
-		status = $5, updated_at = now() WHERE id = $1 RETURNING updated_at`, product.ID,
-		product.Name, product.Slug, product.Description, product.Status,
+		status = $5, tax_class = $6, updated_at = now() WHERE id = $1 RETURNING updated_at`, product.ID,
+		product.Name, product.Slug, product.Description, product.Status, product.TaxClass,
 	).Scan(&product.UpdatedAt)
 	return product, notFound(err)
 }
@@ -185,7 +193,7 @@ func scanCategory(row scanner) (Category, error) {
 func scanProduct(row scanner) (Product, error) {
 	var product Product
 	err := row.Scan(&product.ID, &product.Name, &product.Slug, &product.Description,
-		&product.Status, &product.CreatedAt, &product.UpdatedAt)
+		&product.Status, &product.TaxClass, &product.CreatedAt, &product.UpdatedAt)
 	return product, notFound(err)
 }
 

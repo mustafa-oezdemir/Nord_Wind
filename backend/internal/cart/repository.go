@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"math"
+
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
 )
 
 const MaxQuantity = 99
@@ -28,12 +30,18 @@ type Item struct {
 	Currency       string `json:"currency"`
 	Available      bool   `json:"available"`
 	Unavailable    string `json:"unavailable_reason"`
+	TaxClass       string `json:"tax_class"`
+	TaxRateBP      int64  `json:"tax_rate_bp"`
 }
 
+// Snapshot ist der Warenkorb mit serverseitig berechneter Preisaufstellung (ADR-007).
 type Snapshot struct {
-	Items         []Item `json:"items"`
-	SubtotalCents int64  `json:"subtotal_cents"`
-	Currency      string `json:"currency"`
+	Items []Item `json:"items"`
+	// SubtotalCents ist der Warenwert der lieferbaren Positionen (= Pricing.GoodsCents).
+	SubtotalCents int64     `json:"subtotal_cents"`
+	Currency      string    `json:"currency"`
+	Discount      *Discount `json:"discount"`
+	Pricing       Pricing   `json:"pricing"`
 }
 
 type Repository struct{ db *sql.DB }
@@ -42,9 +50,10 @@ func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
 
 func (r *Repository) Get(ctx context.Context, customerID string) (Snapshot, error) {
 	snapshot := Snapshot{Items: []Item{}, Currency: "EUR"}
+	lines := []pricing.Line{}
 	rows, err := r.db.QueryContext(ctx, `SELECT ci.variant_id, v.product_id, p.slug, p.name,
 		v.sku, v.label, ci.quantity, v.price_cents, v.currency, v.stock_quantity,
-		v.is_active, p.status
+		v.is_active, p.status, p.tax_class
 		FROM cart_items ci JOIN product_variants v ON v.id = ci.variant_id
 		JOIN products p ON p.id = v.product_id
 		WHERE ci.customer_id = $1 ORDER BY ci.created_at, ci.variant_id`, customerID)
@@ -59,9 +68,14 @@ func (r *Repository) Get(ctx context.Context, customerID string) (Snapshot, erro
 		var status string
 		if err := rows.Scan(&item.VariantID, &item.ProductID, &item.ProductSlug,
 			&item.ProductName, &item.SKU, &item.Label, &item.Quantity,
-			&item.UnitPriceCents, &item.Currency, &stock, &active, &status); err != nil {
+			&item.UnitPriceCents, &item.Currency, &stock, &active, &status, &item.TaxClass); err != nil {
 			return snapshot, err
 		}
+		rate, ok := pricing.RateBP(pricing.TaxClass(item.TaxClass))
+		if !ok {
+			return snapshot, pricing.ErrInvalidLine
+		}
+		item.TaxRateBP = rate
 		if item.UnitPriceCents > math.MaxInt64/int64(item.Quantity) {
 			return snapshot, errors.New("Warenkorbpreis überläuft")
 		}
@@ -73,14 +87,31 @@ func (r *Repository) Get(ctx context.Context, customerID string) (Snapshot, erro
 			item.Unavailable = "insufficient_stock"
 		default:
 			item.Available = true
-			if snapshot.SubtotalCents > math.MaxInt64-item.LineTotalCents {
-				return snapshot, errors.New("Warenkorbsumme überläuft")
-			}
-			snapshot.SubtotalCents += item.LineTotalCents
+			lines = append(lines, pricing.Line{UnitGrossCents: item.UnitPriceCents,
+				Quantity: int64(item.Quantity), TaxClass: pricing.TaxClass(item.TaxClass)})
 		}
 		snapshot.Items = append(snapshot.Items, item)
 	}
-	return snapshot, rows.Err()
+	if err := rows.Err(); err != nil {
+		return snapshot, err
+	}
+	rows.Close()
+	discount, err := r.storedDiscount(ctx, customerID)
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.Discount = discount
+	var discountBP int64
+	if discount != nil && discount.Applied {
+		discountBP = discount.PercentBP
+	}
+	quote, err := pricing.Calculate(lines, discountBP, pricing.DefaultShipping)
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.Pricing = newPricing(quote, pricing.DefaultShipping)
+	snapshot.SubtotalCents = quote.GoodsCents
+	return snapshot, nil
 }
 
 func (r *Repository) Add(ctx context.Context, customerID, variantID string, quantity int32) error {

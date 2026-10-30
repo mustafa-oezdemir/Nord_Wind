@@ -78,6 +78,24 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	assertSQLState(t, ctx, db, `INSERT INTO order_items (order_id, variant_id, name_snapshot, sku_snapshot, quantity, unit_price_cents, tax_snapshot) VALUES ('00000000-0000-0000-0000-000000000000', $1, 'Telefon', 'NW-SKU-1', 1, 100, '{}'::jsonb)`, "23503", variantID)
 	assertSQLState(t, ctx, db, `INSERT INTO cart_items (customer_id, variant_id, quantity) VALUES ($1, $2, 0)`, "23514", customerID, variantID)
 	mustExec(t, ctx, db, `INSERT INTO cart_items (customer_id, variant_id, quantity) VALUES ($1, $2, 2)`, customerID, variantID)
+	assertSQLState(t, ctx, db, `UPDATE products SET tax_class = 'luxus' WHERE id = $1`, "23514", productID)
+	assertSQLState(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('herbst10', 1000)`, "23514")
+	assertSQLState(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('HERBST10', 10001)`, "23514")
+	codeID := insertID(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('HERBST10', 1000) RETURNING id`)
+	assertSQLState(t, ctx, db, `INSERT INTO discount_codes (code, percent_bp) VALUES ('HERBST10', 500)`, "23505")
+	mustExec(t, ctx, db, `INSERT INTO cart_discounts (customer_id, discount_code_id) VALUES ($1, $2)`, customerID, codeID)
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Preis-Down darf vorhandene Rabattcodes nicht entfernen")
+	}
+	mustExec(t, ctx, db, `DELETE FROM discount_codes`)
+	mustExec(t, ctx, db, `UPDATE products SET tax_class = 'reduced' WHERE id = $1`, productID)
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Preis-Down darf ermäßigte Steuerklassen nicht verwerfen")
+	}
+	mustExec(t, ctx, db, `UPDATE products SET tax_class = 'standard' WHERE id = $1`, productID)
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 8 mit Domain-Daten: %v", err)
+	}
 	if err := Down(ctx, db); err == nil {
 		t.Fatal("Warenkorb-Down darf vorhandene Positionen nicht entfernen")
 	}
@@ -133,6 +151,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 8: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 7: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -160,6 +181,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Status nach Up/Down/Up: %v", err)
 	}
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 8 vor Bootstrap-Test: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 7 vor Bootstrap-Test: %v", err)
 	}
@@ -202,6 +226,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	var legacyValue string
 	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'legacy'`).Scan(&legacyValue); err != nil || legacyValue != "bleibt" {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 8 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 7 mit bestehendem app_settings: %v", err)

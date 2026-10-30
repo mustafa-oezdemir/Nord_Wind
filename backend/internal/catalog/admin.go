@@ -40,7 +40,7 @@ func (a *AdminRepository) ListCategories(ctx context.Context) ([]Category, error
 
 func (a *AdminRepository) ListProducts(ctx context.Context) ([]Product, error) {
 	rows, err := a.db.QueryContext(ctx, `SELECT id, name, slug, description, status,
-		created_at, updated_at FROM products ORDER BY created_at DESC, id DESC`)
+		tax_class, created_at, updated_at FROM products ORDER BY created_at DESC, id DESC`)
 	if err != nil {
 		return nil, err
 	}

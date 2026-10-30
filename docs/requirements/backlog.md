@@ -37,7 +37,7 @@ Marketplace und Verkäufer-Auszahlungen, Empfehlungsmaschine, komplexe Kampagnen
 2. **Vor weiteren Repositories nach NW-08:** Die noch vorgeschlagene Repository-Umstellung aus [ADR-003](../adr/ADR-003-data-access.md) (GORM) annehmen oder ablehnen. NW-08a Step 1 hat bereits den gemeinsamen Pool und GORM eingerichtet.
 3. **Vor NW-06/NW-10:** Produktarten, Varianten und Preis-/Bestandsmodell festlegen.
 4. **Vor NW-14/NW-16:** Gast-Checkout oder Konto-Pflicht bestimmen.
-5. **Vor NW-15:** Steuerklassen, Brutto-/Netto-Quelle, Rundung, Versand und Rabatte fachlich bestätigen.
+5. **Erledigt am 30. Oktober 2026:** Steuerklassen, Brutto-/Netto-Quelle, Rundung, Versand und Rabatte nach [ADR-007](../adr/ADR-007-pricing-policy.md) (NW-15). Die steuerliche Prüfung der Einordnung folgt vor NW-21.
 6. **Vor NW-16:** Bestell- und Zahlungsstatus sowie ihre erlaubten Übergänge per ADR festlegen.
 7. **Vor NW-17/NW-18:** Reservierungsdauer, Zahlungsanbieter, Retry- und Refund-Regeln festlegen.
 8. **Vor NW-21/NW-25:** Rechtliche Geltung, Hosting, Datenschutz, interne TLS-Anforderungen und Betriebsziele prüfen.

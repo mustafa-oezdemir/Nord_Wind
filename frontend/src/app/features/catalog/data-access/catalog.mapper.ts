@@ -42,10 +42,23 @@ export function parseProductDetail(body: unknown): ProductDetail {
     name: text(record, 'name'),
     description: text(record, 'description', true),
     saleStatus: oneOf(record, 'sale_status', SALE_STATUSES),
+    taxRateBp: taxRate(record),
     categories: list(record, 'categories').map(parseCategoryRef),
     variants: list(record, 'variants').map(parseVariant),
     images: list(record, 'images').map(parseImage),
   };
+}
+
+// Bekannte Steuerklassen und ihre Sätze; eine Abweichung deutet auf einen Vertragsbruch hin.
+const TAX_RATES: Readonly<Record<string, number>> = { standard: 1900, reduced: 700 };
+
+function taxRate(record: JsonRecord): number {
+  const taxClass = record['tax_class'];
+  const rate = integer(record, 'tax_rate_bp', 0);
+  if (typeof taxClass !== 'string' || TAX_RATES[taxClass] !== rate) {
+    throw new InvalidApiResponseError('tax_rate_bp');
+  }
+  return rate;
 }
 
 function parseImage(value: unknown): ProductImage {

@@ -18,6 +18,7 @@ import { apiErrorMessage, toApiError } from '../../../../core/http/api-error';
 import { firstValueFrom } from 'rxjs';
 import { CartApi } from '../../../cart/data-access/cart-api';
 import { formatPageTitle } from '../../../../core/routing/page-title-strategy';
+import { formatPercentBp } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { NotFoundView } from '../../../../shared/ui/not-found-view/not-found-view';
@@ -57,6 +58,7 @@ export class ProductDetailPage {
   readonly variante = input<string>();
 
   protected readonly stockLabels = STOCK_LABELS;
+  protected readonly percent = formatPercentBp;
 
   protected readonly product = rxResource({
     params: () => this.slug()?.trim() || undefined,

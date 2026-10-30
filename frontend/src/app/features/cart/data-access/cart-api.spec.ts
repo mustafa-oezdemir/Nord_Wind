@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { CartApi, CartSnapshot, CustomerSession } from './cart-api';
+import { CartApi, CartSnapshot, CustomerSession, EMPTY_CART } from './cart-api';
 
 describe('CartApi', () => {
   let api: CartApi;
@@ -12,7 +12,7 @@ describe('CartApi', () => {
     csrf_token: 'synthetic-csrf-token',
     expires_at: '2026-10-31T00:00:00Z',
   };
-  const empty: CartSnapshot = { items: [], subtotal_cents: 0, currency: 'EUR' };
+  const empty: CartSnapshot = EMPTY_CART;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -40,5 +40,26 @@ describe('CartApi', () => {
     expect(put.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
     put.flush(empty);
     await updated;
+  });
+
+  it('löst Rabattcodes mit CSRF-Token ein und entfernt sie wieder', async () => {
+    const login = firstValueFrom(api.login('kunde@example.invalid', 'ein-langes-passwort'));
+    http.expectOne('/api/v1/auth/login').flush(session);
+    await login;
+
+    const applied = firstValueFrom(api.applyDiscount('HERBST10'));
+    const put = http.expectOne('/api/v1/cart/discount');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ code: 'HERBST10' });
+    expect(put.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
+    put.flush(empty);
+    expect(await applied).toEqual(empty);
+
+    const removed = firstValueFrom(api.removeDiscount());
+    const del = http.expectOne('/api/v1/cart/discount');
+    expect(del.request.method).toBe('DELETE');
+    expect(del.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
+    del.flush(empty);
+    await removed;
   });
 });

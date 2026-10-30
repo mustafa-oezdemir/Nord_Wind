@@ -54,6 +54,8 @@ export interface ProductDetailDto {
   readonly name: string;
   readonly description: string;
   readonly sale_status: 'available' | 'sold_out' | 'unavailable' | 'discontinued';
+  readonly tax_class: 'standard' | 'reduced';
+  readonly tax_rate_bp: number;
   readonly categories: readonly CategoryRefDto[];
   readonly variants: readonly VariantOfferDto[];
   readonly images: readonly ProductImageDto[];

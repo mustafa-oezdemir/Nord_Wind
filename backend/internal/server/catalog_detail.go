@@ -48,6 +48,8 @@ type productDetailResponse struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	SaleStatus  string                 `json:"sale_status"`
+	TaxClass    string                 `json:"tax_class"`
+	TaxRateBP   int64                  `json:"tax_rate_bp"`
 	Categories  []categoryRefResponse  `json:"categories"`
 	Variants    []variantOfferResponse `json:"variants"`
 	Images      []catalog.ProductImage `json:"images"`
@@ -71,7 +73,7 @@ type variantOfferResponse struct {
 func newProductDetailResponse(detail catalog.ProductDetail) productDetailResponse {
 	response := productDetailResponse{
 		ID: detail.ID, Slug: detail.Slug, Name: detail.Name, Description: detail.Description,
-		SaleStatus: string(detail.SaleStatus),
+		SaleStatus: string(detail.SaleStatus), TaxClass: string(detail.TaxClass), TaxRateBP: detail.TaxRateBP,
 		Categories: make([]categoryRefResponse, 0, len(detail.Categories)),
 		Variants:   make([]variantOfferResponse, 0, len(detail.Variants)),
 		Images:     detail.Images,
