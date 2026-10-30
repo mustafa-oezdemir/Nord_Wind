@@ -65,3 +65,16 @@ Migration `0005_admin_audit` schreibt erfolgreiche Änderungen gemeinsam mit dem
 Migration 6 speichert bis zu sechs bereinigte JPEG-Bilder je Produkt in PostgreSQL. Admin-Upload und -Löschen verlangen Session und CSRF; öffentliche Bildpfade liefern nur Bilder veröffentlichter oder archivierter Produkte. [ADR-005](../docs/adr/ADR-005-product-media.md) beschreibt Limits und Speicherentscheidung. Der echte HTTP-Test verwendet eine eigene leere Datenbank über `NORDWINDS_MEDIA_TEST_URL`.
 
 Migration 7 ergänzt einen kontogebundenen Warenkorb. `GET /api/v1/cart`, `POST /api/v1/cart/items` und `PUT/DELETE /api/v1/cart/items/{variantId}` verlangen eine Customer-Session, Änderungen zusätzlich CSRF. Mengen und Preis-/Bestandsstatus stammen bei jeder Antwort aus der Datenbank; ein Warenkorb reserviert keinen Bestand. [ADR-006](../docs/adr/ADR-006-customer-cart.md) hält die Entscheidung gegen einen anonymen Warenkorb fest. Der PostgreSQL-HTTP-Test verwendet `NORDWINDS_CART_TEST_URL` auf einer weiteren separaten Testdatenbank.
+
+## Beispielkatalog
+
+`seeds/demo_catalog.sql` enthält 10 Kategorien mit je 2 veröffentlichten Beispielprodukten und einer aktiven Variante pro Produkt. Preise und Bestände sind erfundene Entwicklungsdaten; Produktbilder sind nicht enthalten. Das Skript ergänzt nur fehlende Datensätze, überschreibt bestehende Einträge nicht und bricht bei Slug-, SKU- oder ID-Kollisionen transaktional ab. Es wird bewusst nicht bei jeder Migration ausgeführt.
+
+Im Repository-Stamm mit eingerichteter `.env` lässt sich der Beispielkatalog in die laufende lokale Compose-Datenbank laden:
+
+```powershell
+Get-Content -Raw -Encoding UTF8 backend/seeds/demo_catalog.sql |
+  docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -X -v ON_ERROR_STOP=1'
+```
+
+Ein zweiter Lauf ist möglich und fügt keine Duplikate hinzu. Die öffentlichen Endpunkte `/api/v1/categories?limit=100` und `/api/v1/products?limit=100` zeigen danach die 10 bzw. 20 Datensätze.
