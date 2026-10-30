@@ -38,6 +38,12 @@
   font-size: clamp(t.$size-lg, 3vw, t.$size-xl);
 }
 
+.detail-tax-note {
+  margin: -0.25rem 0 0.25rem;
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
 .detail-stock {
   margin: 0;
   color: t.$success;

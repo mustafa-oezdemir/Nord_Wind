@@ -1,6 +1,10 @@
 package catalog
 
-import "time"
+import (
+	"time"
+
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
+)
 
 // Category gehört zum hierarchischen, öffentlich filterbaren Katalog.
 type Category struct {
@@ -29,8 +33,10 @@ type Product struct {
 	Slug        string        `json:"slug"`
 	Description string        `json:"description"`
 	Status      ProductStatus `json:"status"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
+	// TaxClass bestimmt den Umsatzsteuersatz aller Varianten (ADR-007).
+	TaxClass  pricing.TaxClass `json:"tax_class"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 type ProductStatus string

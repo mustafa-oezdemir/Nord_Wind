@@ -29,18 +29,26 @@ describe('AdminApi', () => {
     await restored;
 
     const saved = firstValueFrom(
-      api.saveProduct({ name: 'Kamera', slug: 'kamera', description: '', status: 'draft' }),
+      api.saveProduct({
+        name: 'Kochbuch',
+        slug: 'kochbuch',
+        description: '',
+        status: 'draft',
+        tax_class: 'reduced',
+      }),
     );
     const request = http.expectOne('/api/v1/admin/products');
     expect(request.request.method).toBe('POST');
+    expect(request.request.body.tax_class).toBe('reduced');
     expect(request.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
     expect(request.request.urlWithParams).not.toContain(session.csrf_token);
     request.flush({
       id: 'product-id',
-      name: 'Kamera',
-      slug: 'kamera',
+      name: 'Kochbuch',
+      slug: 'kochbuch',
       description: '',
       status: 'draft',
+      tax_class: 'reduced',
     });
     await saved;
 
@@ -49,5 +57,54 @@ describe('AdminApi', () => {
     expect(logoutRequest.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
     logoutRequest.flush(null);
     await logout;
+  });
+
+  it('legt Rabattcodes an und ändert nur Aktivierung und Gültigkeit', async () => {
+    const restored = firstValueFrom(api.session());
+    http.expectOne('/api/v1/auth/session').flush(session);
+    await restored;
+
+    const created = firstValueFrom(
+      api.createDiscountCode({
+        code: 'HERBST10',
+        percent_bp: 1000,
+        valid_from: null,
+        valid_until: null,
+      }),
+    );
+    const post = http.expectOne('/api/v1/admin/discount-codes');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({
+      code: 'HERBST10',
+      percent_bp: 1000,
+      valid_from: null,
+      valid_until: null,
+      is_active: true,
+    });
+    expect(post.request.headers.get('X-CSRF-Token')).toBe(session.csrf_token);
+    const code = {
+      id: 'code-id',
+      code: 'HERBST10',
+      percent_bp: 1000,
+      is_active: true,
+      valid_from: null,
+      valid_until: null,
+      created_at: '2026-10-30T10:00:00Z',
+      updated_at: '2026-10-30T10:00:00Z',
+    };
+    post.flush(code);
+    await created;
+
+    const updated = firstValueFrom(api.updateDiscountCode(code, false));
+    const put = http.expectOne('/api/v1/admin/discount-codes/code-id');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({
+      percent_bp: 1000,
+      is_active: false,
+      valid_from: null,
+      valid_until: null,
+    });
+    put.flush({ ...code, is_active: false });
+    await updated;
   });
 });

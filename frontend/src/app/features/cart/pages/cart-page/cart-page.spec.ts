@@ -1,54 +1,188 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { CartItem, CartSnapshot, EMPTY_CART } from '../../data-access/cart-api';
 import { CartPage } from './cart-page';
 
+const item = (overrides: Partial<CartItem> = {}): CartItem => ({
+  variant_id: 'variant-id',
+  product_id: 'product-id',
+  product_slug: 'pfanne',
+  product_name: 'Pfanne',
+  sku: 'NW-PFANNE',
+  label: 'Standard',
+  quantity: 1,
+  unit_price_cents: 3000,
+  line_total_cents: 3000,
+  currency: 'EUR',
+  available: true,
+  unavailable_reason: '',
+  tax_class: 'standard',
+  tax_rate_bp: 1900,
+  ...overrides,
+});
+
+/** Antwort der API für Pfanne 30,00 € (19 %) + Buch 10,00 € (7 %), siehe Go-Integrationstest. */
+const mixedCart: CartSnapshot = {
+  items: [
+    item(),
+    item({
+      variant_id: 'book-id',
+      product_slug: 'kochbuch',
+      product_name: 'Kochbuch',
+      sku: 'NW-BUCH',
+      unit_price_cents: 1000,
+      line_total_cents: 1000,
+      tax_class: 'reduced',
+      tax_rate_bp: 700,
+    }),
+  ],
+  subtotal_cents: 4000,
+  currency: 'EUR',
+  discount: null,
+  pricing: {
+    goods_cents: 4000,
+    discount_cents: 0,
+    shipping_cents: 490,
+    total_cents: 4490,
+    missing_for_free_shipping_cents: 1000,
+    shipping_flat_cents: 490,
+    free_shipping_from_cents: 5000,
+    currency: 'EUR',
+    taxes: [
+      { tax_class: 'standard', rate_bp: 1900, gross_cents: 3368, net_cents: 2830, vat_cents: 538 },
+      { tax_class: 'reduced', rate_bp: 700, gross_cents: 1122, net_cents: 1049, vat_cents: 73 },
+    ],
+  },
+};
+
+const discountedCart: CartSnapshot = {
+  ...mixedCart,
+  discount: { code: 'HERBST10', percent_bp: 1000, applied: true },
+  pricing: {
+    ...mixedCart.pricing,
+    goods_cents: 7000,
+    discount_cents: 700,
+    shipping_cents: 0,
+    total_cents: 6300,
+    missing_for_free_shipping_cents: 0,
+    taxes: [
+      { tax_class: 'standard', rate_bp: 1900, gross_cents: 5400, net_cents: 4538, vat_cents: 862 },
+      { tax_class: 'reduced', rate_bp: 700, gross_cents: 900, net_cents: 841, vat_cents: 59 },
+    ],
+  },
+};
+
 describe('CartPage', () => {
+  let fixture: ComponentFixture<CartPage>;
+  let http: HttpTestingController;
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('zeigt eine nicht mehr lieferbare Position und erlaubt ihre Entfernung', async () => {
-    const fixture = TestBed.createComponent(CartPage);
+  afterEach(() => http.verify());
+
+  async function render(snapshot: CartSnapshot): Promise<HTMLElement> {
+    fixture = TestBed.createComponent(CartPage);
     fixture.detectChanges();
-    const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/v1/auth/session').flush({
       customer: { id: 'customer-id', email: 'kunde@example.invalid', role: 'customer' },
       csrf_token: 'synthetic-csrf',
       expires_at: '2026-10-31T00:00:00Z',
     });
     await Promise.resolve();
-    http.expectOne('/api/v1/cart').flush({
-      items: [
-        {
-          variant_id: 'variant-id',
-          product_id: 'product-id',
-          product_slug: 'pfanne',
-          product_name: 'Pfanne',
-          sku: 'NW-PFANNE',
-          label: 'Standard',
-          quantity: 4,
-          unit_price_cents: 1000,
-          line_total_cents: 4000,
-          currency: 'EUR',
-          available: false,
-          unavailable_reason: 'insufficient_stock',
-        },
-      ],
-      subtotal_cents: 0,
-      currency: 'EUR',
-    });
+    http.expectOne('/api/v1/cart').flush(snapshot);
     await fixture.whenStable();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Bestand hat sich geändert.');
-    expect(text).toMatch(/0,00\s€/);
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('button.btn-outline-danger'),
-    ).not.toBeNull();
-    http.verify();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  const text = (element: HTMLElement, testId: string) =>
+    (element.querySelector(`[data-testid="${testId}"]`)?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  it('zeigt eine nicht mehr lieferbare Position und erlaubt ihre Entfernung', async () => {
+    const element = await render({
+      ...EMPTY_CART,
+      items: [item({ quantity: 4, available: false, unavailable_reason: 'insufficient_stock' })],
+    });
+    expect(element.textContent).toContain('Bestand hat sich geändert.');
+    expect(text(element, 'cart-goods')).toBe('0,00 €');
+    expect(element.querySelector('button.btn-outline-danger')).not.toBeNull();
+  });
+
+  it('zeigt genau die Beträge der API: Warenwert, Versand, Gesamtsumme und MwSt. je Satz', async () => {
+    const element = await render(mixedCart);
+
+    expect(text(element, 'cart-goods')).toBe('40,00 €');
+    expect(text(element, 'cart-shipping')).toBe('4,90 €');
+    expect(text(element, 'cart-total')).toBe('44,90 €');
+    expect(text(element, 'cart-vat-1900')).toBe('5,38 €');
+    expect(text(element, 'cart-vat-700')).toBe('0,73 €');
+    expect(text(element, 'cart-free-shipping-hint')).toBe(
+      'Noch 10,00 € bis zum kostenlosen Versand.',
+    );
+    expect(element.querySelector('[data-testid="cart-discount"]')).toBeNull();
+    // Intl trennt Zahl und Prozentzeichen mit einem geschützten Leerzeichen.
+    expect(element.textContent).toMatch(/enthaltene MwSt\. 19\s%/);
+    expect(element.textContent).toMatch(/enthaltene MwSt\. 7\s%/);
+  });
+
+  it('löst einen Rabattcode ein und übernimmt die neue Aufstellung der API', async () => {
+    const element = await render(mixedCart);
+    const input = element.querySelector('#cart-discount-code') as HTMLInputElement;
+    input.value = ' herbst10 ';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    (element.querySelector('.cart-discount-form button') as HTMLButtonElement).click();
+
+    const request = http.expectOne('/api/v1/cart/discount');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ code: 'herbst10' });
+    request.flush(discountedCart);
+    await fixture.whenStable();
+
+    expect(text(element, 'cart-discount')).toBe('−7,00 €');
+    expect(element.textContent).toMatch(/Rabatt HERBST10 \(10\s%\)/);
+    expect(text(element, 'cart-shipping')).toBe('kostenlos');
+    expect(text(element, 'cart-total')).toBe('63,00 €');
+    expect(element.querySelector('[data-testid="cart-free-shipping-hint"]')).toBeNull();
+  });
+
+  it('meldet einen ungültigen Rabattcode ohne den Warenkorb zu verändern', async () => {
+    const element = await render(mixedCart);
+    const input = element.querySelector('#cart-discount-code') as HTMLInputElement;
+    input.value = 'FALSCH';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    (element.querySelector('.cart-discount-form button') as HTMLButtonElement).click();
+    http
+      .expectOne('/api/v1/cart/discount')
+      .flush({ code: 'NOT_FOUND' }, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Der Rabattcode ist ungültig oder abgelaufen.',
+    );
+    expect(text(element, 'cart-total')).toBe('44,90 €');
+  });
+
+  it('weist auf einen nicht mehr gültigen hinterlegten Code hin', async () => {
+    const element = await render({
+      ...mixedCart,
+      discount: { code: 'SOMMER', percent_bp: 1500, applied: false },
+    });
+
+    expect(element.textContent).toContain(
+      'Der Rabattcode SOMMER ist nicht mehr gültig und wird nicht angerechnet.',
+    );
+    expect(element.querySelector('[data-testid="cart-discount"]')).toBeNull();
+    expect(text(element, 'cart-total')).toBe('44,90 €');
   });
 
   it('erzeugt ein Passwort für beide Registrierungsfelder und blockiert Abweichungen', async () => {

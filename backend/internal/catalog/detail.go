@@ -3,6 +3,8 @@ package catalog
 import (
 	"context"
 	"strings"
+
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
 )
 
 // StockStatus beschreibt den Bestand öffentlich, ohne exakte Lagermengen preiszugeben.
@@ -56,9 +58,12 @@ type ProductDetail struct {
 	Name        string
 	Description string
 	SaleStatus  SaleStatus
-	Categories  []CategoryRef
-	Variants    []VariantOffer
-	Images      []ProductImage
+	// TaxClass und TaxRateBP: Alle Preise sind Bruttopreise mit diesem Steuersatz (ADR-007).
+	TaxClass   pricing.TaxClass
+	TaxRateBP  int64
+	Categories []CategoryRef
+	Variants   []VariantOffer
+	Images     []ProductImage
 }
 
 // GetPublicProduct lädt ein veröffentlichtes oder archiviertes Produkt über seinen Slug.
@@ -67,13 +72,18 @@ type ProductDetail struct {
 func (r *Repository) GetPublicProduct(ctx context.Context, slug string) (ProductDetail, error) {
 	detail := ProductDetail{Categories: []CategoryRef{}, Variants: []VariantOffer{}, Images: []ProductImage{}}
 	var status ProductStatus
-	err := r.db.QueryRowContext(ctx, `SELECT id, slug, name, description, status FROM products
+	err := r.db.QueryRowContext(ctx, `SELECT id, slug, name, description, status, tax_class FROM products
 		WHERE lower(slug) = lower($1) AND status IN ('published', 'archived')`,
 		strings.TrimSpace(slug),
-	).Scan(&detail.ID, &detail.Slug, &detail.Name, &detail.Description, &status)
+	).Scan(&detail.ID, &detail.Slug, &detail.Name, &detail.Description, &status, &detail.TaxClass)
 	if err != nil {
 		return ProductDetail{}, notFound(err)
 	}
+	rate, ok := pricing.RateBP(detail.TaxClass)
+	if !ok {
+		return ProductDetail{}, pricing.ErrInvalidLine
+	}
+	detail.TaxRateBP = rate
 	if detail.Categories, err = r.publicProductCategories(ctx, detail.ID); err != nil {
 		return ProductDetail{}, err
 	}

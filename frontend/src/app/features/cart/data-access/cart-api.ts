@@ -16,13 +16,63 @@ export interface CartItem {
   currency: 'EUR';
   available: boolean;
   unavailable_reason: '' | 'product_unavailable' | 'insufficient_stock';
+  tax_class: 'standard' | 'reduced';
+  tax_rate_bp: number;
+}
+
+/** Steuerzeile je Satz; alle Beträge in Cent und von der API berechnet (ADR-007). */
+export interface CartTaxLine {
+  tax_class: 'standard' | 'reduced';
+  rate_bp: number;
+  gross_cents: number;
+  net_cents: number;
+  vat_cents: number;
+}
+
+export interface CartPricing {
+  goods_cents: number;
+  discount_cents: number;
+  shipping_cents: number;
+  total_cents: number;
+  missing_for_free_shipping_cents: number;
+  shipping_flat_cents: number;
+  free_shipping_from_cents: number;
+  currency: 'EUR';
+  taxes: CartTaxLine[];
+}
+
+export interface CartDiscount {
+  code: string;
+  percent_bp: number;
+  /** false, wenn der hinterlegte Code inzwischen deaktiviert oder abgelaufen ist. */
+  applied: boolean;
 }
 
 export interface CartSnapshot {
   items: CartItem[];
   subtotal_cents: number;
   currency: 'EUR';
+  discount: CartDiscount | null;
+  pricing: CartPricing;
 }
+
+export const EMPTY_CART: CartSnapshot = {
+  items: [],
+  subtotal_cents: 0,
+  currency: 'EUR',
+  discount: null,
+  pricing: {
+    goods_cents: 0,
+    discount_cents: 0,
+    shipping_cents: 0,
+    total_cents: 0,
+    missing_for_free_shipping_cents: 0,
+    shipping_flat_cents: 0,
+    free_shipping_from_cents: 0,
+    currency: 'EUR',
+    taxes: [],
+  },
+};
 
 export interface CustomerSession {
   customer: { id: string; email: string; role: 'customer' | 'admin' };
@@ -84,6 +134,20 @@ export class CartApi {
 
   remove(variantId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/cart/items/${variantId}`, {
+      headers: this.headers(),
+    });
+  }
+
+  applyDiscount(code: string): Observable<CartSnapshot> {
+    return this.http.put<CartSnapshot>(
+      `${this.base}/cart/discount`,
+      { code },
+      { headers: this.headers() },
+    );
+  }
+
+  removeDiscount(): Observable<CartSnapshot> {
+    return this.http.delete<CartSnapshot>(`${this.base}/cart/discount`, {
       headers: this.headers(),
     });
   }

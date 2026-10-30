@@ -31,6 +31,26 @@ export interface AdminProduct {
   slug: string;
   description: string;
   status: 'draft' | 'published' | 'archived';
+  /** Umsatzsteuer für alle Varianten: 19 % (standard) oder 7 % (reduced). */
+  tax_class: 'standard' | 'reduced';
+}
+
+export interface AdminDiscountCode {
+  id: string;
+  code: string;
+  percent_bp: number;
+  is_active: boolean;
+  valid_from: string | null;
+  valid_until: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscountCodeDraft {
+  code: string;
+  percent_bp: number;
+  valid_from: string | null;
+  valid_until: string | null;
 }
 
 export interface AdminVariant {
@@ -127,6 +147,7 @@ export class AdminApi {
       slug: input.slug,
       description: input.description,
       status: input.status,
+      tax_class: input.tax_class,
     };
     return input.id
       ? this.http.put<AdminProduct>(`${this.base}/admin/products/${input.id}`, body, {
@@ -216,6 +237,32 @@ export class AdminApi {
     return this.http.delete<void>(`${this.base}/admin/images/${id}`, {
       headers: this.writeHeaders(),
     });
+  }
+
+  listDiscountCodes(): Observable<{ data: AdminDiscountCode[] }> {
+    return this.http.get<{ data: AdminDiscountCode[] }>(`${this.base}/admin/discount-codes`);
+  }
+
+  createDiscountCode(input: DiscountCodeDraft): Observable<AdminDiscountCode> {
+    return this.http.post<AdminDiscountCode>(
+      `${this.base}/admin/discount-codes`,
+      { ...input, is_active: true },
+      { headers: this.writeHeaders() },
+    );
+  }
+
+  /** Der Code selbst ist unveränderlich; geändert werden Satz, Aktivierung und Gültigkeit. */
+  updateDiscountCode(code: AdminDiscountCode, isActive: boolean): Observable<AdminDiscountCode> {
+    return this.http.put<AdminDiscountCode>(
+      `${this.base}/admin/discount-codes/${code.id}`,
+      {
+        percent_bp: code.percent_bp,
+        is_active: isActive,
+        valid_from: code.valid_from,
+        valid_until: code.valid_until,
+      },
+      { headers: this.writeHeaders() },
+    );
   }
 
   private remember(value: AuthSession): void {

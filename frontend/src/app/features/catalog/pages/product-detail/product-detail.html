@@ -53,6 +53,9 @@
 
           @if (selectedVariant(); as variant) {
             <p class="detail-price price" aria-live="polite">{{ variant.price | money }}</p>
+            <p class="detail-tax-note">
+              inkl. {{ percent(item.taxRateBp) }} MwSt., zzgl. Versandkosten
+            </p>
             <p class="detail-stock" [attr.data-stock]="variant.stockStatus">
               {{ stockLabels[variant.stockStatus] }}
             </p>
@@ -95,8 +98,8 @@
           }
 
           <p class="preview-note">
-            Vorschau: Bestellungen sind noch nicht möglich. Preise und Verfügbarkeit können sich bis
-            zum Verkaufsstart ändern.
+            Bestellungen sind noch nicht möglich. Preise und Verfügbarkeit können sich bis zum
+            Verkaufsstart ändern.
           </p>
         </div>
       </div>

@@ -3,8 +3,15 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { formatPercentBp } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
-import { CartApi, CartItem, CartSnapshot, CustomerSession } from '../../data-access/cart-api';
+import {
+  CartApi,
+  CartItem,
+  CartSnapshot,
+  CustomerSession,
+  EMPTY_CART,
+} from '../../data-access/cart-api';
 
 @Component({
   selector: 'app-cart-page',
@@ -16,11 +23,13 @@ export class CartPage implements OnInit {
   private readonly api = inject(CartApi);
 
   protected readonly session = signal<CustomerSession | null>(null);
-  protected readonly cart = signal<CartSnapshot>({ items: [], subtotal_cents: 0, currency: 'EUR' });
+  protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
+  protected readonly percent = formatPercentBp;
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal('');
   protected readonly quantities = signal<Record<string, number>>({});
+  protected discountCode = '';
   protected email = '';
   protected password = '';
   protected confirmPassword = '';
@@ -79,7 +88,7 @@ export class CartPage implements OnInit {
     await this.run(async () => {
       await firstValueFrom(this.api.logout());
       this.session.set(null);
-      this.setCart({ items: [], subtotal_cents: 0, currency: 'EUR' });
+      this.setCart(EMPTY_CART);
     });
   }
 
@@ -103,6 +112,29 @@ export class CartPage implements OnInit {
       await firstValueFrom(this.api.remove(item.variant_id));
       await this.load();
       this.notice.set('Artikel entfernt.');
+    });
+  }
+
+  protected async applyDiscount(): Promise<void> {
+    const code = this.discountCode.trim();
+    if (!code) {
+      return;
+    }
+    await this.run(async () => {
+      try {
+        this.setCart(await firstValueFrom(this.api.applyDiscount(code)));
+        this.discountCode = '';
+        this.notice.set('Rabattcode eingelöst.');
+      } catch (error) {
+        throw this.discountError(error);
+      }
+    });
+  }
+
+  protected async removeDiscount(): Promise<void> {
+    await this.run(async () => {
+      this.setCart(await firstValueFrom(this.api.removeDiscount()));
+      this.notice.set('Rabattcode entfernt.');
     });
   }
 
@@ -146,7 +178,24 @@ export class CartPage implements OnInit {
     }
   }
 
+  /** Rabattcode-Fehler bekommen eigene Meldungen; andere Fehler laufen normal weiter. */
+  private discountError(error: unknown): unknown {
+    if (error instanceof HttpErrorResponse && error.status === 404) {
+      return new DiscountMessage('Der Rabattcode ist ungültig oder abgelaufen.');
+    }
+    if (error instanceof HttpErrorResponse && error.status === 429) {
+      return new DiscountMessage(
+        'Zu viele ungültige Rabattcodes. Versuchen Sie es in 15 Minuten erneut.',
+      );
+    }
+    return error;
+  }
+
   private showError(error: unknown): void {
+    if (error instanceof DiscountMessage) {
+      this.error.set(error.message);
+      return;
+    }
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401) {
         const wasSignedIn = this.session() !== null;
@@ -191,3 +240,6 @@ export function generateStrongPassword(): string {
   globalThis.crypto.getRandomValues(bytes);
   return Array.from(bytes, (value) => passwordAlphabet[value & 63]).join('');
 }
+
+/** Fachliche Meldung für Rabattcodes; wird nicht als Artikel-Fehler behandelt. */
+class DiscountMessage extends Error {}

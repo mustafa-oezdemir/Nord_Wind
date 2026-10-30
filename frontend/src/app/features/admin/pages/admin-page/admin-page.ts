@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { apiErrorMessage, toApiError } from '../../../../core/http/api-error';
+import { formatPercentBp } from '../../../../shared/money/money';
 import {
   AdminApi,
   AdminAuditEvent,
   AdminCategory,
+  AdminDiscountCode,
   AdminImage,
   AdminProduct,
   AdminVariant,
@@ -31,7 +33,10 @@ const emptyProduct = (): ProductDraft => ({
   slug: '',
   description: '',
   status: 'draft',
+  tax_class: 'standard',
 });
+
+const emptyDiscount = () => ({ code: '', percent: 10, validFrom: '', validUntil: '' });
 
 const emptyVariant = (): VariantDraft => ({
   sku: '',
@@ -60,6 +65,8 @@ export class AdminPage implements OnInit {
   protected readonly images = signal<AdminImage[]>([]);
   protected readonly linkedCategories = signal<AdminCategory[]>([]);
   protected readonly events = signal<AdminAuditEvent[]>([]);
+  protected readonly discountCodes = signal<AdminDiscountCode[]>([]);
+  protected readonly percent = formatPercentBp;
   protected readonly selectedProductId = signal('');
   protected readonly selectedProduct = computed(() =>
     this.products().find((item) => item.id === this.selectedProductId()),
@@ -91,6 +98,7 @@ export class AdminPage implements OnInit {
   protected categoryToAttach = '';
   protected imageFile: File | null = null;
   protected imageAlt = '';
+  protected discountForm = emptyDiscount();
 
   async ngOnInit(): Promise<void> {
     try {
@@ -120,6 +128,42 @@ export class AdminPage implements OnInit {
       this.variants.set([]);
       this.images.set([]);
       this.events.set([]);
+      this.discountCodes.set([]);
+    });
+  }
+
+  protected taxLabel(product: AdminProduct): string {
+    return product.tax_class === 'reduced' ? '7 %' : '19 %';
+  }
+
+  protected async createDiscountCode(): Promise<void> {
+    const percentBp = Math.round(Number(this.discountForm.percent) * 100);
+    if (!Number.isInteger(percentBp) || percentBp < 1 || percentBp > 10_000) {
+      this.error.set('Der Rabatt muss zwischen 0,01 % und 100 % liegen.');
+      return;
+    }
+    await this.run(async () => {
+      await firstValueFrom(
+        this.api.createDiscountCode({
+          code: this.discountForm.code.trim().toUpperCase(),
+          percent_bp: percentBp,
+          valid_from: toIsoOrNull(this.discountForm.validFrom),
+          valid_until: toIsoOrNull(this.discountForm.validUntil),
+        }),
+      );
+      this.discountForm = emptyDiscount();
+      await this.loadDiscountCodes();
+      await this.loadAudit();
+      this.notice.set('Rabattcode angelegt.');
+    });
+  }
+
+  protected async toggleDiscountCode(code: AdminDiscountCode): Promise<void> {
+    await this.run(async () => {
+      await firstValueFrom(this.api.updateDiscountCode(code, !code.is_active));
+      await this.loadDiscountCodes();
+      await this.loadAudit();
+      this.notice.set(code.is_active ? 'Rabattcode deaktiviert.' : 'Rabattcode aktiviert.');
     });
   }
 
@@ -291,14 +335,20 @@ export class AdminPage implements OnInit {
   }
 
   private async loadAll(): Promise<void> {
-    const [categories, products, events] = await Promise.all([
+    const [categories, products, events, discountCodes] = await Promise.all([
       firstValueFrom(this.api.listCategories()),
       firstValueFrom(this.api.listProducts()),
       firstValueFrom(this.api.audit()),
+      firstValueFrom(this.api.listDiscountCodes()),
     ]);
     this.categories.set(categories.data);
     this.products.set(products.data);
     this.events.set(events.data);
+    this.discountCodes.set(discountCodes.data);
+  }
+
+  private async loadDiscountCodes(): Promise<void> {
+    this.discountCodes.set((await firstValueFrom(this.api.listDiscountCodes())).data);
   }
 
   private async loadAudit(): Promise<void> {
@@ -346,4 +396,9 @@ export class AdminPage implements OnInit {
     }
     this.error.set(apiErrorMessage(toApiError(error)));
   }
+}
+
+/** Wandelt den Wert eines `datetime-local`-Felds in ISO 8601 (lokale Zeit des Browsers). */
+function toIsoOrNull(value: string): string | null {
+  return value ? new Date(value).toISOString() : null;
 }

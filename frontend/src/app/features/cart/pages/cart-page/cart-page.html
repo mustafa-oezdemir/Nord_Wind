@@ -179,13 +179,93 @@
           </li>
         }
       </ul>
-      <p class="h5">
-        Zwischensumme lieferbarer Artikel: {{ money(cart().subtotal_cents) | money }}
-      </p>
-      <p class="text-secondary">
-        Preise und Bestand werden bei jedem Aufruf aktualisiert. Steuern und Versandkosten sind noch
-        nicht berechnet.
-      </p>
+      <section class="cart-summary card p-3 p-lg-4" aria-labelledby="cart-summary-title">
+        <h2 id="cart-summary-title" class="h4">Übersicht</h2>
+        @let pricing = cart().pricing;
+        <dl class="cart-totals">
+          <div>
+            <dt>Warenwert</dt>
+            <dd data-testid="cart-goods">{{ money(pricing.goods_cents) | money }}</dd>
+          </div>
+          @if (pricing.discount_cents > 0 && cart().discount; as discount) {
+            <div>
+              <dt>Rabatt {{ discount.code }} ({{ percent(discount.percent_bp) }})</dt>
+              <dd data-testid="cart-discount">−{{ money(pricing.discount_cents) | money }}</dd>
+            </div>
+          }
+          <div>
+            <dt>Versand innerhalb Deutschlands</dt>
+            <dd data-testid="cart-shipping">
+              {{
+                pricing.shipping_cents === 0 ? 'kostenlos' : (money(pricing.shipping_cents) | money)
+              }}
+            </dd>
+          </div>
+          <div class="cart-total">
+            <dt>Gesamtsumme</dt>
+            <dd data-testid="cart-total">{{ money(pricing.total_cents) | money }}</dd>
+          </div>
+          @for (tax of pricing.taxes; track tax.rate_bp) {
+            <div class="cart-tax">
+              <dt>enthaltene MwSt. {{ percent(tax.rate_bp) }}</dt>
+              <dd [attr.data-testid]="'cart-vat-' + tax.rate_bp">
+                {{ money(tax.vat_cents) | money }}
+              </dd>
+            </div>
+          }
+        </dl>
+        @if (pricing.missing_for_free_shipping_cents > 0) {
+          <p class="cart-hint" data-testid="cart-free-shipping-hint">
+            Noch {{ money(pricing.missing_for_free_shipping_cents) | money }} bis zum kostenlosen
+            Versand.
+          </p>
+        }
+
+        @if (cart().discount; as discount) {
+          @if (!discount.applied) {
+            <p class="text-danger" role="status">
+              Der Rabattcode {{ discount.code }} ist nicht mehr gültig und wird nicht angerechnet.
+            </p>
+          }
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            [disabled]="busy()"
+            (click)="removeDiscount()"
+          >
+            Rabattcode {{ discount.code }} entfernen
+          </button>
+        } @else {
+          <form class="cart-discount-form" (ngSubmit)="applyDiscount()">
+            <label class="form-label" for="cart-discount-code">Rabattcode</label>
+            <div class="d-flex gap-2">
+              <input
+                id="cart-discount-code"
+                name="discountCode"
+                class="form-control"
+                maxlength="32"
+                autocomplete="off"
+                autocapitalize="characters"
+                [(ngModel)]="discountCode"
+              />
+              <button
+                class="btn btn-outline-primary"
+                type="submit"
+                [disabled]="busy() || !discountCode.trim()"
+              >
+                Einlösen
+              </button>
+            </div>
+          </form>
+        }
+
+        <p class="cart-legal">
+          Alle Preise inkl. MwSt. Versand innerhalb Deutschlands
+          {{ money(pricing.shipping_flat_cents) | money }}, ab
+          {{ money(pricing.free_shipping_from_cents) | money }} Warenwert kostenlos. Preise und
+          Bestand werden bei jedem Aufruf aktualisiert. Bestellungen sind noch nicht möglich.
+        </p>
+      </section>
     }
   }
 </div>

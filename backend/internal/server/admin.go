@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/pricing"
 )
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -71,16 +72,21 @@ type productInput struct {
 	Slug        string                `json:"slug"`
 	Description string                `json:"description"`
 	Status      catalog.ProductStatus `json:"status"`
+	TaxClass    pricing.TaxClass      `json:"tax_class"`
 }
 
 func (v productInput) model(id string) (catalog.Product, bool) {
 	item := catalog.Product{ID: id, Name: strings.TrimSpace(v.Name), Slug: strings.TrimSpace(v.Slug),
-		Description: v.Description, Status: v.Status}
+		Description: v.Description, Status: v.Status, TaxClass: v.TaxClass}
 	if item.Status == "" {
 		item.Status = catalog.ProductDraft
 	}
+	if item.TaxClass == "" {
+		item.TaxClass = pricing.TaxStandard
+	}
 	return item, validText(item.Name, 200) && validSlug(item.Slug) && len(item.Description) <= 10000 &&
-		(item.Status == catalog.ProductDraft || item.Status == catalog.ProductPublished || item.Status == catalog.ProductArchived)
+		(item.Status == catalog.ProductDraft || item.Status == catalog.ProductPublished || item.Status == catalog.ProductArchived) &&
+		pricing.ValidTaxClass(item.TaxClass)
 }
 
 type variantInput struct {

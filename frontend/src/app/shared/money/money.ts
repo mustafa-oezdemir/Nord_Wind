@@ -15,3 +15,13 @@ export function formatMoney(money: Money): string {
   // Division erst bei der Anzeige; gerechnet wird ausschließlich in Cent.
   return euroFormat.format(money.amountCents / 100);
 }
+
+const percentFormat = new Intl.NumberFormat('de-DE', {
+  style: 'percent',
+  maximumFractionDigits: 2,
+});
+
+/** Formatiert Basispunkte als Prozent, z. B. 1900 → `19 %`, 1250 → `12,5 %`. */
+export function formatPercentBp(basisPoints: number): string {
+  return percentFormat.format(basisPoints / 10_000);
+}

@@ -72,6 +72,9 @@ describe('ProductDetailPage', () => {
     expect(price()).toBe('59,90 €');
     expect(stock()).toBe('Nur noch wenige Stück');
     expect(sku()).toBe('NW-PFANNE-28');
+    expect(textOf(element.querySelector('.detail-tax-note'))).toBe(
+      'inkl. 19 % MwSt., zzgl. Versandkosten',
+    );
     expect(TestBed.inject(Title).getTitle()).toBe('Gusseisenpfanne | NordWinds');
     expect(TestBed.inject(Meta).getTag('name="description"')?.content).toBe(
       'Für Herd und Backofen.',
@@ -221,6 +224,7 @@ describe('defaultVariantSku', () => {
     name: 'P',
     description: '',
     saleStatus: 'available',
+    taxRateBp: 1900,
     categories: [],
     images: [],
     variants: stock.map((stockStatus, index) => ({

@@ -57,6 +57,8 @@ export function productDetailDto(overrides: Partial<ProductDetailDto> = {}): Pro
     name: 'Gusseisenpfanne',
     description: 'Für Herd und Backofen.',
     sale_status: 'available',
+    tax_class: 'standard',
+    tax_rate_bp: 1900,
     categories: [{ id: 'c-pfannen', slug: 'pfannen', name: 'Pfannen' }],
     variants: [
       variantDto({
