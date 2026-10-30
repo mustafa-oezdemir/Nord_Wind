@@ -84,7 +84,9 @@ func main() {
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	server.RegisterDiscountAdminRoutes(router, authHandler, cart.NewDiscountAdmin(connection.SQL))
-	server.RegisterOrderRoutes(router, authHandler, orders.NewRepository(connection.SQL))
+	orderRepository := orders.NewRepository(connection.SQL)
+	server.RegisterOrderRoutes(router, authHandler, orderRepository)
+	server.RegisterAdminOrderRoutes(router, authHandler, orderRepository, logger)
 	mockPayments := payment.NewRepository(connection.SQL)
 	if appEnv == "development" {
 		secret := make([]byte, 32)

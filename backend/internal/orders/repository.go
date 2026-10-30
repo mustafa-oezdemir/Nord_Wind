@@ -215,6 +215,38 @@ func get(ctx context.Context, q cart.Querier, customerID, orderNumber string) (O
 	if discountCode.Valid {
 		order.Discount = &Discount{Code: discountCode.String, PercentBP: discountBP.Int64}
 	}
+	var shipment Shipment
+	err = q.QueryRowContext(ctx, `SELECT carrier, tracking_number, created_at FROM order_shipments WHERE order_id = $1`, order.ID).
+		Scan(&shipment.Carrier, &shipment.TrackingNumber, &shipment.CreatedAt)
+	if err == nil {
+		order.Shipment = &shipment
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return Order{}, err
+	}
+	events, err := q.QueryContext(ctx, `SELECT from_status, to_status, created_at FROM order_status_events
+		WHERE order_id = $1 ORDER BY id`, order.ID)
+	if err != nil {
+		return Order{}, err
+	}
+	order.StatusEvents = []StatusEvent{}
+	for events.Next() {
+		var event StatusEvent
+		var from sql.NullString
+		if err := events.Scan(&from, &event.ToStatus, &event.CreatedAt); err != nil {
+			events.Close()
+			return Order{}, err
+		}
+		if from.Valid {
+			status := Status(from.String)
+			event.FromStatus = &status
+		}
+		order.StatusEvents = append(order.StatusEvents, event)
+	}
+	if err := events.Err(); err != nil {
+		events.Close()
+		return Order{}, err
+	}
+	events.Close()
 	rows, err := q.QueryContext(ctx, `SELECT position, variant_id, name_snapshot, variant_label_snapshot,
 			sku_snapshot, quantity, unit_price_cents, line_total_cents, tax_snapshot
 		FROM order_items WHERE order_id = $1 ORDER BY position`, order.ID)

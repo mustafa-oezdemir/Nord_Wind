@@ -56,6 +56,8 @@ export interface Order {
     taxes: CartTaxLine[];
   };
   discount: { code: string; percent_bp: number } | null;
+  shipment: { carrier: 'MANUAL'; tracking_number: string; created_at: string } | null;
+  status_events: { from_status: OrderStatus | null; to_status: OrderStatus; created_at: string }[];
   created_at: string;
 }
 

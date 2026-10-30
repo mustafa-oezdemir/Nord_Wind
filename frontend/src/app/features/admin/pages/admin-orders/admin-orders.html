@@ -1,0 +1,102 @@
+<main class="container py-4 py-lg-5">
+  <a routerLink="/admin">← Zur Verwaltung</a>
+  <h1 class="mt-3">Bestellungen und Versand</h1>
+  @switch (state()) {
+    @case ('loading') {
+      <p role="status">Bestellungen werden geladen …</p>
+    }
+    @case ('unauthorized') {
+      <p>
+        Bitte melden Sie sich mit einem Adminkonto in der <a routerLink="/admin">Verwaltung</a> an.
+      </p>
+    }
+    @case ('error') {
+      <p role="alert">Bestellungen konnten nicht geladen werden.</p>
+      <button class="btn btn-outline-primary" type="button" (click)="load()">Erneut laden</button>
+    }
+    @case ('ready') {
+      @if (notice()) {
+        <p class="alert alert-info" role="status">{{ notice() }}</p>
+      }
+      <p class="small text-secondary">
+        Manuelle Sendungsnummern für den Testbetrieb. Es wird kein Versanddienst beauftragt.
+      </p>
+      <section aria-labelledby="shipment-metrics-title" class="card p-3 mb-4">
+        <h2 id="shipment-metrics-title" class="h5">Versandversuche</h2>
+        <p class="mb-0">
+          Erfolgreich: {{ metrics()['success'] ?? 0 }} · Ungültiger Status:
+          {{ metrics()['invalid_state'] ?? 0 }} · Ungültige Sendungsnummer:
+          {{ metrics()['invalid_tracking'] ?? 0 }} · Technischer Fehler:
+          {{ metrics()['shipment_failed'] ?? 0 }}
+        </p>
+      </section>
+      @if (orders().length === 0) {
+        <p>Noch keine Bestellungen.</p>
+      }
+      <div class="d-grid gap-3">
+        @for (order of orders(); track order.id) {
+          <section class="card p-3" [attr.aria-label]="'Bestellung ' + order.order_number">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+              <div>
+                <strong>{{ order.order_number }}</strong> ·
+                {{ order.created_at | date: 'dd.MM.yyyy HH:mm' }}<br />{{ order.customer_email }}
+              </div>
+              <span>{{ statusLabel(order.status) }}</span>
+            </div>
+            <p class="mb-1 mt-2">
+              {{ order.address.first_name }} {{ order.address.last_name }},
+              {{ order.address.street }} {{ order.address.house_number }},
+              {{ order.address.postal_code }} {{ order.address.city }}
+            </p>
+            @if (order.shipment; as shipment) {
+              <p>
+                Sendungsnummer: <strong>{{ shipment.tracking_number }}</strong>
+              </p>
+            }
+            @if (order.status === 'PAID') {
+              <button
+                type="button"
+                class="btn btn-outline-primary align-self-start"
+                [disabled]="busy()"
+                (click)="advance(order, 'PROCESSING')"
+              >
+                Bearbeitung starten
+              </button>
+            }
+            @if (order.status === 'PROCESSING') {
+              <div class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                  <label class="form-label" [for]="'tracking-' + order.id">Sendungsnummer</label
+                  ><input
+                    class="form-control"
+                    [id]="'tracking-' + order.id"
+                    [(ngModel)]="tracking[order.id]"
+                    maxlength="64"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  [disabled]="busy()"
+                  (click)="advance(order, 'SHIPPED')"
+                >
+                  Als versendet markieren
+                </button>
+              </div>
+            }
+            @if (order.status === 'SHIPPED') {
+              <button
+                type="button"
+                class="btn btn-outline-primary align-self-start"
+                [disabled]="busy()"
+                (click)="advance(order, 'DELIVERED')"
+              >
+                Als zugestellt markieren
+              </button>
+            }
+          </section>
+        }
+      </div>
+    }
+  }
+</main>

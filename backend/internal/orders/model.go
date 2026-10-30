@@ -112,15 +112,29 @@ type Discount struct {
 
 // Order ist die Kundensicht einer Bestellung.
 type Order struct {
-	ID            string    `json:"id"`
-	OrderNumber   string    `json:"order_number"`
-	Status        Status    `json:"status"`
-	CustomerEmail string    `json:"customer_email"`
-	Address       Address   `json:"address"`
-	Items         []Item    `json:"items"`
-	Pricing       Pricing   `json:"pricing"`
-	Discount      *Discount `json:"discount"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID            string        `json:"id"`
+	OrderNumber   string        `json:"order_number"`
+	Status        Status        `json:"status"`
+	CustomerEmail string        `json:"customer_email"`
+	Address       Address       `json:"address"`
+	Items         []Item        `json:"items"`
+	Pricing       Pricing       `json:"pricing"`
+	Discount      *Discount     `json:"discount"`
+	Shipment      *Shipment     `json:"shipment"`
+	StatusEvents  []StatusEvent `json:"status_events"`
+	CreatedAt     time.Time     `json:"created_at"`
+}
+
+type Shipment struct {
+	Carrier        string    `json:"carrier"`
+	TrackingNumber string    `json:"tracking_number"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type StatusEvent struct {
+	FromStatus *Status   `json:"from_status"`
+	ToStatus   Status    `json:"to_status"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // shippingSnapshot ist der Inhalt von orders.shipping_snapshot.

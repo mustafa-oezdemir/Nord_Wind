@@ -6,6 +6,12 @@ const productList = () =>
 
 export const routes: Routes = [
   {
+    path: 'admin/bestellungen',
+    title: 'Bestellungen verwalten',
+    loadComponent: () =>
+      import('./features/admin/pages/admin-orders/admin-orders').then((m) => m.AdminOrders),
+  },
+  {
     path: 'admin',
     title: 'Verwaltung',
     loadComponent: () =>

@@ -128,5 +128,7 @@ export const sampleOrder: Order = {
     taxes: repricedCart.pricing.taxes,
   },
   discount: null,
+  shipment: null,
+  status_events: [{ from_status: null, to_status: 'CREATED', created_at: '2026-10-30T14:12:00Z' }],
   created_at: '2026-10-30T14:12:00Z',
 };

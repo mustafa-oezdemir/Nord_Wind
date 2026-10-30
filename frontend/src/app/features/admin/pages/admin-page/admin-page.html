@@ -61,6 +61,11 @@
   } @else if (session()!.customer.role !== 'admin') {
     <div class="alert alert-warning" role="alert">Dieses Konto hat keine Adminberechtigung.</div>
   } @else {
+    <p>
+      <a routerLink="/admin/bestellungen" class="btn btn-outline-primary"
+        >Bestellungen und Versand verwalten</a
+      >
+    </p>
     <div class="row g-4">
       <section class="col-12 col-xl-5" aria-labelledby="categories-title">
         <div class="card p-3 p-lg-4 h-100">

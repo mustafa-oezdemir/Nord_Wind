@@ -73,9 +73,28 @@
         </li>
         <li>
           <strong>Versand</strong>
-          <span>In dieser Vorschau erfolgt kein Versand.</span>
+          <span>
+            @if (current.shipment; as shipment) {
+              Sendungsnummer {{ shipment.tracking_number }} (manuelle Erfassung).
+            } @else {
+              Noch keine Sendungsnummer. In dieser Vorschau erfolgt kein physischer Versand.
+            }
+          </span>
         </li>
       </ol>
+
+      <section class="order-card mb-4" aria-labelledby="tracking-title">
+        <h2 id="tracking-title" class="order-card-title">Bestellverlauf</h2>
+        <ol>
+          @for (event of current.status_events; track $index) {
+            <li>
+              {{ event.created_at | date: 'd. MMMM y, HH:mm' : 'Europe/Berlin' }} Uhr –
+              {{ statusLabel(event.to_status) }}
+            </li>
+          }
+        </ol>
+        <a routerLink="/konto">Zum Kundenkonto und Bestellverlauf</a>
+      </section>
 
       <div class="order-grid">
         <div class="order-details">
