@@ -42,4 +42,21 @@ describe('ProductCard', () => {
     const element = await render(productSummary({ description: '' }));
     expect(element.querySelector('.product-card-description')).toBeNull();
   });
+
+  it('zeigt bei einer gelöschten Bilddatei wieder das Platzhalter-Motiv', async () => {
+    const fixture = TestBed.createComponent(ProductCard);
+    fixture.componentRef.setInput(
+      'product',
+      productSummary({
+        imageUrl: '/api/v1/media/products/7d8c2c1e-0b7a-4c55-9a31-3b2f1c4d5e61',
+      }),
+    );
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const photo = element.querySelector('.product-card-photo') as HTMLImageElement;
+    expect(photo).not.toBeNull();
+    photo.dispatchEvent(new Event('error'));
+    await fixture.whenStable();
+    expect(element.querySelector('app-product-visual')).not.toBeNull();
+  });
 });

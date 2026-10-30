@@ -33,6 +33,7 @@ type ProductSummary struct {
 	Currency     string
 	Available    bool
 	VariantCount int64
+	ImageURL     string
 }
 
 func (r *Repository) ListProducts(ctx context.Context, options ListOptions) (Page[ProductSummary], error) {
@@ -82,7 +83,9 @@ func (r *Repository) ListProducts(ctx context.Context, options ListOptions) (Pag
 	offsetPlaceholder := fmt.Sprintf("$%d", len(args)+2)
 	args = append(args, options.Limit, options.Offset)
 	rows, err := r.db.QueryContext(ctx, `SELECT p.id, p.slug, p.name, p.description,
-		offer.price_cents, 'EUR', offer.available, offer.variant_count`+base+
+		offer.price_cents, 'EUR', offer.available, offer.variant_count,
+		COALESCE((SELECT '/api/v1/media/products/' || i.id::text FROM product_images i
+			WHERE i.product_id = p.id ORDER BY i.created_at, i.id LIMIT 1), '')`+base+
 		` ORDER BY `+orderBy+` LIMIT `+limitPlaceholder+` OFFSET `+offsetPlaceholder, args...)
 	if err != nil {
 		return result, err
@@ -91,7 +94,7 @@ func (r *Repository) ListProducts(ctx context.Context, options ListOptions) (Pag
 	for rows.Next() {
 		var product ProductSummary
 		if err := rows.Scan(&product.ID, &product.Slug, &product.Name, &product.Description,
-			&product.PriceCents, &product.Currency, &product.Available, &product.VariantCount); err != nil {
+			&product.PriceCents, &product.Currency, &product.Available, &product.VariantCount, &product.ImageURL); err != nil {
 			return result, err
 		}
 		result.Items = append(result.Items, product)

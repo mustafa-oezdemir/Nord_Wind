@@ -36,7 +36,7 @@ Fehlerantworten folgen [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) m
 | `FORBIDDEN` | 403 | Berechtigung oder CSRF-Prüfung fehlt |
 | `RATE_LIMITED` | 429 | Zu viele Login-Versuche |
 | `METHOD_NOT_ALLOWED` | 405 | HTTP-Methode nicht zulässig |
-| `BODY_TOO_LARGE` | 413 | Anfrageinhalt über 1 MiB |
+| `BODY_TOO_LARGE` | 413 | Anfrageinhalt über 1 MiB; Bild-Uploads über 4 MiB Multipart-Body oder 3 MiB Datei |
 | `URI_TOO_LONG` | 414 | Anfrageziel über 2048 Byte |
 | `REQUEST_TIMEOUT` | 503 | Anfrage überschritt ihr Zeitlimit |
 | `SERVICE_UNAVAILABLE` | 503 | Abhängiger Dienst nicht verfügbar |
@@ -59,3 +59,9 @@ Der Authentifizierungs-Integrationstest benötigt `NORDWINDS_AUTH_TEST_URL` für
 Die Admin-API unter `/api/v1/admin` bietet Kategorie-, Produkt- und Varianten-CRUD, Produkt-Kategorie-Zuordnungen sowie `GET /api/v1/admin/audit` für die letzten 100 Änderungen. Alle Routen erfordern die Rolle `admin`; POST, PUT und DELETE zusätzlich den Session-CSRF-Token. Die Angular-Verwaltungsseite liegt unter `/admin`. Der [OpenAPI-Vertrag](../docs/api/openapi.yaml) enthält die einzelnen Routen und vollständigen Schreibfelder. Fehlende Datensätze liefern 404, ungültige Eingaben 400 und Unique-/FK-Konflikte 409.
 
 Migration `0005_admin_audit` schreibt erfolgreiche Änderungen gemeinsam mit dem Katalogdatensatz in einer Transaktion. Für den PostgreSQL-HTTP-Test `NORDWINDS_ADMIN_TEST_URL` auf eine weitere zunächst leere Datenbank `nordwinds_test_*` setzen. Es wird kein Standard-Admin angelegt; die kontrollierte Rollenvergabe und die noch offenen Betriebsentscheidungen sind in [NW-12](../docs/progress/NW-12.md) beschrieben.
+
+## Produktbilder und Warenkorb
+
+Migration 6 speichert bis zu sechs bereinigte JPEG-Bilder je Produkt in PostgreSQL. Admin-Upload und -Löschen verlangen Session und CSRF; öffentliche Bildpfade liefern nur Bilder veröffentlichter oder archivierter Produkte. [ADR-005](../docs/adr/ADR-005-product-media.md) beschreibt Limits und Speicherentscheidung. Der echte HTTP-Test verwendet eine eigene leere Datenbank über `NORDWINDS_MEDIA_TEST_URL`.
+
+Migration 7 ergänzt einen kontogebundenen Warenkorb. `GET /api/v1/cart`, `POST /api/v1/cart/items` und `PUT/DELETE /api/v1/cart/items/{variantId}` verlangen eine Customer-Session, Änderungen zusätzlich CSRF. Mengen und Preis-/Bestandsstatus stammen bei jeder Antwort aus der Datenbank; ein Warenkorb reserviert keinen Bestand. [ADR-006](../docs/adr/ADR-006-customer-cart.md) hält die Entscheidung gegen einen anonymen Warenkorb fest. Der PostgreSQL-HTTP-Test verwendet `NORDWINDS_CART_TEST_URL` auf einer weiteren separaten Testdatenbank.

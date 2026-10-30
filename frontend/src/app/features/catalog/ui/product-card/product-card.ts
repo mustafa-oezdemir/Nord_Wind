@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { ProductSummary } from '../../models/catalog.models';
@@ -13,4 +13,5 @@ import { ProductVisual } from '../product-visual/product-visual';
 })
 export class ProductCard {
   readonly product = input.required<ProductSummary>();
+  protected readonly imageFailed = signal(false);
 }

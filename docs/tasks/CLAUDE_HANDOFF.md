@@ -19,7 +19,7 @@ Die folgenden Punkte sind **nicht** Bestandteil der Step-1-Implementierung. Die 
 - [ ] **Step 2 – Model Mapping:** Nur vorhandene Tabellen abbilden: `categories`, `products`, `product_categories`, `product_variants`, `customers`, `orders`, `order_items`. UUID, FK, Unique-/Check-Regeln, `ON DELETE RESTRICT`, Zeitstempel und Cent-Beträge mit Migration 2 vergleichen. Kein `gorm.Model`, kein `AutoMigrate`, keine erfundenen `ProductImage`-, `User`-, `Address`- oder `Cart`-Tabellen.
 - [ ] **Step 3 – Repository Integration:** Das vorhandene `internal/catalog`-Repository schrittweise auf GORM umstellen. Context, parametrisierte Bedingungen, `ErrNotFound`, Duplicate-/FK-Fehler und unveränderte HTTP-Antworten nachweisen. Zero-Value-Updates für `false`, `0`, leeren Text und Bestand `0` mit echten PostgreSQL-Tests absichern. Keine impliziten `Save()`-Upserts.
 - [ ] **Step 4 – Relationships & Queries:** Kategoriebaum, M:N-Produktkategorien und Varianten korrekt laden; `Preload` nur für tatsächlich benötigte Beziehungen verwenden. Listenfilter, Suche, Sortier-Allowlist, Count und Pagination aus NW-08 exakt erhalten; N+1 und SQL-Pläne gegen Migration 3 prüfen.
-- [ ] **Step 5 – Transactions:** Bestehende testbare Mehrschrittoperationen mit derselben GORM-Transaktion ausführen. Checkout, Warenkorb und Bestandsabbau existieren noch nicht; deren Sperren, Rollback und parallele Bestellungen erst in den vorgesehenen NW-14/NW-16/NW-17-Schritten implementieren.
+- [ ] **Step 5 – Transactions:** Bestehende testbare Mehrschrittoperationen mit derselben GORM-Transaktion ausführen. Der Warenkorb existiert als SQL-Repository; Checkout und Bestandsabbau folgen erst in NW-16/NW-17. Deren Sperren, Rollback und parallele Bestellungen gesondert prüfen.
 - [ ] **Step 6 – Error Handling & Testing:** Echte PostgreSQL-Regressionen für CRUD, Beziehungen, Rollback, Fehlerübersetzung und HTTP-Vertrag ausführen. `go test -race ./...`, `go vet ./...`, Docker-Smoke, `govulncheck`, Log-Redaction und Dependency-Diff prüfen. Fehlende Prüfungen als offen kennzeichnen.
 
 ## 3. Integrierte PRs und verbleibende CI-Prüfung
@@ -35,7 +35,8 @@ Die Reihenfolge bleibt abhängig von den vorherigen Schritten. Für jede Aufgabe
 - [x] **NW-09:** Responsive Angular-Startseite mit echter Katalog-API ist in `main` ([Nachweis](../progress/NW-09.md)).
 - [x] **NW-10:** Produktdetail, Varianten, Preis-/Bestandsanzeige und fehlende Slugs sind in `main` ([Nachweis](../progress/NW-10.md)).
 - [x] **NW-11–12:** Identität, Sessions und Admin-Katalogpflege sind implementiert ([NW-11](../progress/NW-11.md), [NW-12](../progress/NW-12.md)). Der Passwort-Reset ist nur entworfen; produktive Rollenvergabe ist noch zu entscheiden.
-- [ ] **NW-13–14:** Produktbilder und Mediensicherheit; Warenkorb. Fehlende Tabellen nur mit versionierten, datenbewahrenden Migrationen ergänzen.
+- [x] **NW-13:** Produktbilder und Mediensicherheit sind umgesetzt ([Nachweis](../progress/NW-13.md)).
+- [x] **NW-14:** Persistenter, kontogebundener Warenkorb ist umgesetzt ([Nachweis](../progress/NW-14.md)).
 - [ ] **NW-15–20:** Preis-, Steuer- und Versandvertrag fachlich entscheiden; Checkout-Transaktion; konkurrierenden Bestand; Payment-Webhooks; Versand/Tracking; Kundenkonto und Bestellhistorie.
 - [ ] **NW-21–26:** Deutschland-spezifische E-Commerce-Pflichten; Accessibility/SEO; Security-Hardening; Observability/Backup/Restore; Staging-/Release-Pipeline; Produktionsstart und Monitoring. Rechtliche, Zahlungs- und Betriebsentscheidungen vor der Implementierung mit dem Projektinhaber klären.
 

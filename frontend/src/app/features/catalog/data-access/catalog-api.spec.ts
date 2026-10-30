@@ -59,6 +59,7 @@ describe('CatalogApi', () => {
         lowestPrice: { amountCents: 129_999, currency: 'EUR' },
         available: true,
         variantCount: 3,
+        imageUrl: '',
       },
     ]);
     expect(page.pagination).toEqual({ page: 2, limit: 24, total: 25, totalPages: 2 });
@@ -152,6 +153,42 @@ describe('CatalogApi.getProduct', () => {
       ['NW-PFANNE-32', 7_490, 'in_stock'],
     ]);
     expect(product.images).toEqual([]);
+  });
+
+  it('übernimmt nur serverseitige Medienpfade und Bildmaße', async () => {
+    const id = '7d8c2c1e-0b7a-4c55-9a31-3b2f1c4d5e61';
+    const result = firstValueFrom(api.getProduct('gusseisenpfanne'));
+    httpMock.expectOne('/api/v1/products/gusseisenpfanne').flush(
+      productDetailDto({
+        images: [
+          {
+            id,
+            src: `/api/v1/media/products/${id}`,
+            alt: 'Pfanne von oben',
+            width: 800,
+            height: 600,
+          },
+        ],
+      }),
+    );
+    expect((await result).images[0]).toEqual({
+      src: `/api/v1/media/products/${id}`,
+      alt: 'Pfanne von oben',
+      width: 800,
+      height: 600,
+    });
+
+    const invalid = firstValueFrom(api.getProduct('gusseisenpfanne')).catch(
+      (error: unknown) => error,
+    );
+    httpMock.expectOne('/api/v1/products/gusseisenpfanne').flush(
+      productDetailDto({
+        images: [
+          { id, src: 'https://evil.example/image.svg', alt: 'Pfanne', width: 800, height: 600 },
+        ],
+      }),
+    );
+    expect(await invalid).toBeInstanceOf(InvalidApiResponseError);
   });
 
   it('weist unbekannte Status, fremde Währungen und fehlende Listen ab', async () => {

@@ -20,6 +20,7 @@ export function productDto(overrides: Partial<ProductDto> = {}): ProductDto {
     currency: 'EUR',
     available: true,
     variant_count: 2,
+    image_url: '',
     ...overrides,
   };
 }
@@ -80,6 +81,7 @@ export function productDetailDto(overrides: Partial<ProductDetailDto> = {}): Pro
         stock_status: 'in_stock',
       }),
     ],
+    images: [],
     ...overrides,
   };
 }
@@ -111,6 +113,7 @@ export function productSummary(overrides: Partial<ProductSummary> = {}): Product
     lowestPrice: { amountCents: 5_990, currency: 'EUR' },
     available: true,
     variantCount: 2,
+    imageUrl: '',
     ...overrides,
   };
 }

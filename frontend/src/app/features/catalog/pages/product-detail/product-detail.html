@@ -78,6 +78,22 @@
             }}</a>
           }
 
+          @if (
+            item.saleStatus === 'available' && selectedVariant()?.stockStatus !== 'out_of_stock'
+          ) {
+            <button
+              class="btn btn-primary"
+              type="button"
+              [disabled]="cartBusy()"
+              (click)="addToCart()"
+            >
+              In den Warenkorb
+            </button>
+          }
+          @if (cartError()) {
+            <p class="text-danger mt-2" role="alert">{{ cartError() }}</p>
+          }
+
           <p class="preview-note">
             Vorschau: Bestellungen sind noch nicht möglich. Preise und Verfügbarkeit können sich bis
             zum Verkaufsstart ändern.

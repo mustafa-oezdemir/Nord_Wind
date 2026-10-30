@@ -23,6 +23,12 @@ export const routes: Routes = [
       },
       { path: 'produkte', title: 'Alle Produkte', loadComponent: productList },
       {
+        path: 'warenkorb',
+        title: 'Warenkorb',
+        loadComponent: () =>
+          import('./features/cart/pages/cart-page/cart-page').then((m) => m.CartPage),
+      },
+      {
         path: 'produkte/:slug',
         title: 'Produkt',
         loadComponent: () =>

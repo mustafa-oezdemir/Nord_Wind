@@ -71,6 +71,7 @@ describe('MobileMenu', () => {
     expect(links).toEqual([
       '/',
       '/produkte',
+      '/warenkorb',
       '/kategorien/kueche-haushalt',
       '/kategorien/kochgeschirr',
     ]);

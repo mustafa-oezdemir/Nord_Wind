@@ -16,6 +16,14 @@
   background: t.$white;
 }
 
+.product-card-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: t.$mist;
+}
+
 // Die ganze Karte ist klickbar; der Fokusrahmen liegt deshalb an der Karte.
 .product-card:hover {
   border-color: t.$fjord;

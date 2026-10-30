@@ -20,6 +20,7 @@
       <ul class="drawer-list">
         <li><a routerLink="/" (click)="close()">Startseite</a></li>
         <li><a routerLink="/produkte" (click)="close()">Alle Produkte</a></li>
+        <li><a routerLink="/warenkorb" (click)="close()">Warenkorb</a></li>
         @for (category of store.tree(); track category.id) {
           <li>
             <a [routerLink]="['/kategorien', category.slug]" (click)="close()">{{

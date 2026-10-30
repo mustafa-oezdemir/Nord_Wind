@@ -9,6 +9,7 @@ export interface ProductSummary {
   readonly lowestPrice: Money;
   readonly available: boolean;
   readonly variantCount: number;
+  readonly imageUrl: string;
 }
 
 export interface Category {
@@ -66,7 +67,7 @@ export interface VariantOffer {
   readonly stockStatus: StockStatus;
 }
 
-/** Produktbild für die Galerie; die API liefert Bilder erst mit NW-13. */
+/** Serverseitig bereinigtes Produktbild für die Galerie. */
 export interface ProductImage {
   readonly src: string;
   readonly alt: string;

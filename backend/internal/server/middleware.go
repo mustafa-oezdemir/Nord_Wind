@@ -6,15 +6,17 @@ import (
 	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	maxBodyBytes    = 1 << 20
-	maxTargetBytes  = 2048
-	requestDeadline = 5 * time.Second
+	maxBodyBytes      = 1 << 20
+	maxImageBodyBytes = 4 << 20
+	maxTargetBytes    = 2048
+	requestDeadline   = 5 * time.Second
 )
 
 type requestIDKey struct{}
@@ -83,12 +85,16 @@ func limitInput(c *gin.Context) {
 		writeProblem(c, URITooLong)
 		return
 	}
-	if c.Request.ContentLength > maxBodyBytes {
+	maximum := int64(maxBodyBytes)
+	if c.Request.Method == http.MethodPost && strings.HasPrefix(c.Request.URL.Path, "/api/v1/admin/products/") && strings.HasSuffix(c.Request.URL.Path, "/images") {
+		maximum = maxImageBodyBytes
+	}
+	if c.Request.ContentLength > maximum {
 		writeProblem(c, BodyTooLarge)
 		return
 	}
 	if c.Request.Body != nil {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maximum)
 	}
 	c.Next()
 }

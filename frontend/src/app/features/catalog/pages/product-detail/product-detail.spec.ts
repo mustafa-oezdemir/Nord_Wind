@@ -5,6 +5,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Meta, Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import {
   categoryDto,
   flushCategories,
@@ -108,6 +109,26 @@ describe('ProductDetailPage', () => {
     expect((element.querySelector('input[value="NW-PFANNE-32"]') as HTMLInputElement).checked).toBe(
       true,
     );
+  });
+
+  it('fügt die ausgewählte Variante mit Session-CSRF zum Warenkorb hinzu', async () => {
+    render();
+    await respond();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    (element.querySelector('.buy-box button.btn-primary') as HTMLButtonElement).click();
+    TestBed.tick();
+    httpMock.expectOne('/api/v1/auth/session').flush({
+      customer: { id: 'kunde', email: 'kunde@example.invalid', role: 'customer' },
+      csrf_token: 'synthetic-csrf',
+      expires_at: '2026-10-31T00:00:00Z',
+    });
+    const add = httpMock.expectOne('/api/v1/cart/items');
+    expect(add.request.body).toEqual({ variant_id: 'v-28', quantity: 1 });
+    expect(add.request.headers.get('X-CSRF-Token')).toBe('synthetic-csrf');
+    add.flush({ items: [], subtotal_cents: 0, currency: 'EUR' });
+    await Promise.resolve();
+    await fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/warenkorb']);
   });
 
   it('baut die Brotkrumen aus dem Kategoriepfad auf', async () => {

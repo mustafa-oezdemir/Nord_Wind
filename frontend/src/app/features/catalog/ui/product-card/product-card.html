@@ -1,6 +1,17 @@
 @let item = product();
 <article class="product-card">
-  <app-product-visual class="product-card-visual" [seed]="item.slug" />
+  @if (item.imageUrl && !imageFailed()) {
+    <img
+      class="product-card-photo"
+      [src]="item.imageUrl"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      (error)="imageFailed.set(true)"
+    />
+  } @else {
+    <app-product-visual class="product-card-visual" [seed]="item.slug" />
+  }
   <div class="product-card-body">
     <h3 class="product-card-name">
       <a class="product-card-link" [routerLink]="['/produkte', item.slug]">{{ item.name }}</a>

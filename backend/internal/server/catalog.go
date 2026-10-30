@@ -32,6 +32,7 @@ func RegisterCatalogRoutes(router *gin.Engine, repository *catalog.Repository) {
 				Description: product.Description, PriceCents: product.PriceCents,
 				Currency: product.Currency, Available: product.Available,
 				VariantCount: product.VariantCount,
+				ImageURL:     product.ImageURL,
 			})
 		}
 		c.JSON(http.StatusOK, listResponse[productResponse]{
@@ -145,6 +146,7 @@ type productResponse struct {
 	Currency     string `json:"currency"`
 	Available    bool   `json:"available"`
 	VariantCount int64  `json:"variant_count"`
+	ImageURL     string `json:"image_url"`
 }
 
 type categoryResponse struct {

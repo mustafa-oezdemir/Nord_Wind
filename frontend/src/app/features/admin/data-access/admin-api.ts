@@ -43,6 +43,14 @@ export interface AdminVariant {
   is_active: boolean;
 }
 
+export interface AdminImage {
+  id: string;
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}
+
 export interface AdminAuditEvent {
   id: number;
   actor_customer_id: string;
@@ -189,6 +197,25 @@ export class AdminApi {
 
   audit(): Observable<{ data: AdminAuditEvent[] }> {
     return this.http.get<{ data: AdminAuditEvent[] }>(`${this.base}/admin/audit`);
+  }
+
+  listImages(productId: string): Observable<{ data: AdminImage[] }> {
+    return this.http.get<{ data: AdminImage[] }>(`${this.base}/admin/products/${productId}/images`);
+  }
+
+  uploadImage(productId: string, file: File, alt: string): Observable<AdminImage> {
+    const body = new FormData();
+    body.append('image', file);
+    body.append('alt', alt);
+    return this.http.post<AdminImage>(`${this.base}/admin/products/${productId}/images`, body, {
+      headers: this.writeHeaders(),
+    });
+  }
+
+  deleteImage(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/admin/images/${id}`, {
+      headers: this.writeHeaders(),
+    });
   }
 
   private remember(value: AuthSession): void {

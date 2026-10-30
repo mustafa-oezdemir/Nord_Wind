@@ -1,0 +1,142 @@
+<div class="container py-4 py-lg-5 cart-page">
+  <h1>Warenkorb</h1>
+  <p class="text-secondary">
+    Der Warenkorb bleibt in Ihrem Kundenkonto gespeichert. Bestellungen sind noch nicht möglich.
+  </p>
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+  @if (notice()) {
+    <div class="alert alert-success" role="status">{{ notice() }}</div>
+  }
+
+  @if (!session()) {
+    <section class="card p-3 p-lg-4" aria-labelledby="cart-login-title">
+      <h2 id="cart-login-title" class="h4">{{ registerMode ? 'Konto erstellen' : 'Anmelden' }}</h2>
+      <form #authForm="ngForm" (ngSubmit)="authenticate()">
+        <label class="form-label" for="cart-email">E-Mail</label>
+        <input
+          id="cart-email"
+          name="email"
+          type="email"
+          class="form-control mb-3"
+          autocomplete="username"
+          required
+          [(ngModel)]="email"
+        />
+        <label class="form-label" for="cart-password">Passwort</label>
+        <input
+          id="cart-password"
+          name="password"
+          type="password"
+          class="form-control mb-3"
+          [attr.autocomplete]="registerMode ? 'new-password' : 'current-password'"
+          minlength="12"
+          required
+          [(ngModel)]="password"
+        />
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit" [disabled]="busy() || authForm.invalid">
+            {{ registerMode ? 'Konto erstellen und anmelden' : 'Anmelden' }}
+          </button>
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            (click)="registerMode = !registerMode"
+          >
+            {{ registerMode ? 'Bereits registriert?' : 'Neues Konto?' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  } @else if (session()!.customer.role !== 'customer') {
+    <div class="alert alert-warning" role="alert">Dieses Konto hat keinen Kundenwarenkorb.</div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      [disabled]="busy()"
+      (click)="logout()"
+    >
+      Abmelden
+    </button>
+  } @else {
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <p class="mb-0">{{ session()!.customer.email }}</p>
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        type="button"
+        [disabled]="busy()"
+        (click)="logout()"
+      >
+        Abmelden
+      </button>
+    </div>
+    @if (cart().items.length === 0) {
+      <p>Ihr Warenkorb ist leer.</p>
+      <a class="btn btn-primary" routerLink="/produkte">Produkte ansehen</a>
+    } @else {
+      <ul class="list-group mb-4">
+        @for (item of cart().items; track item.variant_id) {
+          <li class="list-group-item py-3">
+            <div class="d-flex flex-wrap justify-content-between gap-3">
+              <div>
+                <h2 class="h5 mb-1">
+                  <a [routerLink]="['/produkte', item.product_slug]">{{ item.product_name }}</a>
+                </h2>
+                <p class="mb-1 text-secondary">{{ item.label }} · {{ item.sku }}</p>
+                @if (!item.available) {
+                  <p class="text-danger mb-0" role="status">
+                    {{
+                      item.unavailable_reason === 'insufficient_stock'
+                        ? 'Bestand hat sich geändert.'
+                        : 'Produkt derzeit nicht verfügbar.'
+                    }}
+                  </p>
+                }
+              </div>
+              <div class="cart-controls">
+                <p class="mb-1">{{ money(item.unit_price_cents) | money }} je Stück</p>
+                <label class="form-label" [for]="'cart-qty-' + item.variant_id">Menge</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <input
+                    class="form-control cart-quantity"
+                    [id]="'cart-qty-' + item.variant_id"
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    [ngModel]="quantities()[item.variant_id]"
+                    (ngModelChange)="setDraft(item.variant_id, $event)"
+                  />
+                  <button
+                    class="btn btn-outline-primary btn-sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="saveQuantity(item)"
+                  >
+                    Ändern
+                  </button>
+                  <button
+                    class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="remove(item)"
+                  >
+                    Entfernen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+      <p class="h5">
+        Zwischensumme lieferbarer Artikel: {{ money(cart().subtotal_cents) | money }}
+      </p>
+      <p class="text-secondary">
+        Preise und Bestand werden bei jedem Aufruf aktualisiert. Steuern und Versandkosten sind noch
+        nicht berechnet.
+      </p>
+    }
+  }
+</div>

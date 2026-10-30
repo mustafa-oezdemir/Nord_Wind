@@ -40,6 +40,9 @@ func RegisterAdminRoutes(router *gin.Engine, auth *AuthHandler, repository *cata
 	group.PUT("/variants/:id", auth.RequireCSRF(), h.updateVariant)
 	group.DELETE("/variants/:id", auth.RequireCSRF(), h.deleteVariant)
 	group.GET("/audit", h.audit)
+	group.GET("/products/:id/images", h.images)
+	group.POST("/products/:id/images", auth.RequireCSRF(), h.uploadImage)
+	group.DELETE("/images/:id", auth.RequireCSRF(), h.deleteImage)
 }
 
 type categoryInput struct {
