@@ -29,6 +29,22 @@ export const routes: Routes = [
           import('./features/cart/pages/cart-page/cart-page').then((m) => m.CartPage),
       },
       {
+        path: 'kasse',
+        title: 'Kasse',
+        loadComponent: () =>
+          import('./features/checkout/pages/checkout-page/checkout-page').then(
+            (m) => m.CheckoutPage,
+          ),
+      },
+      {
+        path: 'bestellung/:orderNumber',
+        title: 'Bestellung',
+        loadComponent: () =>
+          import('./features/checkout/pages/order-confirmation/order-confirmation').then(
+            (m) => m.OrderConfirmation,
+          ),
+      },
+      {
         path: 'produkte/:slug',
         title: 'Produkt',
         loadComponent: () =>

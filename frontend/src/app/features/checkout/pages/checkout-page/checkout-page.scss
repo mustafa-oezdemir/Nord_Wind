@@ -1,0 +1,266 @@
+@use 'tokens' as t;
+
+.checkout-page {
+  max-width: 1120px;
+}
+
+.checkout-title {
+  margin-bottom: 1.5rem;
+  font-size: t.$size-xl;
+}
+
+.checkout-grid {
+  display: grid;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+.checkout-heading {
+  margin-bottom: 0.25rem;
+  color: inherit;
+  font-size: t.$size-md;
+  font-weight: 700;
+}
+
+.checkout-lead {
+  margin-bottom: 1.25rem;
+  color: t.$slate;
+}
+
+// Formular: ruhige Gruppen auf Nebelgrund, damit die Bestellübersicht die Bühne behält.
+.checkout-group {
+  margin-bottom: 1rem;
+  padding: 1rem 1rem 0.25rem;
+  border-radius: t.$radius-md;
+  background: t.$mist;
+
+  // Bootstrap lässt die Legende links fließen; so steht sie innerhalb der Fläche.
+  legend {
+    margin-bottom: 0.75rem;
+    font-size: t.$size-base;
+    font-weight: 600;
+  }
+}
+
+.checkout-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.checkout-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin-bottom: 1rem;
+
+  .form-control {
+    min-height: 3rem;
+    background-color: t.$white;
+
+    &:not(.is-invalid) {
+      border-color: t.$line;
+    }
+  }
+
+  .form-text {
+    margin-top: 0.35rem;
+    color: t.$slate;
+  }
+}
+
+.checkout-field-wide {
+  flex-basis: 100%;
+}
+
+.checkout-field-grow {
+  flex: 3 1 14rem;
+}
+
+.checkout-field-narrow {
+  flex: 1 1 7rem;
+  max-width: 10rem;
+}
+
+.checkout-optional {
+  margin-left: 0.25rem;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  font-weight: 400;
+}
+
+.checkout-country {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.checkout-country-label {
+  color: t.$slate;
+  font-size: t.$size-sm;
+  font-weight: 400;
+}
+
+.checkout-account {
+  margin: 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  overflow-wrap: anywhere;
+}
+
+// Bestellübersicht: Tiefsee-Fläche wie die Fußzeile; die Summe und der Bernstein-Knopf
+// sind das, was der Kunde vor dem Klick zuletzt sieht (§ 312j BGB).
+.checkout-summary {
+  // Die Preisaufstellung nutzt Bootstrap-Variablen; auf dunklem Grund werden sie umgestellt.
+  --bs-border-color: rgb(255 255 255 / 18%);
+  --bs-secondary-color: #b7cad6;
+
+  padding: 1.25rem;
+  border-radius: t.$radius-md;
+  background: t.$ink;
+  color: t.$white;
+
+  a {
+    color: t.$amber;
+  }
+}
+
+.checkout-items {
+  margin: 1rem 0;
+  padding: 0 0 0.5rem;
+  list-style: none;
+  border-bottom: 1px solid var(--bs-border-color);
+
+  li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.checkout-qty {
+  min-width: 2.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: t.$radius-pill;
+  background: rgb(255 255 255 / 12%);
+  font-size: t.$size-sm;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.checkout-item-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.checkout-item-meta {
+  display: block;
+  color: var(--bs-secondary-color);
+  font-size: t.$size-sm;
+  font-weight: 400;
+}
+
+.checkout-item-unavailable {
+  display: block;
+  color: t.$amber;
+  font-size: t.$size-sm;
+}
+
+.checkout-item-price {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.checkout-notice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid t.$amber;
+  border-radius: t.$radius-sm;
+  background: rgb(240 179 60 / 14%);
+
+  &:focus {
+    outline: 2px solid t.$amber;
+    outline-offset: 2px;
+  }
+}
+
+.checkout-notice-danger {
+  border-left-color: #ff9a9e;
+  background: rgb(255 154 158 / 14%);
+}
+
+.checkout-submit {
+  display: block;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: t.$radius-sm;
+  background: t.$amber;
+  color: t.$ink;
+  font-size: t.$size-md;
+  font-weight: 700;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #f5c463;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid t.$white;
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    background: rgb(240 179 60 / 55%);
+    cursor: not-allowed;
+  }
+}
+
+.checkout-legal {
+  margin: 0.75rem 0 0.25rem;
+  color: var(--bs-secondary-color);
+  font-size: t.$size-sm;
+}
+
+.checkout-back {
+  display: inline-block;
+  padding-block: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-submit {
+    transition: none;
+  }
+}
+
+// Ab Tablet-Querformat: Adresse links, Bestellübersicht rechts und beim Scrollen sichtbar.
+@media (min-width: t.$bp-lg) {
+  .checkout-title {
+    font-size: t.$size-2xl;
+  }
+
+  .checkout-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(21rem, 25rem);
+    gap: 3rem;
+  }
+
+  .checkout-group {
+    padding: 1.25rem 1.25rem 0.25rem;
+  }
+
+  .checkout-summary {
+    position: sticky;
+    top: 1.5rem;
+    padding: 1.75rem;
+  }
+}

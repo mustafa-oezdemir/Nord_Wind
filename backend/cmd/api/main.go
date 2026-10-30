@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"log/slog"
 	"net"
@@ -17,7 +18,10 @@ import (
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/inventory"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/notification"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/payment"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/server"
 )
 
@@ -80,6 +84,23 @@ func main() {
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	server.RegisterDiscountAdminRoutes(router, authHandler, cart.NewDiscountAdmin(connection.SQL))
+	server.RegisterOrderRoutes(router, authHandler, orders.NewRepository(connection.SQL))
+	mockPayments := payment.NewRepository(connection.SQL)
+	if appEnv == "development" {
+		secret := make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			logger.Error("Mock-Signatur konnte nicht initialisiert werden", "event", "mock.init.failed")
+			os.Exit(1)
+		}
+		if configured := os.Getenv("NORDWINDS_MOCK_WEBHOOK_SECRET"); configured != "" {
+			if len(configured) < 32 {
+				logger.Error("Mock-Signaturschlüssel zu kurz", "event", "config.invalid")
+				os.Exit(1)
+			}
+			secret = []byte(configured)
+		}
+		server.RegisterMockPaymentRoutes(router, authHandler, mockPayments, secret)
+	}
 	port := os.Getenv("API_HTTP_PORT")
 	if port == "" {
 		port = "8080"
@@ -99,6 +120,25 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			if _, err := inventory.ReleaseExpired(ctx, connection.SQL, time.Now(), 100); err != nil && ctx.Err() == nil {
+				logger.Error("Abgelaufene Reservierungen konnten nicht freigegeben werden", "event", "inventory.expiry.failed")
+			}
+			if appEnv == "development" {
+				if err := mockPayments.SyncExpired(ctx); err != nil && ctx.Err() == nil {
+					logger.Error("Mock-Zahlungen konnten nicht abgeglichen werden", "event", "mock.expiry.failed")
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- httpServer.Serve(listener) }()
 	logger.Info("API gestartet", "event", "app.started", "port", port)

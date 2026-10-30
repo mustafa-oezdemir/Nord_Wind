@@ -1,0 +1,110 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  margin-bottom: 1.75rem;
+}
+
+.steps {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+
+  &:last-child {
+    flex: 0 0 auto;
+  }
+
+  // Verbindungslinie zum nächsten Schritt
+  &:not(:last-child)::after {
+    content: '';
+    flex: 1 1 auto;
+    min-width: 0.75rem;
+    height: 2px;
+    margin-inline: 0.375rem;
+    border-radius: t.$radius-pill;
+    background: t.$line;
+  }
+}
+
+.step-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid t.$line;
+  border-radius: t.$radius-pill;
+  background: t.$white;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.step-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+a.step-label {
+  color: inherit;
+}
+
+.step-done {
+  color: t.$ink;
+
+  .step-mark {
+    border-color: t.$fjord;
+    background: t.$fjord;
+    color: t.$white;
+  }
+
+  &::after {
+    background: t.$fjord;
+  }
+}
+
+.step-current {
+  color: t.$ink;
+  font-weight: 600;
+
+  .step-mark {
+    border-color: t.$ink;
+    background: t.$ink;
+    color: t.$white;
+  }
+}
+
+@media (min-width: t.$bp-md) {
+  .step {
+    gap: 0.5rem;
+
+    &:not(:last-child)::after {
+      margin-inline: 0.75rem;
+    }
+  }
+
+  .step-mark {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}

@@ -1,0 +1,310 @@
+@use 'tokens' as t;
+
+.order-page {
+  max-width: 1120px;
+
+  h1:focus {
+    outline: none;
+  }
+}
+
+.order-hero {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+
+  h1 {
+    margin-bottom: 0.35rem;
+    font-size: t.$size-xl;
+  }
+}
+
+// Der einzige animierte Moment: Kreis und Haken zeichnen sich einmal.
+.order-check {
+  flex: none;
+  width: 3.25rem;
+  height: 3.25rem;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  circle {
+    stroke: t.$success;
+    stroke-width: 3;
+    stroke-dasharray: 151;
+    stroke-dashoffset: 151;
+    fill: rgb(29 111 71 / 8%);
+    animation: order-draw 0.6s ease-out forwards;
+  }
+
+  path {
+    stroke: t.$success;
+    stroke-width: 4;
+    stroke-dasharray: 36;
+    stroke-dashoffset: 36;
+    animation: order-draw 0.35s 0.45s ease-out forwards;
+  }
+}
+
+@keyframes order-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-check circle,
+  .order-check path {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}
+
+.order-lead {
+  margin-bottom: 0.75rem;
+  color: t.$slate;
+}
+
+.order-number {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: baseline;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid t.$line;
+  border-radius: t.$radius-sm;
+  font-size: t.$size-md;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.order-number-label {
+  color: t.$slate;
+  font-size: t.$size-sm;
+  font-weight: 400;
+}
+
+// Nächste Schritte als echte Reihenfolge
+.order-next {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: next;
+
+  li {
+    position: relative;
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.85rem 1rem 0.85rem 3.25rem;
+    border: 1px solid t.$line;
+    border-radius: t.$radius-md;
+    counter-increment: next;
+
+    &::before {
+      content: counter(next);
+      position: absolute;
+      top: 0.85rem;
+      left: 1rem;
+      display: grid;
+      place-items: center;
+      width: 1.6rem;
+      height: 1.6rem;
+      border: 2px solid t.$line;
+      border-radius: t.$radius-pill;
+      color: t.$slate;
+      font-size: t.$size-sm;
+      font-weight: 600;
+    }
+
+    span {
+      color: t.$slate;
+      font-size: t.$size-sm;
+    }
+  }
+}
+
+.order-next-done {
+  background: t.$mist;
+
+  &::before {
+    content: '✓' !important;
+    border-color: t.$success !important;
+    background: t.$success;
+    color: t.$white !important;
+  }
+}
+
+.order-grid {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.order-details {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.order-card {
+  padding: 1.25rem;
+  border: 1px solid t.$line;
+  border-radius: t.$radius-md;
+}
+
+.order-card-title {
+  margin-bottom: 0.75rem;
+  font-size: t.$size-md;
+  font-weight: 700;
+}
+
+.order-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding-block: 0.6rem;
+
+    & + li {
+      border-top: 1px solid t.$line;
+    }
+  }
+}
+
+.order-qty {
+  min-width: 2.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: t.$radius-pill;
+  background: t.$mist;
+  font-size: t.$size-sm;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.order-item-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.order-item-meta {
+  display: block;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  font-weight: 400;
+}
+
+.order-price {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.order-address {
+  margin-bottom: 0.75rem;
+  font-style: normal;
+  line-height: 1.6;
+}
+
+.order-account {
+  margin: 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  overflow-wrap: anywhere;
+}
+
+.order-summary {
+  background: t.$mist;
+  border-color: transparent;
+}
+
+.order-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  color: t.$slate;
+  font-size: t.$size-sm;
+
+  span {
+    color: t.$ink;
+    font-weight: 600;
+  }
+}
+
+.mock-payment-note {
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+.mock-payment-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+
+  legend {
+    grid-column: 1 / -1;
+    margin-bottom: 0.6rem;
+    font-size: t.$size-sm;
+    font-weight: 600;
+  }
+}
+
+.mock-payment-method {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid t.$line;
+  border-radius: t.$radius-sm;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: t.$fjord;
+    background: t.$mist;
+  }
+
+  &:focus-within {
+    outline: 2px solid t.$fjord;
+    outline-offset: 2px;
+  }
+}
+
+.mock-payment-feedback {
+  padding: 0.7rem;
+  border-radius: t.$radius-sm;
+  background: t.$white;
+  font-size: t.$size-sm;
+}
+
+@media (min-width: t.$bp-md) {
+  .order-next {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: t.$bp-lg) {
+  .order-hero h1 {
+    font-size: t.$size-2xl;
+  }
+
+  .order-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(21rem, 25rem);
+    gap: 2rem;
+  }
+
+  .order-summary {
+    position: sticky;
+    top: 1.5rem;
+    padding: 1.5rem;
+  }
+}

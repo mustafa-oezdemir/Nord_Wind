@@ -75,9 +75,9 @@ func newPricing(quote pricing.Quote, policy pricing.ShippingPolicy) Pricing {
 	return result
 }
 
-func (r *Repository) storedDiscount(ctx context.Context, customerID string) (*Discount, error) {
+func storedDiscount(ctx context.Context, q Querier, customerID string) (*Discount, error) {
 	var discount Discount
-	err := r.db.QueryRowContext(ctx, `SELECT dc.code, dc.percent_bp,
+	err := q.QueryRowContext(ctx, `SELECT dc.code, dc.percent_bp,
 		dc.is_active AND (dc.valid_from IS NULL OR dc.valid_from <= now())
 			AND (dc.valid_until IS NULL OR dc.valid_until > now())
 		FROM cart_discounts cd JOIN discount_codes dc ON dc.id = cd.discount_code_id

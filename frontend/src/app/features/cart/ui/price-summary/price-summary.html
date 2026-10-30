@@ -1,0 +1,29 @@
+@let p = pricing();
+<dl class="price-totals">
+  <div>
+    <dt>Warenwert</dt>
+    <dd data-testid="cart-goods">{{ money(p.goods_cents) | money }}</dd>
+  </div>
+  @if (p.discount_cents > 0 && discount(); as applied) {
+    <div>
+      <dt>Rabatt {{ applied.code }} ({{ percent(applied.percent_bp) }})</dt>
+      <dd data-testid="cart-discount">−{{ money(p.discount_cents) | money }}</dd>
+    </div>
+  }
+  <div>
+    <dt>Versand innerhalb Deutschlands</dt>
+    <dd data-testid="cart-shipping">
+      {{ p.shipping_cents === 0 ? 'kostenlos' : (money(p.shipping_cents) | money) }}
+    </dd>
+  </div>
+  <div class="price-total">
+    <dt>Gesamtsumme</dt>
+    <dd data-testid="cart-total">{{ money(p.total_cents) | money }}</dd>
+  </div>
+  @for (tax of p.taxes; track tax.rate_bp) {
+    <div class="price-tax">
+      <dt>enthaltene MwSt. {{ percent(tax.rate_bp) }}</dt>
+      <dd [attr.data-testid]="'cart-vat-' + tax.rate_bp">{{ money(tax.vat_cents) | money }}</dd>
+    </div>
+  }
+</dl>

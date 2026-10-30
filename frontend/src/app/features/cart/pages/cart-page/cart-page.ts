@@ -1,9 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { formatPercentBp } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import {
   CartApi,
@@ -12,10 +11,11 @@ import {
   CustomerSession,
   EMPTY_CART,
 } from '../../data-access/cart-api';
+import { PriceSummary } from '../../ui/price-summary/price-summary';
 
 @Component({
   selector: 'app-cart-page',
-  imports: [FormsModule, RouterLink, MoneyPipe],
+  imports: [FormsModule, RouterLink, MoneyPipe, PriceSummary],
   templateUrl: './cart-page.html',
   styleUrl: './cart-page.scss',
 })
@@ -24,7 +24,10 @@ export class CartPage implements OnInit {
 
   protected readonly session = signal<CustomerSession | null>(null);
   protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
-  protected readonly percent = formatPercentBp;
+  /** Zur Kasse nur, wenn jede Position lieferbar ist; die API prüft das erneut. */
+  protected readonly canCheckout = computed(
+    () => this.cart().items.length > 0 && this.cart().items.every((item) => item.available),
+  );
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal('');
