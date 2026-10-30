@@ -72,7 +72,11 @@ describe('CheckoutPage', () => {
     }
   }
 
-  async function submit(): Promise<void> {
+  async function submit(acknowledge = true): Promise<void> {
+    if (acknowledge) {
+      const checkbox = element.querySelector<HTMLInputElement>('#preview-notice-acknowledged')!;
+      if (!checkbox.checked) checkbox.click();
+    }
     element.querySelector<HTMLButtonElement>('[data-testid="checkout-submit"]')!.click();
     await settle(fixture);
   }
@@ -96,7 +100,7 @@ describe('CheckoutPage', () => {
     await render();
     expect(text('cart-total')).toBe('44,90 €');
     expect(text('cart-vat-700')).toBe('0,73 €');
-    expect(element.textContent).toContain('Zahlungspflichtig bestellen');
+    expect(element.textContent).toContain('Testbestellung absenden');
     expect(element.querySelector('[aria-current="step"]')?.textContent).toContain('Kasse');
 
     fill({ postal_code: '1234', house_number: 'a' });
@@ -109,6 +113,14 @@ describe('CheckoutPage', () => {
     const firstName = element.querySelector('#checkout-first_name')!;
     expect(firstName.getAttribute('aria-invalid')).toBe('true');
     expect(firstName.getAttribute('aria-describedby')).toBe('checkout-first_name-error');
+  });
+
+  it('sendet ohne bestätigten Vorschauhinweis keine Bestellung', async () => {
+    await render();
+    fill(validAddress);
+    await submit(false);
+    expect(http.match('/api/v1/orders')).toHaveLength(0);
+    expect(element.textContent).toContain('Hinweise zur Testbestellung gelesen');
   });
 
   it('sendet Adresse, angezeigte Summe und Schlüssel und öffnet die Bestätigung', async () => {
@@ -129,6 +141,7 @@ describe('CheckoutPage', () => {
         country: 'DE',
       },
       expected_total_cents: 4490,
+      preview_notice_acknowledged: true,
     });
     expect(request.request.headers.get('X-CSRF-Token')).toBe(customerSession.csrf_token);
     expect(/^nw-[0-9a-f]{32}$/.test(request.request.headers.get('Idempotency-Key') ?? '')).toBe(
@@ -176,6 +189,20 @@ describe('CheckoutPage', () => {
     fill({ postal_code: '51149' });
     await settle(fixture);
     expect(element.textContent).not.toContain('Bitte eine fünfstellige deutsche Postleitzahl');
+  });
+
+  it('erklärt die gesperrte Testkasse', async () => {
+    await render();
+    fill(validAddress);
+    await submit();
+    (await expectOrderRequest()).flush(
+      { code: 'SERVICE_UNAVAILABLE' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await settle(fixture);
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Ein echter Verkauf ist noch nicht freigeschaltet',
+    );
   });
 
   it('meldet einen Verbindungsabbruch und wiederholt ohne neuen Schlüssel', async () => {

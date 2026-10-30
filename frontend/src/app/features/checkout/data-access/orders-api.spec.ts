@@ -20,13 +20,16 @@ describe('OrdersApi', () => {
   afterEach(() => http.verify());
 
   it('holt eine frische Session und sendet CSRF-Token und Idempotency-Key nur im Header', async () => {
-    const created = firstValueFrom(api.create(sampleOrder.address, 4690, 'nw-schluessel-0001'));
+    const created = firstValueFrom(
+      api.create(sampleOrder.address, 4690, 'nw-schluessel-0001', true),
+    );
     http.expectOne('/api/v1/auth/session').flush(customerSession);
     const request = http.expectOne('/api/v1/orders');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
       address: sampleOrder.address,
       expected_total_cents: 4690,
+      preview_notice_acknowledged: true,
     });
     expect(request.request.headers.get('X-CSRF-Token')).toBe(customerSession.csrf_token);
     expect(request.request.headers.get('Idempotency-Key')).toBe('nw-schluessel-0001');

@@ -31,7 +31,8 @@
         <section class="checkout-address" aria-labelledby="checkout-address-title">
           <h2 id="checkout-address-title" class="checkout-heading">Liefer- und Rechnungsadresse</h2>
           <p class="checkout-lead">
-            Wir liefern innerhalb Deutschlands. Die Rechnung geht an dieselbe Adresse.
+            Für einen späteren Verkauf ist die Lieferung innerhalb Deutschlands geplant. Die
+            Testbestellung verwendet dieselbe Adresse für Lieferung und Rechnung.
           </p>
           <button
             type="button"
@@ -124,6 +125,25 @@
             }
           </ul>
           <app-price-summary [pricing]="cart().pricing" [discount]="appliedDiscount()" />
+          <p class="small mt-3">
+            Lieferung nur innerhalb Deutschlands. Versandkosten und Zahlungsarten stehen unter
+            <a routerLink="/rechtliches/versand">Versand und Zahlung</a>. Die
+            <a routerLink="/rechtliches/widerruf">Widerrufshinweise</a> gelten hier nur für die
+            Vorschau.
+          </p>
+          <label class="d-flex gap-2 align-items-start my-3" for="preview-notice-acknowledged">
+            <input
+              id="preview-notice-acknowledged"
+              type="checkbox"
+              [checked]="noticeAcknowledged()"
+              (change)="noticeAcknowledged.set(previewAck.checked)"
+              #previewAck
+            />
+            <span
+              >Ich habe verstanden, dass dies eine Testbestellung ohne Zahlung und Versand
+              ist.</span
+            >
+          </label>
 
           @if (notice(); as current) {
             <div
@@ -147,7 +167,7 @@
             [disabled]="busy() || !allAvailable()"
             [attr.aria-busy]="busy() ? true : null"
           >
-            {{ busy() ? 'Bestellung wird gesendet …' : 'Zahlungspflichtig bestellen' }}
+            {{ busy() ? 'Testbestellung wird gesendet …' : 'Testbestellung absenden' }}
           </button>
           <p class="checkout-legal">
             Vorschau: Die Bestellung wird gespeichert. Zahlungen sind nur simuliert; es erfolgt kein

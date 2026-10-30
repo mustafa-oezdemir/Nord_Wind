@@ -10,12 +10,15 @@ import (
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
 )
 
-type ordersHandler struct{ repository *orders.Repository }
+type ordersHandler struct {
+	repository      *orders.Repository
+	checkoutEnabled bool
+}
 
 // RegisterOrderRoutes registriert die Kasse (ADR-008). Nur Kundensessions dürfen bestellen;
 // das Anlegen verlangt CSRF und einen Idempotency-Key.
-func RegisterOrderRoutes(router *gin.Engine, auth *AuthHandler, repository *orders.Repository) {
-	handler := &ordersHandler{repository: repository}
+func RegisterOrderRoutes(router *gin.Engine, auth *AuthHandler, repository *orders.Repository, checkoutEnabled bool) {
+	handler := &ordersHandler{repository: repository, checkoutEnabled: checkoutEnabled}
 	group := router.Group("/api/v1/orders", auth.RequireSession(), auth.RequireRole(identity.CustomerRole))
 	group.POST("", auth.RequireCSRF(), handler.create)
 	group.GET("", handler.list)
@@ -34,11 +37,16 @@ func (h *ordersHandler) list(c *gin.Context) {
 }
 
 type orderCreateInput struct {
-	Address            *orders.Address `json:"address"`
-	ExpectedTotalCents *int64          `json:"expected_total_cents"`
+	Address                   *orders.Address `json:"address"`
+	ExpectedTotalCents        *int64          `json:"expected_total_cents"`
+	PreviewNoticeAcknowledged bool            `json:"preview_notice_acknowledged"`
 }
 
 func (h *ordersHandler) create(c *gin.Context) {
+	if !h.checkoutEnabled {
+		writeProblem(c, ServiceUnavailable)
+		return
+	}
 	key := c.GetHeader("Idempotency-Key")
 	if !orders.ValidIdempotencyKey(key) {
 		writeProblem(c, InvalidRequest)
@@ -49,7 +57,7 @@ func (h *ordersHandler) create(c *gin.Context) {
 		HandleError(c, err)
 		return
 	}
-	if input.ExpectedTotalCents == nil || *input.ExpectedTotalCents < 0 {
+	if input.ExpectedTotalCents == nil || *input.ExpectedTotalCents < 0 || !input.PreviewNoticeAcknowledged {
 		writeProblem(c, InvalidRequest)
 		return
 	}

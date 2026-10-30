@@ -47,7 +47,7 @@ func orderRequest(router http.Handler, body string, cookie *http.Cookie, csrf, k
 }
 
 func orderBody(total int64) string {
-	return fmt.Sprintf(`{"address":%s,"expected_total_cents":%d}`, orderAddress, total)
+	return fmt.Sprintf(`{"address":%s,"expected_total_cents":%d,"preview_notice_acknowledged":true}`, orderAddress, total)
 }
 
 type orderProblem struct {
@@ -144,7 +144,7 @@ func TestOrdersOnPostgres(t *testing.T) {
 	auth := RegisterAuthRoutes(router, service, AuthConfig{PublicOrigin: "https://shop.example.invalid", SecureCookie: true})
 	RegisterCartRoutes(router, auth, cart.NewRepository(db))
 	RegisterAdminRoutes(router, auth, catalog.NewAdminRepository(db))
-	RegisterOrderRoutes(router, auth, orders.NewRepository(db))
+	RegisterOrderRoutes(router, auth, orders.NewRepository(db), true)
 	password := "Synthetic-Orders-Passphrase-2026"
 	login := func(email string, admin bool) (*http.Cookie, string) {
 		t.Helper()
@@ -201,6 +201,18 @@ func TestOrdersOnPostgres(t *testing.T) {
 	orderCount := func() int { return count(`SELECT count(*) FROM orders`) }
 	key := func(suffix string) string { return "test-schluessel-" + suffix }
 
+	t.Run("Produktionssperre verhindert Bestellungen", func(t *testing.T) {
+		blockedRouter, err := New("NordWinds", db, discardLogger())
+		if err != nil {
+			t.Fatal(err)
+		}
+		RegisterOrderRoutes(blockedRouter, auth, orders.NewRepository(db), false)
+		assertProblem(t, orderRequest(blockedRouter, orderBody(0), customer, csrf, key("gesperrt")), http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE")
+		if orderCount() != 0 {
+			t.Fatal("Bestellung trotz Produktionssperre")
+		}
+	})
+
 	t.Run("Anmeldung, Rolle, CSRF und Schlüssel sind Pflicht", func(t *testing.T) {
 		assertProblem(t, orderRequest(router, orderBody(0), nil, "", key("a")), http.StatusUnauthorized, "UNAUTHENTICATED")
 		assertProblem(t, orderRequest(router, orderBody(0), customer, "", key("a")), http.StatusForbidden, "FORBIDDEN")
@@ -210,6 +222,7 @@ func TestOrdersOnPostgres(t *testing.T) {
 		assertProblem(t, orderRequest(router, `{"address":`+orderAddress+`}`, customer, csrf, key("a")), http.StatusBadRequest, "INVALID_REQUEST")
 		assertProblem(t, orderRequest(router, `{"address":`+orderAddress+`,"expected_total_cents":-1}`, customer, csrf, key("a")), http.StatusBadRequest, "INVALID_REQUEST")
 		assertProblem(t, orderRequest(router, `{"address":`+orderAddress+`,"expected_total_cents":0,"total_cents":0}`, customer, csrf, key("a")), http.StatusBadRequest, "INVALID_REQUEST")
+		assertProblem(t, orderRequest(router, `{"address":`+orderAddress+`,"expected_total_cents":0}`, customer, csrf, key("hinweis")), http.StatusBadRequest, "INVALID_REQUEST")
 		if orderCount() != 0 {
 			t.Fatal("Bestellung trotz abgewiesener Anfrage")
 		}
@@ -224,13 +237,13 @@ func TestOrdersOnPostgres(t *testing.T) {
 
 	t.Run("Fehlende oder ungültige Adresse", func(t *testing.T) {
 		snapshot := fillCart()
-		problem := decodeOrderProblem(t, orderRequest(router, fmt.Sprintf(`{"expected_total_cents":%d}`, snapshot.Pricing.TotalCents),
+		problem := decodeOrderProblem(t, orderRequest(router, fmt.Sprintf(`{"expected_total_cents":%d,"preview_notice_acknowledged":true}`, snapshot.Pricing.TotalCents),
 			customer, csrf, key("adresse")), http.StatusUnprocessableEntity, "VALIDATION_FAILED")
 		if len(problem.Errors) != 7 {
 			t.Fatalf("Feldfehler ohne Adresse: %+v", problem.Errors)
 		}
 		partial := `{"address":{"first_name":"Erika","last_name":"","street":"Heidestraße","house_number":"17",
-			"postal_code":"5114","city":"Köln","country":"AT"},"expected_total_cents":` + fmt.Sprint(snapshot.Pricing.TotalCents) + `}`
+			"postal_code":"5114","city":"Köln","country":"AT"},"expected_total_cents":` + fmt.Sprint(snapshot.Pricing.TotalCents) + `,"preview_notice_acknowledged":true}`
 		problem = decodeOrderProblem(t, orderRequest(router, partial, customer, csrf, key("adresse")), http.StatusUnprocessableEntity, "VALIDATION_FAILED")
 		want := []orders.FieldError{{Field: "last_name", Code: "required"}, {Field: "postal_code", Code: "invalid_format"},
 			{Field: "country", Code: "unsupported_country"}}
@@ -508,8 +521,12 @@ func TestOrdersOnPostgres(t *testing.T) {
 			go func(index int, user struct {
 				cookie *http.Cookie
 				csrf   string
-			}) { defer concurrent.Done(); <-start; results[index] = orderRequest(router, orderBody(1490), user.cookie, user.csrf,
-				key(fmt.Sprintf("letztes-%d", index))) }(index, user)
+			}) {
+				defer concurrent.Done()
+				<-start
+				results[index] = orderRequest(router, orderBody(1490), user.cookie, user.csrf,
+					key(fmt.Sprintf("letztes-%d", index)))
+			}(index, user)
 		}
 		close(start)
 		concurrent.Wait()

@@ -59,6 +59,7 @@ services:
       <<: *database-environment
       APP_NAME: ${APP_NAME:-NordWinds}
       APP_ENV: ${APP_ENV:-development}
+      NORDWINDS_DEMO_CHECKOUT_ENABLED: ${NORDWINDS_DEMO_CHECKOUT_ENABLED:-false}
       APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:-http://localhost:8080}
       NORDWINDS_MOCK_WEBHOOK_SECRET: ${NORDWINDS_MOCK_WEBHOOK_SECRET:-}
       API_HTTP_PORT: ${API_HTTP_PORT:-8080}

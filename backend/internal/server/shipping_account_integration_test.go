@@ -56,7 +56,7 @@ func TestShippingAndAccountOnPostgres(t *testing.T) {
 	}
 	auth := RegisterAuthRoutes(router, service, AuthConfig{PublicOrigin: "https://shop.example.invalid", SecureCookie: true})
 	repository := orders.NewRepository(db)
-	RegisterOrderRoutes(router, auth, repository)
+	RegisterOrderRoutes(router, auth, repository, true)
 	var shipmentLog bytes.Buffer
 	RegisterAdminOrderRoutes(router, auth, repository, slog.New(slog.NewJSONHandler(&shipmentLog, nil)))
 	RegisterAccountRoutes(router, auth, repository)

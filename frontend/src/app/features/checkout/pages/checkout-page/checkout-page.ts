@@ -139,6 +139,7 @@ export class CheckoutPage implements OnInit {
   protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
   protected readonly email = signal('');
   protected readonly savedAddresses = signal<SavedAddress[]>([]);
+  protected readonly noticeAcknowledged = signal(false);
   protected readonly busy = signal(false);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly submitted = signal(false);
@@ -235,6 +236,13 @@ export class CheckoutPage implements OnInit {
       this.focusFirstInvalid();
       return;
     }
+    if (!this.noticeAcknowledged()) {
+      this.showNotice(
+        'warning',
+        'Bitte bestätigen Sie, dass Sie die Hinweise zur Testbestellung gelesen haben.',
+      );
+      return;
+    }
     if (!this.allAvailable()) {
       this.showNotice(
         'warning',
@@ -245,7 +253,12 @@ export class CheckoutPage implements OnInit {
     this.busy.set(true);
     try {
       const order = await firstValueFrom(
-        this.ordersApi.create(this.address(), this.cart().pricing.total_cents, this.idempotencyKey),
+        this.ordersApi.create(
+          this.address(),
+          this.cart().pricing.total_cents,
+          this.idempotencyKey,
+          this.noticeAcknowledged(),
+        ),
       );
       await this.router.navigate(['/bestellung', order.order_number], { replaceUrl: true });
     } catch (error) {
@@ -298,6 +311,12 @@ export class CheckoutPage implements OnInit {
           'Diese Bestellung wurde bereits mit anderen Angaben übermittelt. Laden Sie die Seite neu und prüfen Sie Ihren Warenkorb.',
         );
         return;
+      case 'SERVICE_UNAVAILABLE':
+        this.showNotice(
+          'warning',
+          'Testbestellungen sind in dieser Umgebung deaktiviert. Ein echter Verkauf ist noch nicht freigeschaltet.',
+        );
+        return;
     }
     if (error instanceof HttpErrorResponse && error.status === 401) {
       this.state.set('signed-out');
@@ -311,7 +330,7 @@ export class CheckoutPage implements OnInit {
     // Schlüssel sorgt dafür, dass ein neuer Versuch keine zweite Bestellung anlegt.
     this.showNotice(
       'danger',
-      'Die Bestellung konnte nicht bestätigt werden. Sie wurde eventuell schon angelegt – ein erneuter Klick auf „Zahlungspflichtig bestellen“ legt keine zweite Bestellung an.',
+      'Die Testbestellung konnte nicht bestätigt werden. Sie wurde eventuell schon angelegt – ein erneuter Klick auf „Testbestellung absenden“ legt keine zweite Bestellung an.',
     );
   }
 

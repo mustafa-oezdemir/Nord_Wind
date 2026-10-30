@@ -56,6 +56,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/account/account-page').then((m) => m.AccountPage),
       },
       {
+        path: 'rechtliches/:slug',
+        title: 'Rechtliche Informationen',
+        loadComponent: () => import('./features/legal/legal-page').then((m) => m.LegalPage),
+      },
+      {
         path: 'produkte/:slug',
         title: 'Produkt',
         loadComponent: () =>

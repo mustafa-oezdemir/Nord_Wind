@@ -85,7 +85,9 @@ func main() {
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	server.RegisterDiscountAdminRoutes(router, authHandler, cart.NewDiscountAdmin(connection.SQL))
 	orderRepository := orders.NewRepository(connection.SQL)
-	server.RegisterOrderRoutes(router, authHandler, orderRepository)
+	// Ohne echten Betreiber und geprüfte Rechtstexte darf die Vorschau keine Livebestellungen anlegen.
+	server.RegisterOrderRoutes(router, authHandler, orderRepository,
+		demoCheckoutEnabled(appEnv, os.Getenv("NORDWINDS_DEMO_CHECKOUT_ENABLED")))
 	server.RegisterAdminOrderRoutes(router, authHandler, orderRepository, logger)
 	server.RegisterAccountRoutes(router, authHandler, orderRepository)
 	mockPayments := payment.NewRepository(connection.SQL)
@@ -158,4 +160,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func demoCheckoutEnabled(environment, flag string) bool {
+	return environment == "development" && flag == "true"
 }

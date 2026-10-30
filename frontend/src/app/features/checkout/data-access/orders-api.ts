@@ -114,12 +114,21 @@ export class OrdersApi {
   private readonly cart = inject(CartApi);
 
   /** Legt die Bestellung an; ein frisches CSRF-Token kommt aus der aktuellen Session. */
-  create(address: OrderAddress, expectedTotalCents: number, key: string): Observable<Order> {
+  create(
+    address: OrderAddress,
+    expectedTotalCents: number,
+    key: string,
+    noticeAcknowledged: boolean,
+  ): Observable<Order> {
     return this.cart.session().pipe(
       switchMap((session) =>
         this.http.post<Order>(
           `${this.base}/orders`,
-          { address, expected_total_cents: expectedTotalCents },
+          {
+            address,
+            expected_total_cents: expectedTotalCents,
+            preview_notice_acknowledged: noticeAcknowledged,
+          },
           {
             headers: new HttpHeaders({
               'X-CSRF-Token': session.csrf_token,

@@ -25,6 +25,9 @@
       }
       {{ item.lowestPrice | money }}
     </p>
+    <p class="small text-secondary mb-2">
+      inkl. MwSt., zzgl. <a routerLink="/rechtliches/versand">Versandkosten</a>
+    </p>
     <p class="product-card-stock" [class.is-available]="item.available">
       {{ item.available ? 'Auf Lager' : 'Derzeit nicht verfügbar' }}
     </p>

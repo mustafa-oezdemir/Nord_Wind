@@ -1,0 +1,38 @@
+<div class="legal-shell container py-4 py-lg-5">
+  <nav aria-label="Brotkrumen" class="mb-4">
+    <a routerLink="/">Startseite</a> <span aria-hidden="true">/</span> Rechtliches
+  </nav>
+  @if (document(); as page) {
+    <header class="legal-hero">
+      <span class="legal-eyebrow">NordWinds · Vorschau</span>
+      <h1>{{ page.title }}</h1>
+      <p>{{ page.lead }}</p>
+    </header>
+    <div class="legal-grid">
+      <article>
+        @for (section of page.sections; track section.title) {
+          <section class="legal-card">
+            <h2>{{ section.title }}</h2>
+            @for (paragraph of section.paragraphs; track paragraph) {
+              <p>{{ paragraph }}</p>
+            }
+          </section>
+        }
+      </article>
+      <aside class="legal-aside" aria-label="Weitere Informationen">
+        <h2>Weitere Informationen</h2>
+        <ul>
+          <li><a routerLink="/rechtliches/impressum">Impressum</a></li>
+          <li><a routerLink="/rechtliches/datenschutz">Datenschutz</a></li>
+          <li><a routerLink="/rechtliches/cookies">Cookies</a></li>
+          <li><a routerLink="/rechtliches/widerruf">Widerruf</a></li>
+          <li><a routerLink="/rechtliches/versand">Versand und Zahlung</a></li>
+          <li><a routerLink="/rechtliches/barrierefreiheit">Barrierefreiheit</a></li>
+        </ul>
+      </aside>
+    </div>
+  } @else {
+    <h1>Seite nicht gefunden</h1>
+    <a routerLink="/">Zur Startseite</a>
+  }
+</div>

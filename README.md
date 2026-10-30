@@ -4,7 +4,7 @@ Geplanter Onlineshop für den deutschen Markt mit deutschsprachiger Oberfläche 
 
 ## Projektstand
 
-Dieses Repository enthält eine deutschsprachige Angular-Storefront (Startseite, Produktliste, Suche, Kategorien und Produktdetail), eine Go-API mit Gin und lesender Katalog-API, versionierte PostgreSQL-Migrationen und einen lokalen Docker-Compose-Stack. Benutzerkonten, Warenkorb und Checkout sind noch nicht implementiert; der Shop verkauft noch nichts.
+Dieses Repository enthält eine deutschsprachige Angular-Storefront, eine Go-API mit Gin, versionierte PostgreSQL-Migrationen und einen lokalen Docker-Compose-Stack. Benutzerkonten, Warenkorb und eine Testkasse sind implementiert. Der Shop verkauft noch nichts; Betreiber, Sortiment und rechtliche Freigabe fehlen. Die verlinkten Rechtsseiten kennzeichnen diesen Vorschauzustand ausdrücklich.
 
 ## Geplante Architektur
 
@@ -18,6 +18,8 @@ Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Mark
 ## Lokale Konfiguration
 
 Die Datei `.env.example` enthält freigebbare Variablennamen und Beispielwerte. Für die lokale Entwicklung wird sie nach `.env` kopiert. Anschließend muss `POSTGRES_PASSWORD` durch ein eigenes, starkes Passwort ersetzt werden. `.env` und der lokale Planungsordner `_todo/` werden nicht in Git aufgenommen.
+
+Testbestellungen sind standardmäßig gesperrt. Ausschließlich für lokale Simulationen kann `NORDWINDS_DEMO_CHECKOUT_ENABLED=true` bei `APP_ENV=development` gesetzt werden. In jeder anderen Umgebung bleibt `POST /api/v1/orders` gesperrt. Diese Einstellung ist keine Freigabe für echte Verkäufe. Der [NW-21-Prüfstand](docs/progress/NW-21.md) nennt die fachlichen und rechtlichen Voraussetzungen.
 
 ## Lokal starten und prüfen
 
