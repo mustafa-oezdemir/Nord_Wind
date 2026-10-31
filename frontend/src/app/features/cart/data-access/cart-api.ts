@@ -75,7 +75,7 @@ export const EMPTY_CART: CartSnapshot = {
 };
 
 export interface CustomerSession {
-  customer: { id: string; email: string; role: 'customer' | 'admin' };
+  customer: { id: string; email: string; role: 'customer' | 'admin' | 'employee' };
   csrf_token: string;
   expires_at: string;
 }

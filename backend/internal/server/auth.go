@@ -148,8 +148,19 @@ func (h *AuthHandler) RequireSession() gin.HandlerFunc {
 }
 
 func (h *AuthHandler) RequireRole(role identity.Role) gin.HandlerFunc {
+	return h.RequireAnyRole(role)
+}
+
+func (h *AuthHandler) RequireAnyRole(roles ...identity.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if CurrentSession(c).Customer.Role != role {
+		allowed := false
+		for _, role := range roles {
+			if CurrentSession(c).Customer.Role == role {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
 			writeProblem(c, Forbidden)
 			return
 		}

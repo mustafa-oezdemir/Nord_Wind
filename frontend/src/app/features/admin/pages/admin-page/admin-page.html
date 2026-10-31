@@ -29,7 +29,7 @@
 
   @if (!session()) {
     <section class="card admin-login p-4" aria-labelledby="login-title">
-      <h2 id="login-title" class="h4">Admin-Anmeldung</h2>
+      <h2 id="login-title" class="h4">Admin- und Mitarbeiteranmeldung</h2>
       <form (ngSubmit)="login()">
         <div class="mb-3">
           <label class="form-label" for="admin-email">E-Mail</label>
@@ -58,8 +58,15 @@
         <button class="btn btn-primary" type="submit" [disabled]="busy()">Anmelden</button>
       </form>
     </section>
+  } @else if (session()!.customer.role === 'employee') {
+    <p class="alert alert-info" role="status">
+      Dieses Konto verwaltet nur Bestellungen und Versand.
+    </p>
+    <a routerLink="/admin/bestellungen" class="btn btn-primary">Bestellungen und Versand öffnen</a>
   } @else if (session()!.customer.role !== 'admin') {
-    <div class="alert alert-warning" role="alert">Dieses Konto hat keine Adminberechtigung.</div>
+    <div class="alert alert-warning" role="alert">
+      Dieses Konto hat keine Verwaltungsberechtigung.
+    </div>
   } @else {
     <p>
       <a routerLink="/admin/bestellungen" class="btn btn-outline-primary"

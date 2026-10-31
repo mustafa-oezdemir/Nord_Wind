@@ -17,7 +17,7 @@ type adminOrderHandler struct {
 
 func RegisterAdminOrderRoutes(router *gin.Engine, auth *AuthHandler, repository *orders.Repository, logger *slog.Logger) {
 	h := &adminOrderHandler{repository: repository, logger: logger}
-	group := router.Group("/api/v1/admin/orders", auth.RequireSession(), auth.RequireRole(identity.AdminRole))
+	group := router.Group("/api/v1/admin/orders", auth.RequireSession(), auth.RequireAnyRole(identity.AdminRole, identity.EmployeeRole))
 	group.GET("", h.list)
 	group.GET("/shipment-metrics", h.metrics)
 	group.GET("/:orderNumber", h.get)
@@ -69,7 +69,9 @@ func (h *adminOrderHandler) transition(c *gin.Context) {
 		HandleError(c, err)
 		return
 	}
-	order, err := h.repository.AdminTransition(c.Request.Context(), number, input.Status, input.TrackingNumber)
+	session := CurrentSession(c)
+	order, err := h.repository.StaffTransition(c.Request.Context(), number, input.Status, input.TrackingNumber,
+		string(session.Customer.Role), session.Customer.ID)
 	if err == nil {
 		c.Header("Cache-Control", "no-store")
 		c.JSON(http.StatusOK, order)

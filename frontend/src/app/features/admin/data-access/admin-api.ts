@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../../../core/config/api-config';
 export interface AdminCustomer {
   id: string;
   email: string;
-  role: 'admin' | 'customer';
+  role: 'admin' | 'employee' | 'customer';
 }
 
 export interface AuthSession {

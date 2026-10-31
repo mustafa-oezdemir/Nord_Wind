@@ -63,9 +63,12 @@ func (r *Repository) AdminGet(ctx context.Context, number string) (Order, error)
 	return get(ctx, r.db, customerID, number)
 }
 
-// AdminTransition sperrt die Bestellung und schreibt Status, Sendung und Verlauf atomar.
+// StaffTransition sperrt die Bestellung und schreibt Status, Sendung und Akteur atomar.
 // Bei SHIPPED ist ein manueller Tracking-Code nötig; andere Ziele dürfen keinen enthalten.
-func (r *Repository) AdminTransition(ctx context.Context, number string, target Status, tracking string) (Order, error) {
+func (r *Repository) StaffTransition(ctx context.Context, number string, target Status, tracking, actor, actorID string) (Order, error) {
+	if actor != "admin" && actor != "employee" {
+		return Order{}, ErrInvalidTransition
+	}
 	tracking = strings.TrimSpace(tracking)
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -97,8 +100,8 @@ func (r *Repository) AdminTransition(ctx context.Context, number string, target 
 	if _, err := tx.ExecContext(ctx, `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1`, id, target); err != nil {
 		return Order{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO order_status_events (order_id, from_status, to_status, actor)
-		VALUES ($1, $2, $3, 'admin')`, id, current, target); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO order_status_events (order_id, from_status, to_status, actor, actor_customer_id)
+		VALUES ($1, $2, $3, $4, $5)`, id, current, target, actor, actorID); err != nil {
 		return Order{}, err
 	}
 	if target == Shipped {

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/identity"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/migrations"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/orders"
@@ -57,10 +58,11 @@ func TestShippingAndAccountOnPostgres(t *testing.T) {
 	auth := RegisterAuthRoutes(router, service, AuthConfig{PublicOrigin: "https://shop.example.invalid", SecureCookie: true})
 	repository := orders.NewRepository(db)
 	RegisterOrderRoutes(router, auth, repository, true)
+	RegisterAdminRoutes(router, auth, catalog.NewAdminRepository(db))
 	var shipmentLog bytes.Buffer
 	RegisterAdminOrderRoutes(router, auth, repository, slog.New(slog.NewJSONHandler(&shipmentLog, nil)))
 	RegisterAccountRoutes(router, auth, repository)
-	login := func(email string, admin bool) (*http.Cookie, string, string) {
+	login := func(email, role string) (*http.Cookie, string, string) {
 		t.Helper()
 		body := fmt.Sprintf(`{"email":%q,"password":"Synthetic-Shipping-Passphrase-2026"}`, email)
 		if response := authRequest(router, http.MethodPost, "/api/v1/auth/register", body, nil, ""); response.Code != 201 {
@@ -70,8 +72,8 @@ func TestShippingAndAccountOnPostgres(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT id FROM customers WHERE email = $1`, email).Scan(&id); err != nil {
 			t.Fatal(err)
 		}
-		if admin {
-			if _, err := db.ExecContext(ctx, `UPDATE customers SET role = 'admin' WHERE id = $1`, id); err != nil {
+		if role != "" {
+			if _, err := db.ExecContext(ctx, `UPDATE customers SET role = $2 WHERE id = $1`, id, role); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -81,9 +83,10 @@ func TestShippingAndAccountOnPostgres(t *testing.T) {
 		}
 		return sessionCookie(t, response), csrfFromResponse(t, response), id
 	}
-	owner, ownerCSRF, ownerID := login("shipping-owner@example.invalid", false)
-	other, otherCSRF, otherID := login("shipping-other@example.invalid", false)
-	admin, adminCSRF, _ := login("shipping-admin@example.invalid", true)
+	owner, ownerCSRF, ownerID := login("shipping-owner@example.invalid", "")
+	other, otherCSRF, otherID := login("shipping-other@example.invalid", "")
+	admin, adminCSRF, adminID := login("shipping-admin@example.invalid", "admin")
+	employee, employeeCSRF, employeeID := login("shipping-employee@example.invalid", "employee")
 	productID := insertShippingID(t, db, `INSERT INTO products (name, slug, status) VALUES ('Testware', 'shipping-testware', 'published') RETURNING id`)
 	variantID := insertShippingID(t, db, `INSERT INTO product_variants (product_id, sku, label, price_cents, stock_quantity)
 		VALUES ($1, 'NW-SHIPPING', 'Standard', 1000, 10) RETURNING id`, productID)
@@ -119,19 +122,34 @@ func TestShippingAndAccountOnPostgres(t *testing.T) {
 		t.Fatalf("IDOR in Historie: %d %s", list.Code, list.Body.String())
 	}
 	assertProblem(t, authRequest(router, http.MethodGet, "/api/v1/admin/orders", "", owner, ""), 403, "FORBIDDEN")
+	if response := authRequest(router, http.MethodGet, "/api/v1/admin/orders", "", employee, ""); response.Code != 200 {
+		t.Fatalf("Mitarbeiter darf Bestellungen nicht lesen: %d", response.Code)
+	}
+	assertProblem(t, authRequest(router, http.MethodGet, "/api/v1/admin/categories", "", employee, ""), 403, "FORBIDDEN")
+	assertProblem(t, authRequest(router, http.MethodGet, "/api/v1/orders", "", employee, ""), 403, "FORBIDDEN")
+	assertProblem(t, authRequest(router, http.MethodGet, "/api/v1/customer/me", "", employee, ""), 403, "FORBIDDEN")
 	patch := func(cookie *http.Cookie, csrf, status, tracking string) *httptest.ResponseRecorder {
 		body := fmt.Sprintf(`{"status":%q,"tracking_number":%q}`, status, tracking)
 		return authRequest(router, http.MethodPatch, "/api/v1/admin/orders/"+number+"/status", body, cookie, csrf)
 	}
 	assertProblem(t, patch(owner, ownerCSRF, "PROCESSING", ""), 403, "FORBIDDEN")
 	assertProblem(t, patch(admin, adminCSRF, "SHIPPED", "NW-12345"), 409, "CONFLICT")
-	if response := patch(admin, adminCSRF, "PROCESSING", ""); response.Code != 200 {
+	if response := patch(employee, employeeCSRF, "PROCESSING", ""); response.Code != 200 {
 		t.Fatalf("Bearbeitung: %s", response.Body.String())
+	}
+	var actor, actorID string
+	if err := db.QueryRowContext(ctx, `SELECT actor, actor_customer_id FROM order_status_events
+		WHERE order_id = $1 AND to_status = 'PROCESSING'`, orderID).Scan(&actor, &actorID); err != nil || actor != "employee" || actorID != employeeID {
+		t.Fatalf("Mitarbeiter-Akteur nicht nachweisbar: %q %q %v", actor, actorID, err)
 	}
 	assertProblem(t, patch(admin, adminCSRF, "SHIPPED", "bad!"), 422, "VALIDATION_FAILED")
 	shipped := patch(admin, adminCSRF, "SHIPPED", "NW-TRACK-12345")
 	if shipped.Code != 200 || !strings.Contains(shipped.Body.String(), "NW-TRACK-12345") {
 		t.Fatalf("Versand: %d %s", shipped.Code, shipped.Body.String())
+	}
+	if err := db.QueryRowContext(ctx, `SELECT actor, actor_customer_id FROM order_status_events
+		WHERE order_id = $1 AND to_status = 'SHIPPED'`, orderID).Scan(&actor, &actorID); err != nil || actor != "admin" || actorID != adminID {
+		t.Fatalf("Admin-Akteur nicht nachweisbar: %q %q %v", actor, actorID, err)
 	}
 	assertProblem(t, patch(admin, adminCSRF, "SHIPPED", "NW-OTHER"), 409, "CONFLICT")
 	metrics := authRequest(router, http.MethodGet, "/api/v1/admin/orders/shipment-metrics", "", admin, "")

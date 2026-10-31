@@ -43,7 +43,7 @@ export class AdminOrders implements OnInit {
     this.state.set('loading');
     try {
       const session = await firstValueFrom(this.http.get<AuthSession>(`${this.base}/auth/session`));
-      if (session.customer.role !== 'admin') {
+      if (session.customer.role !== 'admin' && session.customer.role !== 'employee') {
         this.state.set('unauthorized');
         return;
       }
