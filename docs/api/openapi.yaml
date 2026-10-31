@@ -259,6 +259,31 @@ paths:
         '200': { $ref: '#/components/responses/AdminAuditList' }
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/admin/analytics/sales:
+    get:
+      summary: Bezahlte Umsätze für das Admin Dashboard auswerten
+      operationId: adminSalesAnalytics
+      description: >-
+        Nur für Admins. Bruttowarenumsatz nach Bestellrabatt ohne Versand,
+        zeitlich nach dem ersten PAID-Ereignis in Europe/Berlin. Erstattete
+        Mock-Zahlungen zählen nicht. Die Kategorie ist die aktuell erste
+        Zuordnung nach sort_order und ID; spätere Katalogänderungen können
+        historische Kategorie- und Produktnamen verändern. Höchstens acht
+        Reihen werden einzeln gezeigt, der Rest als Weitere.
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - name: group_by
+          in: query
+          schema: { type: string, enum: [total, category, product], default: total }
+        - name: period
+          in: query
+          schema: { type: string, enum: [week, month, quarter], default: week }
+          description: Letzte 7 Tage, letzte 30 Tage oder drei Kalendermonate einschließlich heute.
+      responses:
+        '200': { $ref: '#/components/responses/AdminSalesReport' }
+        '400': { $ref: '#/components/responses/AuthProblem' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/admin/products/{id}/images:
     parameters: [{ $ref: '#/components/parameters/AdminID' }]
     get:
@@ -1270,6 +1295,11 @@ components:
             required: [data]
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/AdminAuditEvent' } }
+    AdminSalesReport:
+      description: Aggregierte Umsatzreihen; Antwort mit Cache-Control no-store.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AdminSalesReport' }
     ProductImage:
       description: Bereinigtes Produktbild.
       content:
@@ -1433,6 +1463,35 @@ components:
         related_id: { type: string, format: uuid, nullable: true }
         action: { type: string, enum: [create, update, delete, attach, detach] }
         created_at: { type: string, format: date-time }
+    AdminSalesReport:
+      type: object
+      required: [group_by, period, currency, start_date, end_date, buckets, series, total_cents]
+      properties:
+        group_by: { type: string, enum: [total, category, product] }
+        period: { type: string, enum: [week, month, quarter] }
+        currency: { type: string, enum: [EUR] }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        buckets:
+          type: array
+          items:
+            type: object
+            required: [key, label]
+            properties:
+              key: { type: string, format: date }
+              label: { type: string }
+        series:
+          type: array
+          items:
+            type: object
+            required: [key, label, values_cents, total_cents, quantity]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              values_cents: { type: array, items: { type: integer, format: int64 } }
+              total_cents: { type: integer, format: int64 }
+              quantity: { type: integer, format: int64 }
+        total_cents: { type: integer, format: int64 }
     CartItem:
       type: object
       required: [variant_id, product_id, product_slug, product_name, sku, label, quantity, unit_price_cents, line_total_cents, currency, available, unavailable_reason, tax_class, tax_rate_bp]

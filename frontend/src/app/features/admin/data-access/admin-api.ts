@@ -81,6 +81,26 @@ export interface AdminAuditEvent {
   created_at: string;
 }
 
+export type SalesGroupBy = 'total' | 'category' | 'product';
+export type SalesPeriod = 'week' | 'month' | 'quarter';
+
+export interface SalesReport {
+  group_by: SalesGroupBy;
+  period: SalesPeriod;
+  currency: 'EUR';
+  start_date: string;
+  end_date: string;
+  buckets: { key: string; label: string }[];
+  series: {
+    key: string;
+    label: string;
+    values_cents: number[];
+    total_cents: number;
+    quantity: number;
+  }[];
+  total_cents: number;
+}
+
 export type CategoryDraft = Omit<AdminCategory, 'id'> & { id?: string };
 export type ProductDraft = Omit<AdminProduct, 'id'> & { id?: string };
 export type VariantDraft = Omit<AdminVariant, 'id' | 'product_id'> & { id?: string };
@@ -90,6 +110,12 @@ export class AdminApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private csrfToken = '';
+
+  sales(groupBy: SalesGroupBy, period: SalesPeriod): Observable<SalesReport> {
+    return this.http.get<SalesReport>(`${this.base}/admin/analytics/sales`, {
+      params: { group_by: groupBy, period },
+    });
+  }
 
   session(): Observable<AuthSession> {
     return this.http

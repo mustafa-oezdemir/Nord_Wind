@@ -18,6 +18,7 @@ import {
   ProductDraft,
   VariantDraft,
 } from '../../data-access/admin-api';
+import { SalesAnalytics } from './sales-analytics';
 
 const emptyCategory = (): CategoryDraft => ({
   parent_id: null,
@@ -46,9 +47,22 @@ const emptyVariant = (): VariantDraft => ({
   is_active: true,
 });
 
+type AdminView =
+  'home' | 'dashboard' | 'categories' | 'category-form' | 'products' | 'product-form' | 'discounts';
+
+const viewTitles: Record<AdminView, string> = {
+  home: 'Übersicht',
+  dashboard: 'Admin Dashboard',
+  categories: 'Kategoriebaum',
+  'category-form': 'Kategorie anlegen',
+  products: 'Produkte',
+  'product-form': 'Produkt anlegen',
+  discounts: 'Rabattcodes',
+};
+
 @Component({
   selector: 'app-admin-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SalesAnalytics],
   templateUrl: './admin-page.html',
   styleUrl: './admin-page.scss',
 })
@@ -66,6 +80,19 @@ export class AdminPage implements OnInit {
   protected readonly linkedCategories = signal<AdminCategory[]>([]);
   protected readonly events = signal<AdminAuditEvent[]>([]);
   protected readonly discountCodes = signal<AdminDiscountCode[]>([]);
+  protected readonly view = signal<AdminView>('home');
+  protected readonly viewTitle = computed(() => {
+    const view = this.view();
+    if (view === 'category-form' && this.categoryForm.id) return 'Kategorie bearbeiten';
+    if (view === 'product-form' && this.productForm.id) return 'Produkt bearbeiten';
+    return viewTitles[view];
+  });
+  protected readonly publishedProducts = computed(
+    () => this.products().filter((product) => product.status === 'published').length,
+  );
+  protected readonly activeDiscountCodes = computed(
+    () => this.discountCodes().filter((code) => code.is_active).length,
+  );
   protected readonly percent = formatPercentBp;
   protected readonly selectedProductId = signal('');
   protected readonly selectedProduct = computed(() =>
@@ -100,6 +127,14 @@ export class AdminPage implements OnInit {
   protected imageAlt = '';
   protected discountForm = emptyDiscount();
 
+  protected openView(view: AdminView): void {
+    this.error.set('');
+    this.notice.set('');
+    if (view === 'category-form') this.resetCategory();
+    if (view === 'product-form') this.resetProduct();
+    this.view.set(view);
+  }
+
   async ngOnInit(): Promise<void> {
     try {
       const session = await firstValueFrom(this.api.session());
@@ -129,6 +164,7 @@ export class AdminPage implements OnInit {
       this.images.set([]);
       this.events.set([]);
       this.discountCodes.set([]);
+      this.view.set('home');
     });
   }
 
@@ -170,6 +206,7 @@ export class AdminPage implements OnInit {
   protected editCategory(category: AdminCategory): void {
     this.categoryForm = { ...category };
     this.notice.set('');
+    this.view.set('category-form');
   }
 
   protected resetCategory(): void {
@@ -181,6 +218,7 @@ export class AdminPage implements OnInit {
       await firstValueFrom(this.api.saveCategory(this.categoryForm));
       this.resetCategory();
       await this.loadAll();
+      this.view.set('categories');
       this.notice.set('Kategorie gespeichert.');
     });
   }
@@ -196,6 +234,7 @@ export class AdminPage implements OnInit {
 
   protected editProduct(product: AdminProduct): void {
     this.productForm = { ...product };
+    this.view.set('product-form');
     void this.selectProduct(product.id);
   }
 
@@ -209,6 +248,7 @@ export class AdminPage implements OnInit {
       this.resetProduct();
       await this.loadAll();
       await this.selectProduct(result.id);
+      this.view.set('products');
       this.notice.set('Produkt gespeichert.');
     });
   }

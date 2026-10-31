@@ -1,0 +1,160 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+}
+
+.admin-eyebrow {
+  color: t.$fjord;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sales-panel {
+  margin-top: 1.5rem;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  border: 1px solid t.$line;
+  border-radius: 1.25rem;
+  background: t.$white;
+  box-shadow: 0 8px 28px rgba(t.$ink, 0.04);
+}
+
+.sales-panel-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1.3rem;
+  border-bottom: 1px solid t.$line;
+
+  .admin-eyebrow {
+    color: t.$fjord;
+  }
+  h3 {
+    margin: 0.4rem 0 0.25rem;
+    font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+    letter-spacing: -0.03em;
+  }
+  p {
+    margin: 0;
+    color: t.$slate;
+  }
+}
+
+.sales-total {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: t.$slate;
+  font-size: t.$size-sm;
+
+  strong {
+    color: t.$ink;
+    font-size: 1.5rem;
+    line-height: 1.1;
+  }
+}
+
+.sales-step {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 0;
+  border-bottom: 1px solid t.$line;
+}
+
+.sales-step-label {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+
+  span {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    place-items: center;
+    border-radius: 0.6rem;
+    background: t.$mist;
+    color: t.$fjord-dark;
+    font-size: 0.8rem;
+    font-weight: 750;
+  }
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+}
+
+.sales-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  button {
+    min-height: 2.7rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid t.$line;
+    border-radius: 0.7rem;
+    background: #f8fafb;
+    color: t.$ink;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button:hover {
+    border-color: t.$fjord;
+  }
+  button[aria-pressed='true'] {
+    border-color: t.$fjord;
+    background: t.$fjord-dark;
+    color: t.$white;
+  }
+  button:focus-visible {
+    outline: 3px solid t.$amber;
+    outline-offset: 2px;
+  }
+}
+
+.sales-panel app-sales-chart {
+  display: block;
+  margin-top: 1.3rem;
+}
+.sales-table-wrap {
+  margin-top: 1.3rem;
+  overflow-x: auto;
+}
+.sales-table {
+  width: 100%;
+  min-width: 400px;
+}
+.sales-table caption {
+  caption-side: top;
+  color: t.$slate;
+}
+.sales-table tfoot {
+  font-weight: 750;
+}
+.sales-message {
+  margin: 1rem 0 0;
+  color: t.$slate;
+}
+.sales-definition {
+  margin: 1rem 0 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+@media (max-width: 767px) {
+  .sales-step {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+}

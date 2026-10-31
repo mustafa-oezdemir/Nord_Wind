@@ -1,0 +1,193 @@
+<section class="sales-panel" aria-labelledby="sales-title">
+  <div class="sales-panel-heading">
+    <div>
+      <span class="admin-eyebrow">Analyse</span>
+      <h3 id="sales-title">Umsatz entdecken</h3>
+      <p>Wählen Sie nacheinander Ansicht, Zeitraum und Diagramm.</p>
+    </div>
+    @if (salesReport()) {
+      <div class="sales-total">
+        <span>Umsatz im Zeitraum</span><strong>{{ salesMoney(salesReport()!.total_cents) }}</strong>
+      </div>
+    }
+  </div>
+  <div class="sales-step">
+    <div class="sales-step-label">
+      <span>01</span>
+      <h4>Was möchten Sie sehen?</h4>
+    </div>
+    <div class="sales-choices" role="group" aria-label="Umsatzansicht">
+      <button
+        type="button"
+        [attr.aria-pressed]="salesGroup() === 'total'"
+        (click)="chooseSalesGroup('total')"
+      >
+        Gesamtumsatz
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="salesGroup() === 'category'"
+        (click)="chooseSalesGroup('category')"
+      >
+        Kategorien
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="salesGroup() === 'product'"
+        (click)="chooseSalesGroup('product')"
+      >
+        Produkte
+      </button>
+    </div>
+  </div>
+  @if (salesGroup()) {
+    <div class="sales-step">
+      <div class="sales-step-label">
+        <span>02</span>
+        <h4>Welcher Zeitraum?</h4>
+      </div>
+      <div class="sales-choices" role="group" aria-label="Umsatzzeitraum">
+        <button
+          type="button"
+          [attr.aria-pressed]="salesPeriod() === 'week'"
+          (click)="chooseSalesPeriod('week')"
+        >
+          7 Tage
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesPeriod() === 'month'"
+          (click)="chooseSalesPeriod('month')"
+        >
+          30 Tage
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesPeriod() === 'quarter'"
+          (click)="chooseSalesPeriod('quarter')"
+        >
+          3 Monate
+        </button>
+      </div>
+    </div>
+  }
+  @if (salesLoading()) {
+    <p class="sales-message" role="status">Umsatzdaten werden geladen …</p>
+  }
+  @if (salesError()) {
+    <p class="alert alert-danger" role="alert">{{ salesError() }}</p>
+  }
+  @if (salesReport()) {
+    <div class="sales-step">
+      <div class="sales-step-label">
+        <span>03</span>
+        <h4>Welches Diagramm?</h4>
+      </div>
+      <div class="sales-choices" role="group" aria-label="Diagrammtyp">
+        <button
+          type="button"
+          [attr.aria-pressed]="salesChartType() === 'bar'"
+          (click)="chooseSalesChartType('bar')"
+        >
+          Balken
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesChartType() === 'line'"
+          (click)="chooseSalesChartType('line')"
+        >
+          Linie
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesChartType() === 'area'"
+          (click)="chooseSalesChartType('area')"
+        >
+          Fläche
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesChartType() === 'doughnut'"
+          (click)="chooseSalesChartType('doughnut')"
+        >
+          Ring
+        </button>
+      </div>
+    </div>
+    @if (salesChartType()) {
+      <app-sales-chart [report]="salesReport()!" [chartType]="salesChartType()!" />
+    }
+    <div class="sales-table-wrap">
+      <table class="table table-sm sales-table">
+        <caption>
+          Umsatz nach
+          {{
+            salesGroup() === 'category'
+              ? 'Kategorie'
+              : salesGroup() === 'product'
+                ? 'Produkt'
+                : 'Gesamt'
+          }}
+          vom
+          {{
+            salesReport()!.start_date
+          }}
+          bis
+          {{
+            salesReport()!.end_date
+          }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              {{
+                salesGroup() === 'category'
+                  ? 'Kategorie'
+                  : salesGroup() === 'product'
+                    ? 'Produkt'
+                    : 'Ansicht'
+              }}
+            </th>
+            @for (bucket of salesReport()!.buckets; track bucket.key) {
+              <th scope="col" class="text-end">{{ bucket.label }}</th>
+            }
+            <th scope="col" class="text-end">Stück</th>
+            <th scope="col" class="text-end">Umsatz</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (series of salesReport()!.series; track series.key) {
+            <tr>
+              <th scope="row">{{ series.label }}</th>
+              @for (value of series.values_cents; track $index) {
+                <td class="text-end">{{ salesMoney(value) }}</td>
+              }
+              <td class="text-end">{{ series.quantity }}</td>
+              <td class="text-end">{{ salesMoney(series.total_cents) }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">Gesamt</th>
+            @for (bucket of salesReport()!.buckets; track bucket.key; let index = $index) {
+              <td class="text-end">
+                {{ salesMoney(salesBucketTotal(salesReport()!, index)) }}
+              </td>
+            }
+            <td></td>
+            <td class="text-end">{{ salesMoney(salesReport()!.total_cents) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    @if (salesReport()!.total_cents === 0) {
+      <p class="sales-message">Für diesen Zeitraum liegen keine bezahlten Verkäufe vor.</p>
+    }
+    <p class="sales-definition">
+      Bruttoumsatz aus bezahlten Bestellpositionen nach Rabatt, ohne Versand. Erstattete
+      Bestellungen zählen nicht. Kategoriezuordnung nach der aktuellen primären Kategorie. Zeitzone:
+      Berlin.
+    </p>
+  }
+</section>

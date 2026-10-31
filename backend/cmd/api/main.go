@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/analytics"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/cart"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/catalog"
 	"github.com/mustafa-oezdemir/Nord_Wind/backend/internal/database"
@@ -107,6 +108,7 @@ func main() {
 	})
 	authHandler := server.RegisterAuthRoutes(router, identityService, authConfig)
 	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
+	server.RegisterAdminAnalyticsRoutes(router, authHandler, analytics.NewRepository(connection.SQL))
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
 	server.RegisterCartRoutes(router, authHandler, cart.NewRepository(connection.SQL))
 	server.RegisterDiscountAdminRoutes(router, authHandler, cart.NewDiscountAdmin(connection.SQL))

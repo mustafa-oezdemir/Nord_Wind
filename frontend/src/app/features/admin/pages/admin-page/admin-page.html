@@ -1,16 +1,12 @@
 <main class="admin-shell container py-4 py-lg-5">
-  <header class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-    <div>
-      <a routerLink="/" class="text-decoration-none">← Zum Shop</a>
-      <h1 class="mt-2 mb-1">NordWinds Verwaltung</h1>
-      <p class="text-secondary mb-0">Kategorien, Produkte und Varianten pflegen</p>
-    </div>
+  <header class="admin-topbar">
+    <a routerLink="/" class="admin-shop-link">← Zum Shop</a>
     @if (session()) {
-      <div class="text-end">
-        <div class="small text-secondary mb-2">{{ session()!.customer.email }}</div>
+      <div class="admin-account-actions">
+        <span class="admin-account-email">{{ session()!.customer.email }}</span>
         <button
           type="button"
-          class="btn btn-outline-secondary btn-sm"
+          class="btn btn-outline-secondary btn-sm admin-logout"
           [disabled]="busy()"
           (click)="logout()"
         >
@@ -20,6 +16,12 @@
     }
   </header>
 
+  <section class="admin-intro" aria-labelledby="admin-title">
+    <span class="admin-eyebrow">NordWinds · Verwaltung</span>
+    <h1 id="admin-title">Alles im Blick. Schnell am Ziel.</h1>
+    <p>Katalog, Angebote und Bestellungen zentral verwalten.</p>
+  </section>
+
   @if (error()) {
     <div class="alert alert-danger" role="alert">{{ error() }}</div>
   }
@@ -28,7 +30,7 @@
   }
 
   @if (!session()) {
-    <section class="card admin-login p-4" aria-labelledby="login-title">
+    <section class="card admin-login p-4 p-lg-5" aria-labelledby="login-title">
       <h2 id="login-title" class="h4">Admin- und Mitarbeiteranmeldung</h2>
       <form (ngSubmit)="login()">
         <div class="mb-3">
@@ -68,262 +70,382 @@
       Dieses Konto hat keine Verwaltungsberechtigung.
     </div>
   } @else {
-    <p>
-      <a routerLink="/admin/bestellungen" class="btn btn-outline-primary"
-        >Bestellungen und Versand verwalten</a
-      >
-    </p>
-    <div class="row g-4">
-      <section class="col-12 col-xl-5" aria-labelledby="categories-title">
-        <div class="card p-3 p-lg-4 h-100">
-          <h2 id="categories-title" class="h4">Kategoriebaum</h2>
-          @if (categoryTree().length === 0) {
-            <p class="text-secondary">Noch keine Kategorien vorhanden.</p>
-          } @else {
-            <ul class="list-group mb-4">
-              @for (entry of categoryTree(); track entry.category.id) {
-                <li class="list-group-item d-flex align-items-center justify-content-between gap-2">
-                  <span [style.padding-left.px]="entry.depth * 18">
-                    {{ entry.category.name }}
-                    @if (entry.category.status === 'inactive') {
-                      <small class="text-secondary">(inaktiv)</small>
+    @if (view() === 'home') {
+      <section class="admin-home" aria-labelledby="admin-home-title">
+        <div class="admin-section-heading">
+          <div>
+            <h2 id="admin-home-title">Was möchten Sie bearbeiten?</h2>
+            <p>Wählen Sie einen Bereich. Die Übersicht bleibt bewusst übersichtlich.</p>
+          </div>
+          <a routerLink="/admin/bestellungen" class="btn btn-outline-primary"
+            >Bestellungen & Versand</a
+          >
+        </div>
+        <div class="admin-tile-grid">
+          <button class="admin-tile" type="button" (click)="openView('dashboard')">
+            <span class="admin-tile-index">01</span>
+            <span class="admin-tile-title">Admin Dashboard</span>
+            <span class="admin-tile-copy">Kennzahlen und letzte Änderungen</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="admin-tile" type="button" (click)="openView('categories')">
+            <span class="admin-tile-index">02</span>
+            <span class="admin-tile-title">Kategoriebaum</span>
+            <span class="admin-tile-copy">Struktur und Reihenfolge pflegen</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="admin-tile" type="button" (click)="openView('products')">
+            <span class="admin-tile-index">03</span>
+            <span class="admin-tile-title">Produkte</span>
+            <span class="admin-tile-copy">Artikel, Varianten und Bilder verwalten</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="admin-tile" type="button" (click)="openView('category-form')">
+            <span class="admin-tile-index">04</span>
+            <span class="admin-tile-title">Kategorie anlegen</span>
+            <span class="admin-tile-copy">Eine neue Kategorie hinzufügen</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="admin-tile" type="button" (click)="openView('product-form')">
+            <span class="admin-tile-index">05</span>
+            <span class="admin-tile-title">Produkt anlegen</span>
+            <span class="admin-tile-copy">Einen neuen Artikel vorbereiten</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="admin-tile" type="button" (click)="openView('discounts')">
+            <span class="admin-tile-index">06</span>
+            <span class="admin-tile-title">Rabattcodes</span>
+            <span class="admin-tile-copy">Aktionen anlegen und verwalten</span>
+            <span class="admin-tile-arrow" aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </section>
+    } @else {
+      <nav class="admin-view-nav" aria-label="Verwaltungsbereiche">
+        <button class="btn btn-outline-secondary" type="button" (click)="openView('home')">
+          ← Übersicht
+        </button>
+        <span>{{ viewTitle() }}</span>
+        <a routerLink="/admin/bestellungen" class="btn btn-outline-primary"
+          >Bestellungen & Versand</a
+        >
+      </nav>
+    }
+    @if (view() === 'dashboard') {
+      <section class="admin-dashboard" aria-labelledby="dashboard-title">
+        <div class="admin-section-heading">
+          <div>
+            <h2 id="dashboard-title">Admin Dashboard</h2>
+            <p>Aktueller Stand Ihres NordWinds Katalogs.</p>
+          </div>
+        </div>
+        <div class="admin-stat-grid">
+          <div class="admin-stat">
+            <span>Kategorien</span><strong>{{ categories().length }}</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Produkte</span><strong>{{ products().length }}</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Veröffentlicht</span><strong>{{ publishedProducts() }}</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Aktive Rabattcodes</span><strong>{{ activeDiscountCodes() }}</strong>
+          </div>
+        </div>
+        <app-sales-analytics />
+      </section>
+    }
+    @if (
+      view() === 'categories' ||
+      view() === 'category-form' ||
+      view() === 'products' ||
+      view() === 'product-form'
+    ) {
+      <div class="row g-4">
+        @if (view() === 'categories' || view() === 'category-form') {
+          <section
+            class="col-12"
+            [attr.aria-labelledby]="
+              view() === 'categories' ? 'categories-title' : 'category-form-title'
+            "
+          >
+            <div class="card p-3 p-lg-4 h-100">
+              @if (view() === 'categories') {
+                <h2 id="categories-title" class="h4">Kategoriebaum</h2>
+                @if (categoryTree().length === 0) {
+                  <p class="text-secondary">Noch keine Kategorien vorhanden.</p>
+                } @else {
+                  <ul class="list-group mb-4">
+                    @for (entry of categoryTree(); track entry.category.id) {
+                      <li
+                        class="list-group-item d-flex align-items-center justify-content-between gap-2"
+                      >
+                        <span [style.padding-left.px]="entry.depth * 18">
+                          {{ entry.category.name }}
+                          @if (entry.category.status === 'inactive') {
+                            <small class="text-secondary">(inaktiv)</small>
+                          }
+                        </span>
+                        <span class="d-flex gap-1">
+                          <button
+                            class="btn btn-outline-primary btn-sm"
+                            type="button"
+                            (click)="editCategory(entry.category)"
+                          >
+                            Bearbeiten
+                          </button>
+                          <button
+                            class="btn btn-outline-danger btn-sm"
+                            type="button"
+                            [disabled]="busy()"
+                            (click)="deleteCategory(entry.category)"
+                          >
+                            Löschen
+                          </button>
+                        </span>
+                      </li>
                     }
-                  </span>
-                  <span class="d-flex gap-1">
-                    <button
-                      class="btn btn-outline-primary btn-sm"
-                      type="button"
-                      (click)="editCategory(entry.category)"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      class="btn btn-outline-danger btn-sm"
-                      type="button"
-                      [disabled]="busy()"
-                      (click)="deleteCategory(entry.category)"
-                    >
-                      Löschen
-                    </button>
-                  </span>
-                </li>
-              }
-            </ul>
-          }
-          <h3 class="h5">{{ categoryForm.id ? 'Kategorie bearbeiten' : 'Kategorie anlegen' }}</h3>
-          <form #categoryNgForm="ngForm" (ngSubmit)="saveCategory()" class="admin-form">
-            <label class="form-label" for="category-name">Name</label>
-            <input
-              id="category-name"
-              name="categoryName"
-              class="form-control mb-2"
-              required
-              maxlength="200"
-              [(ngModel)]="categoryForm.name"
-            />
-            <label class="form-label" for="category-slug">Slug</label>
-            <input
-              id="category-slug"
-              name="categorySlug"
-              class="form-control mb-2"
-              required
-              maxlength="120"
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              [(ngModel)]="categoryForm.slug"
-            />
-            <label class="form-label" for="category-parent">Übergeordnete Kategorie</label>
-            <select
-              id="category-parent"
-              name="categoryParent"
-              class="form-select mb-2"
-              [(ngModel)]="categoryForm.parent_id"
-            >
-              <option [ngValue]="null">Keine</option>
-              @for (entry of categoryTree(); track entry.category.id) {
-                @if (entry.category.id !== categoryForm.id) {
-                  <option [ngValue]="entry.category.id">{{ entry.category.name }}</option>
+                  </ul>
                 }
+              } @else {
+                <h2 id="category-form-title" class="h4">
+                  {{ categoryForm.id ? 'Kategorie bearbeiten' : 'Kategorie anlegen' }}
+                </h2>
+                <form #categoryNgForm="ngForm" (ngSubmit)="saveCategory()" class="admin-form">
+                  <label class="form-label" for="category-name">Name</label>
+                  <input
+                    id="category-name"
+                    name="categoryName"
+                    class="form-control mb-2"
+                    required
+                    maxlength="200"
+                    [(ngModel)]="categoryForm.name"
+                  />
+                  <label class="form-label" for="category-slug">Slug</label>
+                  <input
+                    id="category-slug"
+                    name="categorySlug"
+                    class="form-control mb-2"
+                    required
+                    maxlength="120"
+                    pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                    [(ngModel)]="categoryForm.slug"
+                  />
+                  <label class="form-label" for="category-parent">Übergeordnete Kategorie</label>
+                  <select
+                    id="category-parent"
+                    name="categoryParent"
+                    class="form-select mb-2"
+                    [(ngModel)]="categoryForm.parent_id"
+                  >
+                    <option [ngValue]="null">Keine</option>
+                    @for (entry of categoryTree(); track entry.category.id) {
+                      @if (entry.category.id !== categoryForm.id) {
+                        <option [ngValue]="entry.category.id">{{ entry.category.name }}</option>
+                      }
+                    }
+                  </select>
+                  <label class="form-label" for="category-description">Beschreibung</label>
+                  <textarea
+                    id="category-description"
+                    name="categoryDescription"
+                    class="form-control mb-2"
+                    rows="2"
+                    maxlength="5000"
+                    [(ngModel)]="categoryForm.description"
+                  ></textarea>
+                  <div class="row g-2 mb-3">
+                    <div class="col-6">
+                      <label class="form-label" for="category-status">Status</label>
+                      <select
+                        id="category-status"
+                        name="categoryStatus"
+                        class="form-select"
+                        [(ngModel)]="categoryForm.status"
+                      >
+                        <option value="active">Aktiv</option>
+                        <option value="inactive">Inaktiv</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="category-order">Sortierung</label>
+                      <input
+                        id="category-order"
+                        name="categoryOrder"
+                        type="number"
+                        min="0"
+                        class="form-control"
+                        [(ngModel)]="categoryForm.sort_order"
+                      />
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button
+                      class="btn btn-primary"
+                      type="submit"
+                      [disabled]="busy() || categoryNgForm.invalid"
+                    >
+                      Speichern
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      (click)="resetCategory()"
+                    >
+                      Zurücksetzen
+                    </button>
+                  </div>
+                </form>
               }
-            </select>
-            <label class="form-label" for="category-description">Beschreibung</label>
-            <textarea
-              id="category-description"
-              name="categoryDescription"
-              class="form-control mb-2"
-              rows="2"
-              maxlength="5000"
-              [(ngModel)]="categoryForm.description"
-            ></textarea>
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label class="form-label" for="category-status">Status</label>
-                <select
-                  id="category-status"
-                  name="categoryStatus"
-                  class="form-select"
-                  [(ngModel)]="categoryForm.status"
-                >
-                  <option value="active">Aktiv</option>
-                  <option value="inactive">Inaktiv</option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label" for="category-order">Sortierung</label>
-                <input
-                  id="category-order"
-                  name="categoryOrder"
-                  type="number"
-                  min="0"
-                  class="form-control"
-                  [(ngModel)]="categoryForm.sort_order"
-                />
-              </div>
             </div>
-            <div class="d-flex gap-2">
-              <button
-                class="btn btn-primary"
-                type="submit"
-                [disabled]="busy() || categoryNgForm.invalid"
-              >
-                Speichern
-              </button>
-              <button class="btn btn-outline-secondary" type="button" (click)="resetCategory()">
-                Zurücksetzen
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
+          </section>
+        }
 
-      <section class="col-12 col-xl-7" aria-labelledby="products-title">
-        <div class="card p-3 p-lg-4 h-100">
-          <h2 id="products-title" class="h4">Produkte</h2>
-          @if (products().length === 0) {
-            <p class="text-secondary">Noch keine Produkte vorhanden.</p>
-          } @else {
-            <div class="table-responsive mb-4">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th scope="col">Produkt</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">MwSt.</th>
-                    <th scope="col">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (product of products(); track product.id) {
-                    <tr>
-                      <td>
-                        {{ product.name
-                        }}<small class="d-block text-secondary">{{ product.slug }}</small>
-                      </td>
-                      <td>{{ product.status }}</td>
-                      <td>{{ taxLabel(product) }}</td>
-                      <td class="text-nowrap">
-                        <button
-                          class="btn btn-outline-primary btn-sm me-1"
-                          type="button"
-                          (click)="editProduct(product)"
-                        >
-                          Bearbeiten
-                        </button>
-                        <button
-                          class="btn btn-outline-secondary btn-sm me-1"
-                          type="button"
-                          (click)="selectProduct(product.id)"
-                        >
-                          Varianten
-                        </button>
-                        <button
-                          class="btn btn-outline-danger btn-sm"
-                          type="button"
-                          [disabled]="busy()"
-                          (click)="deleteProduct(product)"
-                        >
-                          Löschen
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+        @if (view() === 'products' || view() === 'product-form') {
+          <section
+            class="col-12"
+            [attr.aria-labelledby]="view() === 'products' ? 'products-title' : 'product-form-title'"
+          >
+            <div class="card p-3 p-lg-4 h-100">
+              @if (view() === 'products') {
+                <h2 id="products-title" class="h4">Produkte</h2>
+                @if (products().length === 0) {
+                  <p class="text-secondary">Noch keine Produkte vorhanden.</p>
+                } @else {
+                  <div class="table-responsive mb-4">
+                    <table class="table align-middle">
+                      <thead>
+                        <tr>
+                          <th scope="col">Produkt</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">MwSt.</th>
+                          <th scope="col">Aktionen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (product of products(); track product.id) {
+                          <tr>
+                            <td>
+                              {{ product.name
+                              }}<small class="d-block text-secondary">{{ product.slug }}</small>
+                            </td>
+                            <td>{{ product.status }}</td>
+                            <td>{{ taxLabel(product) }}</td>
+                            <td class="text-nowrap">
+                              <button
+                                class="btn btn-outline-primary btn-sm me-1"
+                                type="button"
+                                (click)="editProduct(product)"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button
+                                class="btn btn-outline-secondary btn-sm me-1"
+                                type="button"
+                                (click)="selectProduct(product.id)"
+                              >
+                                Varianten
+                              </button>
+                              <button
+                                class="btn btn-outline-danger btn-sm"
+                                type="button"
+                                [disabled]="busy()"
+                                (click)="deleteProduct(product)"
+                              >
+                                Löschen
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              } @else {
+                <h2 id="product-form-title" class="h4">
+                  {{ productForm.id ? 'Produkt bearbeiten' : 'Produkt anlegen' }}
+                </h2>
+                <form #productNgForm="ngForm" (ngSubmit)="saveProduct()" class="admin-form">
+                  <label class="form-label" for="product-name">Name</label>
+                  <input
+                    id="product-name"
+                    name="productName"
+                    class="form-control mb-2"
+                    required
+                    maxlength="200"
+                    [(ngModel)]="productForm.name"
+                  />
+                  <label class="form-label" for="product-slug">Slug</label>
+                  <input
+                    id="product-slug"
+                    name="productSlug"
+                    class="form-control mb-2"
+                    required
+                    maxlength="120"
+                    pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                    [(ngModel)]="productForm.slug"
+                  />
+                  <label class="form-label" for="product-description">Beschreibung</label>
+                  <textarea
+                    id="product-description"
+                    name="productDescription"
+                    class="form-control mb-2"
+                    rows="2"
+                    maxlength="10000"
+                    [(ngModel)]="productForm.description"
+                  ></textarea>
+                  <label class="form-label" for="product-status">Status</label>
+                  <select
+                    id="product-status"
+                    name="productStatus"
+                    class="form-select mb-3"
+                    [(ngModel)]="productForm.status"
+                  >
+                    <option value="draft">Entwurf</option>
+                    <option value="published">Veröffentlicht</option>
+                    <option value="archived">Archiviert</option>
+                  </select>
+                  <label class="form-label" for="product-tax-class">Umsatzsteuer</label>
+                  <select
+                    id="product-tax-class"
+                    name="productTaxClass"
+                    class="form-select mb-1"
+                    aria-describedby="product-tax-class-hint"
+                    [(ngModel)]="productForm.tax_class"
+                  >
+                    <option value="standard">19 % (Regelsatz)</option>
+                    <option value="reduced">7 % (ermäßigt)</option>
+                  </select>
+                  <p id="product-tax-class-hint" class="form-text mb-3">
+                    Der ermäßigte Satz gilt nur für Waren nach § 12 Abs. 2 UStG und Anlage 2, etwa
+                    Bücher und die meisten Lebensmittel. Im Zweifel steuerlich prüfen lassen.
+                  </p>
+                  <div class="d-flex gap-2">
+                    <button
+                      class="btn btn-primary"
+                      type="submit"
+                      [disabled]="busy() || productNgForm.invalid"
+                    >
+                      Speichern
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      (click)="resetProduct()"
+                    >
+                      Zurücksetzen
+                    </button>
+                  </div>
+                </form>
+              }
             </div>
-          }
-          <h3 class="h5">{{ productForm.id ? 'Produkt bearbeiten' : 'Produkt anlegen' }}</h3>
-          <form #productNgForm="ngForm" (ngSubmit)="saveProduct()" class="admin-form">
-            <label class="form-label" for="product-name">Name</label>
-            <input
-              id="product-name"
-              name="productName"
-              class="form-control mb-2"
-              required
-              maxlength="200"
-              [(ngModel)]="productForm.name"
-            />
-            <label class="form-label" for="product-slug">Slug</label>
-            <input
-              id="product-slug"
-              name="productSlug"
-              class="form-control mb-2"
-              required
-              maxlength="120"
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              [(ngModel)]="productForm.slug"
-            />
-            <label class="form-label" for="product-description">Beschreibung</label>
-            <textarea
-              id="product-description"
-              name="productDescription"
-              class="form-control mb-2"
-              rows="2"
-              maxlength="10000"
-              [(ngModel)]="productForm.description"
-            ></textarea>
-            <label class="form-label" for="product-status">Status</label>
-            <select
-              id="product-status"
-              name="productStatus"
-              class="form-select mb-3"
-              [(ngModel)]="productForm.status"
-            >
-              <option value="draft">Entwurf</option>
-              <option value="published">Veröffentlicht</option>
-              <option value="archived">Archiviert</option>
-            </select>
-            <label class="form-label" for="product-tax-class">Umsatzsteuer</label>
-            <select
-              id="product-tax-class"
-              name="productTaxClass"
-              class="form-select mb-1"
-              aria-describedby="product-tax-class-hint"
-              [(ngModel)]="productForm.tax_class"
-            >
-              <option value="standard">19 % (Regelsatz)</option>
-              <option value="reduced">7 % (ermäßigt)</option>
-            </select>
-            <p id="product-tax-class-hint" class="form-text mb-3">
-              Der ermäßigte Satz gilt nur für Waren nach § 12 Abs. 2 UStG und Anlage 2, etwa Bücher
-              und die meisten Lebensmittel. Im Zweifel steuerlich prüfen lassen.
-            </p>
-            <div class="d-flex gap-2">
-              <button
-                class="btn btn-primary"
-                type="submit"
-                [disabled]="busy() || productNgForm.invalid"
-              >
-                Speichern
-              </button>
-              <button class="btn btn-outline-secondary" type="button" (click)="resetProduct()">
-                Zurücksetzen
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-    </div>
+          </section>
+        }
+      </div>
+    }
 
-    @if (selectedProduct(); as product) {
+    @if (view() === 'products' && selectedProduct(); as product) {
       <section class="card p-3 p-lg-4 mt-4" aria-labelledby="variants-title">
         <h2 id="variants-title" class="h4">{{ product.name }}: Varianten und Kategorien</h2>
         <section class="mb-4" aria-labelledby="product-images-title">
@@ -562,149 +684,153 @@
       </section>
     }
 
-    <section class="card p-3 p-lg-4 mt-4" aria-labelledby="discounts-title">
-      <h2 id="discounts-title" class="h4">Rabattcodes</h2>
-      <p class="text-secondary">
-        Prozentualer Rabatt auf den Warenwert des Warenkorbs. Codes sind nach dem Anlegen
-        unveränderlich und werden deaktiviert statt gelöscht.
-      </p>
-      <div class="table-responsive mb-3">
-        <table class="table align-middle">
-          <thead>
-            <tr>
-              <th scope="col">Code</th>
-              <th scope="col">Rabatt</th>
-              <th scope="col">Gültig</th>
-              <th scope="col">Status</th>
-              <th scope="col">Aktion</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (code of discountCodes(); track code.id) {
+    @if (view() === 'discounts') {
+      <section class="card p-3 p-lg-4 mt-4" aria-labelledby="discounts-title">
+        <h2 id="discounts-title" class="h4">Rabattcodes</h2>
+        <p class="text-secondary">
+          Prozentualer Rabatt auf den Warenwert des Warenkorbs. Codes sind nach dem Anlegen
+          unveränderlich und werden deaktiviert statt gelöscht.
+        </p>
+        <div class="table-responsive mb-3">
+          <table class="table align-middle">
+            <thead>
               <tr>
-                <td>{{ code.code }}</td>
-                <td>{{ percent(code.percent_bp) }}</td>
-                <td>
-                  {{ code.valid_from ? 'ab ' + code.valid_from : '' }}
-                  {{ code.valid_until ? 'bis ' + code.valid_until : '' }}
-                  @if (!code.valid_from && !code.valid_until) {
-                    unbegrenzt
-                  }
-                </td>
-                <td>{{ code.is_active ? 'aktiv' : 'deaktiviert' }}</td>
-                <td>
-                  <button
-                    class="btn btn-outline-secondary btn-sm"
-                    type="button"
-                    [disabled]="busy()"
-                    (click)="toggleDiscountCode(code)"
-                  >
-                    {{ code.is_active ? 'Deaktivieren' : 'Aktivieren' }}
-                  </button>
-                </td>
+                <th scope="col">Code</th>
+                <th scope="col">Rabatt</th>
+                <th scope="col">Gültig</th>
+                <th scope="col">Status</th>
+                <th scope="col">Aktion</th>
               </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="text-secondary">Noch keine Rabattcodes angelegt.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <form #discountNgForm="ngForm" (ngSubmit)="createDiscountCode()" class="admin-form">
-        <div class="row g-2">
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="discount-code">Code</label>
-            <input
-              id="discount-code"
-              name="discountCode"
-              class="form-control"
-              required
-              minlength="3"
-              maxlength="32"
-              pattern="[A-Za-z0-9][A-Za-z0-9-]{2,31}"
-              autocomplete="off"
-              [(ngModel)]="discountForm.code"
-            />
-          </div>
-          <div class="col-12 col-md-2">
-            <label class="form-label" for="discount-percent">Rabatt in %</label>
-            <input
-              id="discount-percent"
-              name="discountPercent"
-              type="number"
-              min="0.01"
-              max="100"
-              step="0.01"
-              class="form-control"
-              required
-              [(ngModel)]="discountForm.percent"
-            />
-          </div>
-          <div class="col-6 col-md-3">
-            <label class="form-label" for="discount-from">Gültig ab (optional)</label>
-            <input
-              id="discount-from"
-              name="discountFrom"
-              type="datetime-local"
-              class="form-control"
-              [(ngModel)]="discountForm.validFrom"
-            />
-          </div>
-          <div class="col-6 col-md-3">
-            <label class="form-label" for="discount-until">Gültig bis (optional)</label>
-            <input
-              id="discount-until"
-              name="discountUntil"
-              type="datetime-local"
-              class="form-control"
-              [(ngModel)]="discountForm.validUntil"
-            />
-          </div>
+            </thead>
+            <tbody>
+              @for (code of discountCodes(); track code.id) {
+                <tr>
+                  <td>{{ code.code }}</td>
+                  <td>{{ percent(code.percent_bp) }}</td>
+                  <td>
+                    {{ code.valid_from ? 'ab ' + code.valid_from : '' }}
+                    {{ code.valid_until ? 'bis ' + code.valid_until : '' }}
+                    @if (!code.valid_from && !code.valid_until) {
+                      unbegrenzt
+                    }
+                  </td>
+                  <td>{{ code.is_active ? 'aktiv' : 'deaktiviert' }}</td>
+                  <td>
+                    <button
+                      class="btn btn-outline-secondary btn-sm"
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="toggleDiscountCode(code)"
+                    >
+                      {{ code.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="text-secondary">Noch keine Rabattcodes angelegt.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
-        <button
-          class="btn btn-primary mt-3"
-          type="submit"
-          [disabled]="busy() || discountNgForm.invalid"
-        >
-          Rabattcode anlegen
-        </button>
-      </form>
-    </section>
+        <form #discountNgForm="ngForm" (ngSubmit)="createDiscountCode()" class="admin-form">
+          <div class="row g-2">
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="discount-code">Code</label>
+              <input
+                id="discount-code"
+                name="discountCode"
+                class="form-control"
+                required
+                minlength="3"
+                maxlength="32"
+                pattern="[A-Za-z0-9][A-Za-z0-9-]{2,31}"
+                autocomplete="off"
+                [(ngModel)]="discountForm.code"
+              />
+            </div>
+            <div class="col-12 col-md-2">
+              <label class="form-label" for="discount-percent">Rabatt in %</label>
+              <input
+                id="discount-percent"
+                name="discountPercent"
+                type="number"
+                min="0.01"
+                max="100"
+                step="0.01"
+                class="form-control"
+                required
+                [(ngModel)]="discountForm.percent"
+              />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="discount-from">Gültig ab (optional)</label>
+              <input
+                id="discount-from"
+                name="discountFrom"
+                type="datetime-local"
+                class="form-control"
+                [(ngModel)]="discountForm.validFrom"
+              />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="discount-until">Gültig bis (optional)</label>
+              <input
+                id="discount-until"
+                name="discountUntil"
+                type="datetime-local"
+                class="form-control"
+                [(ngModel)]="discountForm.validUntil"
+              />
+            </div>
+          </div>
+          <button
+            class="btn btn-primary mt-3"
+            type="submit"
+            [disabled]="busy() || discountNgForm.invalid"
+          >
+            Rabattcode anlegen
+          </button>
+        </form>
+      </section>
+    }
 
-    <section class="card p-3 p-lg-4 mt-4" aria-labelledby="audit-title">
-      <h2 id="audit-title" class="h4">Letzte Änderungen</h2>
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th scope="col">Zeitpunkt</th>
-              <th scope="col">Aktion</th>
-              <th scope="col">Objekt</th>
-              <th scope="col">Akteur</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (event of events(); track event.id) {
+    @if (view() === 'dashboard') {
+      <section class="card p-3 p-lg-4 mt-4" aria-labelledby="audit-title">
+        <h2 id="audit-title" class="h4">Letzte Änderungen</h2>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
               <tr>
-                <td>{{ event.created_at }}</td>
-                <td>{{ event.action }}</td>
-                <td>
-                  {{ event.entity_type }}: {{ event.entity_id }}
-                  @if (event.related_id) {
-                    / {{ event.related_id }}
-                  }
-                </td>
-                <td>{{ event.actor_customer_id }}</td>
+                <th scope="col">Zeitpunkt</th>
+                <th scope="col">Aktion</th>
+                <th scope="col">Objekt</th>
+                <th scope="col">Akteur</th>
               </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" class="text-secondary">Noch keine Änderungen protokolliert.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
+            </thead>
+            <tbody>
+              @for (event of events(); track event.id) {
+                <tr>
+                  <td>{{ event.created_at }}</td>
+                  <td>{{ event.action }}</td>
+                  <td>
+                    {{ event.entity_type }}: {{ event.entity_id }}
+                    @if (event.related_id) {
+                      / {{ event.related_id }}
+                    }
+                  </td>
+                  <td>{{ event.actor_customer_id }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="text-secondary">Noch keine Änderungen protokolliert.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
   }
 </main>
