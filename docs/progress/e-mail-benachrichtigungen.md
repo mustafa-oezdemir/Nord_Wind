@@ -7,7 +7,7 @@
   - Nur Ereignisse, die es im Projekt gibt.
   - Mailpit statt MailHog.
   - Nur eigene Änderungen mergen.
-- **Offen:** Ein Lauf mit Docker Compose und der echten Mailpit-Oberfläche steht aus (siehe Prüfungen).
+- **Offen:** Ein Lauf mit Docker Compose und der echten Mailpit-Oberfläche steht aus (siehe Prüfungen). Die Image-Stufen sind ohne Docker nachgestellt geprüft (siehe [Docker-Images](#docker-images)).
 
 ## Was der Kunde bekommt
 
@@ -69,6 +69,7 @@ docker compose up --build -d    # führt Migration 15 aus; vorhandene Volumes bl
 
 - **Shop:** `http://127.0.0.1:8080`.
 - **Mailpit:** `http://127.0.0.1:8025`. Alle E-Mails landen dort, nichts geht an echte Postfächer.
+- **Postfach leeren:** in der Mailpit-Oberfläche alle Nachrichten löschen. Wer das Volume selbst entfernen will, löscht nur dieses: `docker compose rm -sf mailpit`, danach `docker volume rm nordwinds_mailpit-data`. `docker compose down -v` würde auch die Datenbank löschen.
 
 | Szenario | So auslösen |
 | --- | --- |
@@ -116,6 +117,33 @@ NORDWINDS_NOTIFICATION_TEST_URL=… NORDWINDS_NOTIFICATION_FLOW_TEST_URL=… go 
 4. **Mailpit entfernen:** Den Dienst `mailpit` nicht mitstarten bzw. in der Produktions-Compose-Datei weglassen. Seine Oberfläche nie öffentlich veröffentlichen.
 5. **Start prüfen:** Die API verweigert den Start mit Testpostfach, Klartext, fehlenden Zugangsdaten oder Testdomain. Das Protokoll meldet `notification.started` mit Host und TLS-Modus, ohne Zugangsdaten.
 6. **Überwachen:** `GET /api/v1/admin/notifications` (`counts.failed`, `counts.pending`) und die Protokollereignisse `notification.delivery`.
+
+## Docker-Images
+
+Das `Dockerfile` braucht keine Änderung. Die Stufe `api` übersetzt `./cmd/api` und `./cmd/migrate` und nimmt damit den gesamten Benachrichtigungscode mit:
+
+- Die Vorlagen sind per `go:embed` in der Binärdatei.
+- Die Zeitzonendaten stecken über `time/tzdata` ebenfalls darin; zusätzlich enthält das Image `tzdata`.
+- Migration 15 läuft wie bisher über den Dienst `migrate`.
+- Die `.dockerignore` schließt keine dieser Dateien aus.
+
+Geändert ist nur der Dienst `mailpit` in `compose.yaml`: Volume `mailpit-data` mit `MP_DATABASE=/data/mailpit.db` und `TZ=Europe/Berlin` (Begründung in [ADR-011](../adr/ADR-011-e-mail-benachrichtigungen.md#mailpit-statt-mailhog)).
+
+So werden die Images mit allen Änderungen neu gebaut und gestartet (vorhandene Volumes bleiben erhalten):
+
+```bash
+docker compose up --build -d   # baut nordwinds-api, -ssr und -edge neu, zieht axllent/mailpit:v1.31.6
+docker compose ps              # Dienste „healthy“, migrate „exited (0)“
+```
+
+Ohne Docker in der Prüfumgebung sind die Image-Stufen so nachgestellt:
+
+| Image-Stufe | Nachgestellte Prüfung | Ergebnis |
+| --- | --- | --- |
+| `backend-build` / `api` | Build-Kontext aus `git archive`, `CGO_ENABLED=0 go build -trimpath -ldflags="-s -w"` für `api` und `migrate` mit Go 1.27.3; statisch gelinkt, Vorlagen und `Europe/Berlin` in der Binärdatei | **PASS** |
+| `frontend-build` / `ssr` | `ng build --configuration production` (Node 22 statt 26); `index.csr.html` und `server/server.mjs` vorhanden | **PASS** |
+| Zusammenspiel wie in `compose.yaml` | frische Datenbank `nordwinds_test_*`: `migrate up` bis Version 15, API `/health/ready`, Dispatcher gestartet, SSR-Healthcheck `/konto` und Startseite, Registrierung erzeugt die Begrüßung, die über die Outbox per SMTP zugestellt wird; keine Klartextadresse im API-Protokoll | **PASS** |
+| `docker compose config`, `docker build`, Lauf mit Mailpit | **NICHT AUSGEFÜHRT**: weder Docker noch die Ausführung einer heruntergeladenen Compose-Binärdatei war möglich. Die YAML-Struktur ist mit einem Parser geprüft. | — |
 
 ## Prüfungen
 

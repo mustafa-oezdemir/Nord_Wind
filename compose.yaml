@@ -51,10 +51,15 @@ services:
 
   # Lokales Testpostfach (ADR-011): fängt alle E-Mails ab, stellt nichts zu.
   # Die Oberfläche ist nur über 127.0.0.1 erreichbar, SMTP nur im Compose-Netz.
+  # Nachrichten liegen im Volume mailpit-data und überstehen Neustarts und Image-Neubauten.
   mailpit:
     image: axllent/mailpit:v1.31.6
     environment:
       MP_MAX_MESSAGES: "500"
+      MP_DATABASE: /data/mailpit.db
+      TZ: Europe/Berlin
+    volumes:
+      - mailpit-data:/data
     ports:
       - "127.0.0.1:${HOST_MAILPIT_PORT:-8025}:8025"
     expose:
@@ -210,3 +215,4 @@ networks:
 
 volumes:
   db-data: {}
+  mailpit-data: {}

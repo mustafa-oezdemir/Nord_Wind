@@ -115,6 +115,9 @@ STARTTLS hat keinen stillen Rückfall auf Klartext. Zertifikate werden gegen den
 - Es nutzt dieselben Ports (SMTP 1025, Oberfläche 8025) und bringt einen eigenen Healthcheck mit.
 - Die Oberfläche ist nur über `127.0.0.1:${HOST_MAILPIT_PORT:-8025}` erreichbar, SMTP nur im Compose-Netz.
 - Der Container läuft schreibgeschützt, ohne Capabilities, mit höchstens 500 Nachrichten.
+- Die Nachrichten liegen in `/data/mailpit.db` im benannten Volume `mailpit-data` (`MP_DATABASE`), wie es die Mailpit-Dokumentation für Docker empfiehlt. Ohne diese Angabe legt Mailpit eine temporäre Datenbank im tmpfs `/tmp` an, die bei jedem Neustart verloren geht. `TZ=Europe/Berlin` zeigt die Zeiten in der Oberfläche in deutscher Zeit (das Image enthält `tzdata`).
+- Port 1025 ist bewusst nicht am Host veröffentlicht. Nur die API im Compose-Netz liefert ein.
+- `MP_SMTP_AUTH_ACCEPT_ANY` und `MP_SMTP_AUTH_ALLOW_INSECURE` aus dem Compose-Beispiel der Mailpit-Dokumentation sind nicht gesetzt. Die API meldet sich bei Mailpit nicht an (`SMTP_USERNAME` leer), und Go überträgt PLAIN-Zugangsdaten ohne TLS an einen anderen Host als localhost ohnehin nicht. Die beiden Optionen hätten deshalb keine Wirkung.
 - Gewählt ist v1.31.6 (veröffentlicht am 15. Oktober) statt v1.32.0 (22. Oktober), weil die neueste Version noch keine zwei Wochen alt war.
 
 ### Werbung und Einwilligung
