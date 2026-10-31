@@ -2,7 +2,9 @@ package migrations
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"net/url"
 	"os"
@@ -55,7 +57,12 @@ func TestMonitorRoleOnPostgres(t *testing.T) {
 		}
 	}
 
-	password := "Monitor-Test-Passwort-mit-'Quote'-und-$-2026"
+	// Zur Laufzeit erzeugt (kein Passwortwert im Repository); ' und $ prüfen das Quoting.
+	raw := make([]byte, 30)
+	if _, err := rand.Read(raw); err != nil {
+		t.Fatal(err)
+	}
+	password := base64.RawURLEncoding.EncodeToString(raw) + "'$"
 	for run := 0; run < 2; run++ { // zweimal: Wiederholung beim nächsten migrate up
 		if err := GrantMonitor(ctx, db, role, password); err != nil {
 			t.Fatalf("Lauf %d: %v", run+1, err)

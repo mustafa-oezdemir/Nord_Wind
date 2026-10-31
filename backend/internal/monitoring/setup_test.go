@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
@@ -20,10 +21,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Zugangsdaten für Tests entstehen zur Laufzeit. Im Repository stehen keine Passwortwerte,
+// die Secret-Scanner wie GitGuardian als Fund melden würden.
+var (
+	prometheusTestSecret = randomTestSecret(24)
+	grafanaTestSecret    = randomTestSecret(24)
+)
+
+func randomTestSecret(length int) string {
+	raw := make([]byte, length)
+	if _, err := rand.Read(raw); err != nil {
+		panic(err)
+	}
+	return "t" + base64.RawURLEncoding.EncodeToString(raw)[:length-1]
+}
+
 func validEnv() map[string]string {
 	return map[string]string{
-		"PROMETHEUS_USER": "nordwinds_prometheus", "PROMETHEUS_PASSWORD": "Prometheus-Testpasswort-2026",
-		"GRAFANA_ADMIN_USER": "nordwinds_admin", "GRAFANA_ADMIN_PASSWORD": "Grafana-Testpasswort-2026",
+		"PROMETHEUS_USER": "nordwinds_prometheus", "PROMETHEUS_PASSWORD": prometheusTestSecret,
+		"GRAFANA_ADMIN_USER": "nordwinds_admin", "GRAFANA_ADMIN_PASSWORD": grafanaTestSecret,
 		"NORDWINDS_METRICS_TOKEN":       strings.Repeat("m", 40),
 		"NORDWINDS_DB_MONITOR_USER":     "nordwinds_monitor",
 		"NORDWINDS_DB_MONITOR_PASSWORD": strings.Repeat("d", 40),
@@ -37,9 +53,9 @@ func TestConfigFromEnvRejectsMissingWeakAndPlaceholderValues(t *testing.T) {
 	}
 	for key, value := range map[string]string{
 		"PROMETHEUS_USER":               "a b",
-		"PROMETHEUS_PASSWORD":           "kurz",
+		"PROMETHEUS_PASSWORD":           prometheusTestSecret[:4],
 		"GRAFANA_ADMIN_USER":            "",
-		"GRAFANA_ADMIN_PASSWORD":        "hier-ein-eigenes-starkes-passwort-setzen",
+		"GRAFANA_ADMIN_PASSWORD":        "hier-" + grafanaTestSecret,
 		"NORDWINDS_METRICS_TOKEN":       "",
 		"NORDWINDS_DB_MONITOR_USER":     "Monitor-Rolle",
 		"NORDWINDS_DB_MONITOR_PASSWORD": strings.Repeat("x", 31),
@@ -60,7 +76,7 @@ func TestConfigFromEnvRejectsMissingWeakAndPlaceholderValues(t *testing.T) {
 		t.Error("Passwort über 72 Byte akzeptiert")
 	}
 	broken = validEnv()
-	broken["GRAFANA_ADMIN_PASSWORD"] = "Grafana Passwort mit Leerzeichen"
+	broken["GRAFANA_ADMIN_PASSWORD"] = grafanaTestSecret[:10] + " " + grafanaTestSecret[10:]
 	if _, err := ConfigFromEnv(func(k string) string { return broken[k] }); err == nil {
 		t.Error("Leerzeichen akzeptiert")
 	}
@@ -197,7 +213,7 @@ func TestRunCreatesTLSAndCredentials(t *testing.T) {
 	source := read(t, filepath.Join(config.GrafanaDir, "provisioning/datasources/prometheus.yaml"))
 	block, _ := pem.Decode([]byte(read(t, filepath.Join(config.GrafanaDir, "ca.crt"))))
 	if block == nil || !strings.Contains(source, "url: https://prometheus:9090") || !strings.Contains(source, "        -----BEGIN CERTIFICATE-----") ||
-		!strings.Contains(source, "basicAuthPassword: 'Prometheus-Testpasswort-2026'") {
+		!strings.Contains(source, "basicAuthPassword: '"+prometheusTestSecret+"'") {
 		t.Fatalf("Datenquelle:\n%s", source)
 	}
 	if read(t, filepath.Join(config.GrafanaDir, "admin_password")) != config.GrafanaAdminPassword {
@@ -206,7 +222,8 @@ func TestRunCreatesTLSAndCredentials(t *testing.T) {
 
 	// Zweiter Lauf: CA, Serverzertifikat und Grafana-Schlüssel bleiben; ein neues Passwort gilt sofort.
 	secret := read(t, filepath.Join(config.GrafanaDir, "secret_key"))
-	config.PrometheusPassword = "Neues-Pass$wort-mit-'Quote'-2026"
+	// $ und ' prüfen die Maskierung für Grafana und YAML.
+	config.PrometheusPassword = grafanaTestSecret + "$'x"
 	second, err := Run(config)
 	if err != nil {
 		t.Fatal(err)
@@ -218,7 +235,7 @@ func TestRunCreatesTLSAndCredentials(t *testing.T) {
 		t.Fatal("Grafana-Schlüssel gewechselt")
 	}
 	source = read(t, filepath.Join(config.GrafanaDir, "provisioning/datasources/prometheus.yaml"))
-	if !strings.Contains(source, `basicAuthPassword: 'Neues-Pass$$wort-mit-''Quote''-2026'`) {
+	if !strings.Contains(source, "basicAuthPassword: '"+grafanaTestSecret+"$$''x'") {
 		t.Fatalf("Maskierung fehlt:\n%s", source)
 	}
 

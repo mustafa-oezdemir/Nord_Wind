@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"os"
 	"strings"
 	"testing"
@@ -72,7 +74,12 @@ func TestBusinessMetricsOnPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Die Registrierung reiht über den Trigger eine Begrüßung ein (ADR-011).
-	if _, err := service.Register(ctx, "metrik-kundin@example.invalid", "Synthetic-Metrics-Passphrase-2026", "test"); err != nil {
+	raw := make([]byte, 24)
+	if _, err := rand.Read(raw); err != nil {
+		t.Fatal(err)
+	}
+	// Zur Laufzeit erzeugt, damit kein Passwortwert im Repository steht.
+	if _, err := service.Register(ctx, "metrik-kundin@example.invalid", base64.RawURLEncoding.EncodeToString(raw), "test"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE notification_outbox SET created_at = now() - interval '10 minutes'`); err != nil {
