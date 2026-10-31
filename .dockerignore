@@ -24,6 +24,7 @@ ai-agents/
 .github/copilot-instructions.md
 secrets/
 backups/
+backups-staging/
 certs/local/
 *.pem
 *.key

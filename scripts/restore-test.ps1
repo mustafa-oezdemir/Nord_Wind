@@ -25,7 +25,7 @@ if ($expected -notmatch '^[0-9a-f]{64}$' -or $actual -cne $expected) {
     throw 'Die SHA-256-Prüfsumme stimmt nicht.'
 }
 
-$containers = @(docker compose -p $Project ps -q db)
+$containers = @(docker ps --filter "label=com.docker.compose.project=$Project" --filter 'label=com.docker.compose.service=db' --format '{{.ID}}')
 if ($LASTEXITCODE -ne 0 -or $containers.Count -ne 1 -or -not $containers[0]) {
     throw 'Die Datenbank des angegebenen Compose-Projekts läuft nicht.'
 }

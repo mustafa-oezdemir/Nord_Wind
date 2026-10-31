@@ -28,7 +28,7 @@ services:
       PGUSER: ${POSTGRES_USER:-nordwinds_app}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
     volumes:
-      - ./backups:/backups
+      - ${NORDWINDS_BACKUP_DIR:-./backups}:/backups
       - ./scripts/backup-loop.sh:/opt/nordwinds/backup-loop.sh:ro
     depends_on:
       db:

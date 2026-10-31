@@ -62,6 +62,7 @@ pnpm-debug.log*
 /data/postgres/
 /postgres-data/
 /backups/
+/backups-staging/
 *.pid
 
 # Editor- und Betriebssystemdateien

@@ -1,0 +1,19 @@
+services:
+  api:
+    environment:
+      APP_ENV: staging
+      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:-https://staging.localhost:18443}
+      NORDWINDS_DEMO_CHECKOUT_ENABLED: "false"
+  ssr:
+    environment:
+      NORDWINDS_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN:-https://staging.localhost:18443}
+  edge:
+    environment:
+      STAGING_HOST: ${STAGING_HOST:-staging.localhost}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - ./ops/Caddyfile.staging:/etc/caddy/Caddyfile:ro

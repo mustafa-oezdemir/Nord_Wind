@@ -61,6 +61,7 @@ Der [NW-10-Nachweis](docs/progress/NW-10.md) beschreibt Produktdetail, Varianten
 Der [NW-22-Nachweis](docs/progress/NW-22.md) dokumentiert die Zugänglichkeits- und SEO-Prüfung sowie die Entscheidung für gezieltes SSR.
 Der [NW-23-Sicherheitsnachweis](docs/progress/NW-23.md) beschreibt die geprüften Schutzmaßnahmen, Scans und offenen Betriebsrisiken.
 Der [NW-24-Betriebsnachweis](docs/progress/NW-24.md) beschreibt Metriken, tägliche Datenbanksicherung und die ausgeführte Rücksicherung.
+Der [NW-25-Staging-Nachweis](docs/progress/NW-25.md) und das [Release-Runbook](ops/release-runbook.md) beschreiben die lokale HTTPS-Prüfung und die offenen Freigabesperren. [NW-26](docs/progress/NW-26.md) ist ausdrücklich noch kein Produktionsstart.
 
 ## Container-Images
 

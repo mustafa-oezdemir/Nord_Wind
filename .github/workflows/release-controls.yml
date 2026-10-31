@@ -1,0 +1,92 @@
+name: Release controls
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Annotierter SemVer-Tag, z. B. v1.2.3
+        required: true
+        type: string
+      expected_sha:
+        description: Vollständiger Commit-SHA des genehmigten PR
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  verify:
+    name: release-verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      commit: ${{ steps.tag.outputs.commit }}
+    steps:
+      - name: Quellen und Tags auschecken
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tag und Hauptbranch prüfen
+        id: tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git cat-file -t "refs/tags/$RELEASE_TAG")" = tag
+          commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          test "$commit" = "$EXPECTED_SHA"
+          git fetch origin main --quiet
+          git merge-base --is-ancestor "$commit" origin/main
+          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+      - name: PR, CI, Security und Freigaberegel prüfen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ steps.tag.outputs.commit }}
+        run: |
+          merged="$(gh api "repos/$GITHUB_REPOSITORY/commits/$COMMIT_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | length')"
+          test "$merged" -ge 1
+          for check in quality images secrets; do
+            passed="$(gh api "repos/$GITHUB_REPOSITORY/commits/$COMMIT_SHA/check-runs" --jq "[.check_runs[] | select(.name == \"$check\" and .conclusion == \"success\")] | length")"
+            test "$passed" -ge 1
+          done
+          reviewers="$(gh api "repos/$GITHUB_REPOSITORY/environments/staging" --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length')"
+          test "$reviewers" -ge 1
+
+  staging:
+    name: staging-validation
+    needs: verify
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Genehmigten Commit auschecken
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.commit }}
+          persist-credentials: false
+      - name: Isolierte Staging-Konfiguration erzeugen
+        shell: pwsh
+        run: ./scripts/create-local-staging-env.ps1
+      - name: HTTPS-Staging starten
+        run: docker compose --env-file .env.staging -f compose.yaml -f compose.staging.yaml up -d --build
+      - name: Synthetischen Katalog laden
+        shell: pwsh
+        run: |
+          Get-Content -LiteralPath backend/seeds/demo_catalog.sql -Raw -Encoding UTF8 |
+            docker compose --env-file .env.staging -f compose.yaml -f compose.staging.yaml exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -X -v ON_ERROR_STOP=1'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: HTTPS-Smoke und synthetischen Kundenfluss prüfen
+        shell: pwsh
+        run: ./scripts/staging-check.ps1 -SyntheticFlow
+      - name: Sicherung, Restore und Migration auf Kopie prüfen
+        shell: pwsh
+        run: ./scripts/staging-preflight.ps1
+      - name: Temporäre Container stoppen
+        if: always()
+        run: docker compose --env-file .env.staging -f compose.yaml -f compose.staging.yaml down
