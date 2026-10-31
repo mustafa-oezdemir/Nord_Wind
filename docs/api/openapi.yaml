@@ -266,10 +266,14 @@ paths:
       description: >-
         Nur für Admins. Bruttowarenumsatz nach Bestellrabatt ohne Versand,
         zeitlich nach dem ersten PAID-Ereignis in Europe/Berlin. Erstattete
-        Mock-Zahlungen zählen nicht. Die Kategorie ist die aktuell erste
-        Zuordnung nach sort_order und ID; spätere Katalogänderungen können
-        historische Kategorie- und Produktnamen verändern. Höchstens acht
-        Reihen werden einzeln gezeigt, der Rest als Weitere.
+        Mock-Zahlungen zählen nicht. Die Kategorie eines Produkts ist die
+        aktuell erste Zuordnung nach sort_order und ID; spätere
+        Katalogänderungen können historische Zuordnungen und Namen verändern.
+        Jede Kategorie bzw. jedes Produkt im Umfang erscheint als eigene Reihe,
+        auch ohne Umsatz. Kategorien stehen in Baumreihenfolge, Produkte
+        gruppiert nach ihrer Kategorie und darin nach Umsatz. Eine Kategorie
+        zählt nur Produkte, deren primäre Kategorie sie ist; Unterkategorien
+        sind eigene Reihen.
       security: [{ SessionCookie: [] }]
       parameters:
         - name: group_by
@@ -277,11 +281,51 @@ paths:
           schema: { type: string, enum: [total, category, product], default: total }
         - name: period
           in: query
-          schema: { type: string, enum: [week, month, quarter], default: week }
-          description: Letzte 7 Tage, letzte 30 Tage oder drei Kalendermonate einschließlich heute.
+          schema: { type: string, enum: [week, month, quarter, custom], default: week }
+          description: >-
+            Letzte 7 Tage, letzte 30 Tage, drei Kalendermonate einschließlich
+            heute oder ein eigener Zeitraum mit from und to.
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+          description: >-
+            Nur mit period=custom, erster Tag einschließlich. Bis 62 Tage
+            entstehen Tageswerte, darüber Monatswerte; höchstens 731 Tage.
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+          description: Nur mit period=custom, letzter Tag einschließlich, spätestens heute.
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Beschränkt auf diese Kategorie und alle Unterkategorien.
+        - name: product_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: >-
+            Nur für group_by total oder product. Mit category_id muss das
+            Produkt in dieser Kategorie oder einer Unterkategorie liegen.
       responses:
         '200': { $ref: '#/components/responses/AdminSalesReport' }
-        '400': { $ref: '#/components/responses/AuthProblem' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+  /api/v1/admin/analytics/catalog:
+    get:
+      summary: Kategorien und Produkte für die Auswahl der Umsatzanalyse
+      operationId: adminSalesCatalog
+      description: >-
+        Nur für Admins. Alle Kategorien in Baumreihenfolge mit Tiefe und alle
+        Produkte mit ihrer primären Kategorie, gruppiert nach dieser
+        Reihenfolge. Antwort mit Cache-Control no-store.
+      security: [{ SessionCookie: [] }]
+      responses:
+        '200':
+          description: Auswahllisten.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSalesCatalog' }
         '401': { $ref: '#/components/responses/AuthProblem' }
         '403': { $ref: '#/components/responses/AuthProblem' }
   /api/v1/admin/products/{id}/images:
@@ -1465,10 +1509,13 @@ components:
         created_at: { type: string, format: date-time }
     AdminSalesReport:
       type: object
-      required: [group_by, period, currency, start_date, end_date, buckets, series, total_cents]
+      required: [group_by, period, granularity, currency, start_date, end_date, buckets, series, total_cents]
       properties:
         group_by: { type: string, enum: [total, category, product] }
-        period: { type: string, enum: [week, month, quarter] }
+        period: { type: string, enum: [week, month, quarter, custom] }
+        granularity: { type: string, enum: [day, month] }
+        category_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
         currency: { type: string, enum: [EUR] }
         start_date: { type: string, format: date }
         end_date: { type: string, format: date }
@@ -1484,14 +1531,43 @@ components:
           type: array
           items:
             type: object
-            required: [key, label, values_cents, total_cents, quantity]
+            required: [key, label, category_key, category_label, depth, values_cents, total_cents, quantity]
             properties:
-              key: { type: string }
+              key: { type: string, description: 'Kategorie- oder Produkt-ID, total oder uncategorized' }
               label: { type: string }
+              category_key: { type: string, description: 'Bei Produkten die primäre Kategorie, bei Kategorien die Kategorie selbst; leer bei total' }
+              category_label: { type: string }
+              parent_key: { type: string, description: 'Oberkategorie einer Kategorie-Reihe' }
+              depth: { type: integer, description: 'Tiefe im Kategoriebaum (0 = oberste Ebene)' }
               values_cents: { type: array, items: { type: integer, format: int64 } }
               total_cents: { type: integer, format: int64 }
               quantity: { type: integer, format: int64 }
         total_cents: { type: integer, format: int64 }
+    AdminSalesCatalog:
+      type: object
+      required: [categories, products]
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            required: [id, name, status, depth]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              parent_id: { type: string, format: uuid }
+              status: { type: string, enum: [active, inactive] }
+              depth: { type: integer }
+        products:
+          type: array
+          items:
+            type: object
+            required: [id, name, status]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              status: { type: string, enum: [draft, published, archived] }
+              category_id: { type: string, format: uuid, description: 'Primäre Kategorie; fehlt ohne Zuordnung' }
     CartItem:
       type: object
       required: [variant_id, product_id, product_slug, product_name, sku, label, quantity, unit_price_cents, line_total_cents, currency, available, unavailable_reason, tax_class, tax_rate_bp]

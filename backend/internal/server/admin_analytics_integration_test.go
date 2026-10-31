@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -139,12 +140,23 @@ func TestAdminSalesAnalyticsOnPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	read := func(group, period string) analytics.Report {
+	// Unterkategorie ohne Umsatz, Produkt darin und Produkt ohne Kategorie: Alle erscheinen als eigene Reihe.
+	subcategory := insertShippingID(t, db, `INSERT INTO categories (name, slug, parent_id) VALUES ('Pfannen', 'analytics-pfannen', $1) RETURNING id`, categoryA)
+	grill := insertShippingID(t, db, `INSERT INTO products (name, slug, status) VALUES ('Grillpfanne', 'analytics-grillpfanne', 'draft') RETURNING id`)
+	if _, err := db.ExecContext(ctx, `INSERT INTO product_categories (product_id, category_id) VALUES ($1, $2)`, grill, subcategory); err != nil {
+		t.Fatal(err)
+	}
+	voucher := insertShippingID(t, db, `INSERT INTO products (name, slug, status) VALUES ('Gutschein', 'analytics-gutschein', 'published') RETURNING id`)
+
+	get := func(query string) *httptest.ResponseRecorder {
 		t.Helper()
-		response := authRequest(router, http.MethodGet,
-			"/api/v1/admin/analytics/sales?group_by="+group+"&period="+period, "", admin, "")
+		return authRequest(router, http.MethodGet, "/api/v1/admin/analytics/sales?"+query, "", admin, "")
+	}
+	read := func(query string) analytics.Report {
+		t.Helper()
+		response := get(query)
 		if response.Code != 200 || response.Header().Get("Cache-Control") != "no-store" {
-			t.Fatalf("Analyse %s/%s: %d %s", group, period, response.Code, response.Body.String())
+			t.Fatalf("Analyse %s: %d %s", query, response.Code, response.Body.String())
 		}
 		var report analytics.Report
 		if err := json.Unmarshal(response.Body.Bytes(), &report); err != nil {
@@ -152,24 +164,94 @@ func TestAdminSalesAnalyticsOnPostgres(t *testing.T) {
 		}
 		return report
 	}
-	total := read("total", "week")
-	if total.TotalCents != 3600 || len(total.Buckets) != 7 || len(total.Series) != 1 || total.Series[0].Quantity != 2 {
+	type row struct {
+		key   string
+		total int64
+	}
+	rows := func(report analytics.Report) []row {
+		result := make([]row, 0, len(report.Series))
+		for _, series := range report.Series {
+			result = append(result, row{series.Key, series.TotalCents})
+		}
+		return result
+	}
+	expect := func(name string, report analytics.Report, total int64, want ...row) {
+		t.Helper()
+		got := rows(report)
+		if report.TotalCents != total || fmt.Sprint(got) != fmt.Sprint(want) {
+			t.Fatalf("%s: Summe %d, Reihen %v; erwartet %d, %v", name, report.TotalCents, got, total, want)
+		}
+	}
+
+	total := read("group_by=total&period=week")
+	if total.TotalCents != 3600 || len(total.Buckets) != 7 || len(total.Series) != 1 || total.Series[0].Quantity != 2 || total.Granularity != "day" {
 		t.Fatalf("Rabattbereinigter Gesamtumsatz: %+v", total)
 	}
-	productSales := read("product", "month")
-	if productSales.TotalCents != 3600 || len(productSales.Buckets) != 30 ||
-		len(productSales.Series) != 2 || productSales.Series[0].TotalCents != 2700 || productSales.Series[1].TotalCents != 900 {
-		t.Fatalf("Produktumsatz: %+v", productSales)
+	// Kategorien in Baumreihenfolge (sort_order, Name), Unterkategorie direkt unter ihrer Oberkategorie.
+	categories := read("group_by=category&period=quarter")
+	expect("Kategorien", categories, 3600, row{categoryB, 900}, row{categoryA, 2700}, row{subcategory, 0}, row{"uncategorized", 0})
+	if len(categories.Buckets) != 3 || categories.Series[2].ParentKey != categoryA || categories.Series[2].Depth != 1 {
+		t.Fatalf("Unterkategorie: %+v", categories.Series[2])
 	}
-	categorySales := read("category", "quarter")
-	if categorySales.TotalCents != 3600 || len(categorySales.Buckets) != 3 ||
-		len(categorySales.Series) != 2 || categorySales.Series[0].TotalCents != 2700 || categorySales.Series[1].TotalCents != 900 {
-		t.Fatalf("Kategorieumsatz: %+v", categorySales)
+	expect("Oberkategorie mit Unterkategorie", read("group_by=category&period=week&category_id="+categoryA), 2700,
+		row{categoryA, 2700}, row{subcategory, 0})
+	expect("nur Unterkategorie", read("group_by=category&period=week&category_id="+subcategory), 0, row{subcategory, 0})
+
+	// Produkte gruppiert nach Kategorie; jede Reihe kennt ihre Kategorie für Farbe und Gruppierung.
+	products := read("group_by=product&period=month")
+	expect("Produkte", products, 3600, row{productB, 900}, row{productA, 2700}, row{grill, 0}, row{voucher, 0})
+	if len(products.Buckets) != 30 || products.Series[1].CategoryKey != categoryA || products.Series[1].CategoryLabel != "Küche" ||
+		products.Series[2].CategoryKey != subcategory || products.Series[3].CategoryKey != "uncategorized" {
+		t.Fatalf("Produktkategorien: %+v", products.Series)
 	}
+	expect("Produkte einer Kategorie samt Unterkategorie", read("group_by=product&period=week&category_id="+categoryA), 2700,
+		row{productA, 2700}, row{grill, 0})
+	expect("ein Produkt", read("group_by=product&period=week&category_id="+categoryA+"&product_id="+productA), 2700, row{productA, 2700})
+	expect("Gesamtumsatz einer Kategorie", read("group_by=total&period=week&category_id="+categoryB), 900, row{"total", 900})
+
+	// Eigener Zeitraum: gestern bis heute in Berlin.
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := time.Now().In(berlin)
+	custom := read("group_by=total&period=custom&from=" + today.AddDate(0, 0, -1).Format("2006-01-02") + "&to=" + today.Format("2006-01-02"))
+	if custom.TotalCents != 3600 || len(custom.Buckets) != 2 || custom.StartDate != today.AddDate(0, 0, -1).Format("2006-01-02") {
+		t.Fatalf("Eigener Zeitraum: %+v", custom)
+	}
+	if empty := read("group_by=total&period=custom&from=2025-01-01&to=2025-01-31"); empty.TotalCents != 0 || len(empty.Buckets) != 31 {
+		t.Fatalf("Zeitraum ohne Verkäufe: %+v", empty)
+	}
+	for _, invalid := range []string{
+		"group_by=total&period=custom&from=" + today.Format("2006-01-02") + "&to=" + today.AddDate(0, 0, 1).Format("2006-01-02"),
+		"group_by=total&period=custom&from=2026-10-31",
+		"group_by=total&period=week&from=2026-10-01",
+		"group_by=category&period=week&category_id=kein-uuid",
+		"group_by=category&period=week&product_id=" + productA,
+		"group_by=product&period=week&category_id=" + categoryB + "&product_id=" + productA,
+	} {
+		assertProblem(t, get(invalid), 400, "INVALID_REQUEST")
+	}
+	assertProblem(t, get("group_by=category&period=week&category_id=00000000-0000-4000-8000-000000000000"), 404, "NOT_FOUND")
+	assertProblem(t, get("group_by=product&period=week&product_id=00000000-0000-4000-8000-000000000000"), 404, "NOT_FOUND")
+
+	// Auswahllisten: alle Kategorien und Produkte der Datenbank, nur für Admins.
+	assertProblem(t, authRequest(router, http.MethodGet, "/api/v1/admin/analytics/catalog", "", employee, ""), 403, "FORBIDDEN")
+	catalogResponse := authRequest(router, http.MethodGet, "/api/v1/admin/analytics/catalog", "", admin, "")
+	var catalog analytics.Catalog
+	if catalogResponse.Code != 200 || json.Unmarshal(catalogResponse.Body.Bytes(), &catalog) != nil {
+		t.Fatalf("Katalog: %d %s", catalogResponse.Code, catalogResponse.Body.String())
+	}
+	if len(catalog.Categories) != 3 || catalog.Categories[0].ID != categoryB || catalog.Categories[2].ID != subcategory ||
+		catalog.Categories[2].Depth != 1 || len(catalog.Products) != 4 || catalog.Products[2].ID != grill ||
+		catalog.Products[2].CategoryID != subcategory || catalog.Products[2].Status != "draft" || catalog.Products[3].CategoryID != "" {
+		t.Fatalf("Katalog: %+v", catalog)
+	}
+
 	if _, err := db.ExecContext(ctx, `UPDATE mock_payments SET state = 'refunded' WHERE order_id = $1`, orderID); err != nil {
 		t.Fatal(err)
 	}
-	if refunded := read("total", "week"); refunded.TotalCents != 0 {
+	if refunded := read("group_by=total&period=week"); refunded.TotalCents != 0 {
 		t.Fatalf("Erstattung darf nicht als Umsatz zählen: %+v", refunded)
 	}
 }

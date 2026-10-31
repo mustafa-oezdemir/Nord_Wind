@@ -33,8 +33,13 @@ const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR'
 export function salesChartConfig(
   report: SalesReport,
   chartType: SalesChartType,
+  seriesColors: readonly string[] = [],
+  compact = false,
 ): ChartConfiguration {
+  const color = (index: number) => seriesColors[index] ?? colors[index % colors.length];
   const doughnut = chartType === 'doughnut';
+  // Kategorien und Produkte als gestapelte Balken: ein Balken je Tag, Farbbänder je Kategorie.
+  const stacked = chartType === 'bar' && report.group_by !== 'total' && report.series.length > 1;
   const area = chartType === 'area';
   const type = doughnut ? 'doughnut' : chartType === 'bar' ? 'bar' : 'line';
   const datasets = doughnut
@@ -42,7 +47,7 @@ export function salesChartConfig(
         {
           label: 'Umsatz',
           data: report.series.map((series) => series.total_cents / 100),
-          backgroundColor: report.series.map((_, index) => colors[index % colors.length]),
+          backgroundColor: report.series.map((_, index) => color(index)),
           borderColor: '#ffffff',
           borderWidth: 2,
         },
@@ -50,10 +55,8 @@ export function salesChartConfig(
     : report.series.map((series, index) => ({
         label: series.label,
         data: series.values_cents.map((cents) => cents / 100),
-        borderColor: colors[index % colors.length],
-        backgroundColor: area
-          ? `${colors[index % colors.length]}33`
-          : colors[index % colors.length],
+        borderColor: color(index),
+        backgroundColor: area ? `${color(index)}33` : color(index),
         borderWidth: 2,
         borderRadius: chartType === 'bar' ? 3 : 0,
         fill: area,
@@ -77,12 +80,18 @@ export function salesChartConfig(
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          display: report.group_by !== 'total',
+          // Auf schmalen Bildschirmen übernimmt bei vielen Reihen die Tabelle die Legende.
+          display: report.group_by !== 'total' && !(compact && report.series.length > 12),
           position: 'bottom',
-          labels: { usePointStyle: true },
+          labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8 },
         },
         tooltip: {
+          filter: (item) => doughnut || Number(item.raw) !== 0,
           callbacks: {
+            footer: (items) =>
+              doughnut || items.length < 2
+                ? ''
+                : `Summe: ${euro.format(items.reduce((sum, item) => sum + (Number(item.raw) || 0), 0))}`,
             label: (context) =>
               `${doughnut ? context.label : `${context.dataset.label} · ${context.label}`}: ${euro.format(Number(context.raw) || 0)}`,
           },
@@ -92,10 +101,15 @@ export function salesChartConfig(
         ? {}
         : {
             x: {
+              stacked,
               grid: { display: false },
               ticks: { maxTicksLimit: report.buckets.length > 15 ? 7 : 10 },
             },
-            y: { beginAtZero: true, ticks: { callback: (value) => euro.format(Number(value)) } },
+            y: {
+              stacked,
+              beginAtZero: true,
+              ticks: { callback: (value) => euro.format(Number(value)) },
+            },
           },
     },
   };
@@ -134,6 +148,8 @@ export function salesChartConfig(
 export class SalesChart implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) report!: SalesReport;
   @Input({ required: true }) chartType!: SalesChartType;
+  /** Farben je Reihe in derselben Reihenfolge wie `report.series`. */
+  @Input() colors: readonly string[] = [];
   @ViewChild('canvas') private canvas?: ElementRef<HTMLCanvasElement>;
 
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -179,7 +195,11 @@ export class SalesChart implements AfterViewInit, OnChanges, OnDestroy {
         chartjs.Tooltip,
       );
       this.chart?.destroy();
-      this.chart = new chartjs.Chart(context, salesChartConfig(this.report, this.chartType));
+      const compact = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+      this.chart = new chartjs.Chart(
+        context,
+        salesChartConfig(this.report, this.chartType, this.colors, compact),
+      );
     } catch {
       if (generation === this.generation) this.failed.set(true);
     }
