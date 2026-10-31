@@ -7,7 +7,7 @@
   - Nur Ereignisse, die es im Projekt gibt.
   - Mailpit statt MailHog.
   - Nur eigene Änderungen mergen.
-- **Offen:** Ein Lauf mit Docker Compose und der echten Mailpit-Oberfläche steht aus (siehe Prüfungen). Die Image-Stufen sind ohne Docker nachgestellt geprüft (siehe [Docker-Images](#docker-images)).
+- **Betriebsprüfung:** Der ursprüngliche Cloud-Lauf ohne Docker ist unten dokumentiert. Am 31. Oktober 2026 wurde Mailpit zusätzlich in den lokalen Docker-Compose-Umgebungen für Entwicklung und Staging gestartet und geprüft (siehe [Lokale Docker-Nachprüfung](#lokale-docker-nachprüfung)).
 
 ## Was der Kunde bekommt
 
@@ -169,3 +169,31 @@ Ohne Docker in der Prüfumgebung sind die Image-Stufen so nachgestellt:
 - **Weitere Benachrichtigungen:** wieder vorrätig, Supportantwort, Benachrichtigungseinstellungen, Newsletter.
 
 ADR-011 beschreibt, wie jede davon später ergänzt wird.
+
+## Lokale Docker-Nachprüfung
+
+Am 31. Oktober 2026 wurde die bereits konfigurierte Mailpit-Installation auf
+Windows mit Docker Compose tatsächlich ausgeführt. Die Version
+`axllent/mailpit:v1.31.6` folgt der [offiziellen Docker-Anleitung](https://mailpit.axllent.org/docs/install/docker/):
+Weboberfläche auf Containerport `8025`, SMTP auf `1025`. Nur die Weboberfläche
+ist an `127.0.0.1` des Hosts gebunden; SMTP bleibt im jeweiligen Compose-Netz.
+
+| Umgebung | Weboberfläche | API-Verbindung | Ergebnis |
+| --- | --- | --- | --- |
+| Entwicklung | `http://127.0.0.1:8025` | `mailpit:1025` | HTTP 200, SMTP-Port aus dem API-Container erreichbar, alle aktiven Dienste healthy |
+| Lokales Staging | `http://127.0.0.1:18026` | `mailpit:1025` | HTTP 200, SMTP-Port aus dem API-Container erreichbar, alle aktiven Dienste healthy |
+
+Vor der Staging-Umstellung wurde mit `backup-loop.sh` ein neues Custom-Format-Backup
+erstellt und durch `pg_restore --list` sowie SHA-256-Prüfung validiert. Danach
+lief Migration 15 erfolgreich. Der bereits vorhandene Portwert `18026` wurde
+in der ignorierten lokalen Datei `.env.staging` von `HOST_MAILHOG_PORT` auf
+`HOST_MAILPIT_PORT` umgestellt. Das Staging-MailHog-Postfach enthielt vor der
+Entfernung null Nachrichten. Die beiden NordWinds-MailHog-Container wurden
+entfernt; MailHog-Container anderer Projekte blieben unberührt. Das
+Mailpit-Volume `nordwinds-staging_mailpit-data` ist vorhanden.
+
+Die Staging-Seite und `/api/v1/meta` antworteten über den lokalen HTTPS-Proxy
+mit HTTP 200. Für den Test wurde der Hostname `staging.localhost` nur in `curl`
+auf `127.0.0.1` aufgelöst; die Windows-Hostkonfiguration wurde nicht verändert.
+Ein neuer E-Mail-Versand aus einem fachlichen Ereignis wurde bei dieser
+Betriebsnachprüfung nicht ausgelöst.
