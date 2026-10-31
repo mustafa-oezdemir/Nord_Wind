@@ -34,6 +34,8 @@ docker compose ps
 
 Unter einer POSIX-Shell führt `sh scripts/smoke.sh` denselben Smoke-Test aus. `docker compose down` stoppt den Stack, ohne das Datenbank-Volume zu entfernen. Die Datenbank ist nicht am Host veröffentlicht; nur Caddy ist lokal unter `127.0.0.1:8080` erreichbar. Der Port kann über `HOST_HTTP_PORT` in `.env` geändert und dem Smoke-Test als URL übergeben werden.
 
+Der `backup`-Dienst erstellt nach dem Start und danach täglich ein geprüftes Datenbankarchiv in `backups/`; der Ordner ist lokal und wird von Git ignoriert. Die [Rücksicherungsanleitung](docs/progress/NW-24.md) beschreibt den Test in einer separaten Datenbank. Für einen öffentlichen Betrieb sind verschlüsselte Kopien außerhalb des Hosts und eine Überwachung des Sicherungsstatus erforderlich.
+
 Frontend und Backend lassen sich auch getrennt prüfen:
 
 ```powershell
@@ -58,6 +60,7 @@ Der [NW-09-Nachweis](docs/progress/NW-09.md) beschreibt Storefront, Design-Syste
 Der [NW-10-Nachweis](docs/progress/NW-10.md) beschreibt Produktdetail, Variantenauswahl und den neuen Detail-Endpunkt der API.
 Der [NW-22-Nachweis](docs/progress/NW-22.md) dokumentiert die Zugänglichkeits- und SEO-Prüfung sowie die Entscheidung für gezieltes SSR.
 Der [NW-23-Sicherheitsnachweis](docs/progress/NW-23.md) beschreibt die geprüften Schutzmaßnahmen, Scans und offenen Betriebsrisiken.
+Der [NW-24-Betriebsnachweis](docs/progress/NW-24.md) beschreibt Metriken, tägliche Datenbanksicherung und die ausgeführte Rücksicherung.
 
 ## Container-Images
 

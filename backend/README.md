@@ -48,6 +48,8 @@ Neue Handler ordnen erwartete Fehler über `server.APIError` und `server.HandleE
 
 Access-Logs werden als `slog`-JSON ausgegeben. Sie enthalten nur Zeitpunkt, Service/Umgebung, Ereignis, Request-ID, HTTP-Methode, normalisierte Route, Status, Dauer und gegebenenfalls Fehlercode. Normale 4xx-Antworten erscheinen als `INFO`, 5xx als `ERROR`. URL-Parameter, Header, Cookies, Bodies, SQL- und fremde Fehlertexte werden nicht protokolliert.
 
+Mit einem mindestens 32 Zeichen langen `NORDWINDS_METRICS_TOKEN` ist `/internal/metrics` nur am internen API-Port und mit `Authorization: Bearer <Token>` abrufbar. Die Metriken umfassen HTTP-Statusklassen und -Dauer, DB-Readiness, GORM-Fehler und langsame Abfragen sowie simulierte Payment-Ereignisse und -Fehler. Caddy veröffentlicht diesen Pfad nicht. Sicherung und Rücksicherung sind in [NW-24](../docs/progress/NW-24.md) beschrieben.
+
 ## Kundenanmeldung
 
 `POST /api/v1/auth/register` erstellt Kundenkonten, `POST /api/v1/auth/login` stellt eine neue Session aus, `GET /api/v1/auth/session` liefert den aktuellen Kunden und CSRF-Token, `POST /api/v1/auth/logout` widerruft die Session. `GET /api/v1/customer/me` ist ausschließlich für die Kundenrolle freigegeben. Der [OpenAPI-Vertrag](../docs/api/openapi.yaml) beschreibt Antworten und Fehlercodes. Die Sicherheitsentscheidung einschließlich Passwort-Reset-Entwurf steht in [ADR-004](../docs/adr/ADR-004-authentication.md).

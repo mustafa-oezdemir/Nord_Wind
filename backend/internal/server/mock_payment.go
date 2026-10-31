@@ -60,9 +60,11 @@ func (h *mockPaymentHandler) initiate(c *gin.Context) {
 	}
 	result, err := h.repository.Initiate(c.Request.Context(), CurrentSession(c).Customer.ID, input.OrderID, input.Method)
 	if err != nil {
+		observePayment(c, "", err)
 		h.writeError(c, err)
 		return
 	}
+	observePayment(c, "pending", nil)
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, result)
 }
@@ -144,11 +146,13 @@ func (h *mockPaymentHandler) simulate(c *gin.Context) {
 
 func (h *mockPaymentHandler) webhook(c *gin.Context) {
 	if c.ContentType() != "application/json" {
+		observePayment(c, "", payment.ErrInvalidEvent)
 		writeProblem(c, InvalidRequest)
 		return
 	}
 	raw, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		observePayment(c, "", err)
 		HandleError(c, err)
 		return
 	}
@@ -160,6 +164,7 @@ func (h *mockPaymentHandler) webhook(c *gin.Context) {
 
 func (h *mockPaymentHandler) verifyAndProcess(c *gin.Context, raw []byte, signature string, now time.Time) error {
 	if err := payment.Verify(h.secret, signature, raw, now); err != nil {
+		observePayment(c, "", err)
 		writeProblem(c, Unauthenticated)
 		return err
 	}
@@ -167,18 +172,22 @@ func (h *mockPaymentHandler) verifyAndProcess(c *gin.Context, raw []byte, signat
 	decoder.DisallowUnknownFields()
 	var event payment.Event
 	if err := decoder.Decode(&event); err != nil || !event.Valid() {
+		observePayment(c, "", payment.ErrInvalidEvent)
 		writeProblem(c, InvalidRequest)
 		return payment.ErrInvalidEvent
 	}
 	var extra any
 	if err := decoder.Decode(&extra); err != io.EOF {
+		observePayment(c, "", payment.ErrInvalidEvent)
 		writeProblem(c, InvalidRequest)
 		return payment.ErrInvalidEvent
 	}
 	if err := h.repository.Process(c.Request.Context(), event, raw); err != nil {
+		observePayment(c, "", err)
 		h.writeError(c, err)
 		return err
 	}
+	observePayment(c, string(event.Outcome), nil)
 	return nil
 }
 

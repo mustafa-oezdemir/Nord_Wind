@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $base = $BaseUrl.TrimEnd('/')
 
-foreach ($service in @('db', 'api', 'ssr', 'edge')) {
+foreach ($service in @('db', 'backup', 'api', 'ssr', 'edge')) {
     $containerId = docker compose ps -q $service
     if ($LASTEXITCODE -ne 0 -or -not $containerId) {
         throw "Container $service ist nicht verfügbar."
@@ -58,4 +58,4 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Die Datenbankmigration wurde nicht bestätigt.'
 }
 
-Write-Output 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Container-Health und Migration.'
+Write-Output 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Backup-Health und Migration.'

@@ -12,6 +12,10 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 
+	handle /internal/* {
+		respond 404
+	}
+
 	handle /api/* {
 		reverse_proxy api:{$API_HTTP_PORT} {
 			header_up X-Nordwinds-Client-IP {remote_host}

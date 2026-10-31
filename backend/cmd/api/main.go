@@ -67,7 +67,7 @@ func main() {
 	if appName == "" {
 		appName = "NordWinds"
 	}
-	router, err := server.New(appName, connection.SQL, logger)
+	router, err := server.New(appName, connection.SQL, logger, os.Getenv("NORDWINDS_METRICS_TOKEN"))
 	if err != nil {
 		logger.Error("Router konnte nicht erstellt werden", "event", "router.failed")
 		os.Exit(1)

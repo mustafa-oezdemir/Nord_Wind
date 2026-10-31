@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,6 +16,14 @@ type safeGORMLogger struct {
 	logger        *slog.Logger
 	level         gormlogger.LogLevel
 	slowThreshold time.Duration
+}
+
+var dbQueryErrors atomic.Uint64
+var dbSlowQueries atomic.Uint64
+
+// QueryMetrics gibt nur aggregierte Zähler zurück, niemals SQL oder Parameter.
+func QueryMetrics() (errors, slow uint64) {
+	return dbQueryErrors.Load(), dbSlowQueries.Load()
 }
 
 func newSafeGORMLogger(logger *slog.Logger) gormlogger.Interface {
@@ -51,12 +60,14 @@ func (log safeGORMLogger) Trace(ctx context.Context, begin time.Time, _ func() (
 	duration := time.Since(begin)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) &&
 		!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+		dbQueryErrors.Add(1)
 		if log.level >= gormlogger.Error {
 			log.logger.ErrorContext(ctx, "database.query_failed", "duration_ms", duration.Milliseconds())
 		}
 		return
 	}
 	if duration > log.slowThreshold && log.level >= gormlogger.Warn {
+		dbSlowQueries.Add(1)
 		log.logger.WarnContext(ctx, "database.query_slow", "duration_ms", duration.Milliseconds())
 	} else if log.level >= gormlogger.Info {
 		log.logger.InfoContext(ctx, "database.query", "duration_ms", duration.Milliseconds())

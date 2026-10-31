@@ -4,7 +4,7 @@ set -eu
 base_url="${1:-http://127.0.0.1:8080}"
 base_url="${base_url%/}"
 
-for service in db api ssr edge; do
+for service in db backup api ssr edge; do
   container_id="$(docker compose ps -q "$service")"
   test -n "$container_id"
   health="starting"
@@ -32,4 +32,4 @@ if [ -n "$slug" ]; then
 fi
 
 docker compose run --rm --no-deps migrate status >/dev/null
-printf '%s\n' 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Container-Health und Migration.'
+printf '%s\n' 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Backup-Health und Migration.'
