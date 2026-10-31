@@ -82,23 +82,59 @@ export interface AdminAuditEvent {
 }
 
 export type SalesGroupBy = 'total' | 'category' | 'product';
-export type SalesPeriod = 'week' | 'month' | 'quarter';
+export type SalesPeriod = 'week' | 'month' | 'quarter' | 'custom';
+
+/** Auswahl für die Umsatzanalyse; `from`/`to` nur bei `period: 'custom'` (YYYY-MM-DD). */
+export interface SalesQuery {
+  group_by: SalesGroupBy;
+  period: SalesPeriod;
+  from?: string;
+  to?: string;
+  category_id?: string;
+  product_id?: string;
+}
+
+export interface SalesSeries {
+  key: string;
+  label: string;
+  /** Bei Produkten die primäre Kategorie, bei Kategorien die Kategorie selbst. */
+  category_key: string;
+  category_label: string;
+  parent_key?: string;
+  depth: number;
+  values_cents: number[];
+  total_cents: number;
+  quantity: number;
+}
 
 export interface SalesReport {
   group_by: SalesGroupBy;
   period: SalesPeriod;
+  granularity: 'day' | 'month';
+  category_id?: string;
+  product_id?: string;
   currency: 'EUR';
   start_date: string;
   end_date: string;
   buckets: { key: string; label: string }[];
-  series: {
-    key: string;
-    label: string;
-    values_cents: number[];
-    total_cents: number;
-    quantity: number;
-  }[];
+  series: SalesSeries[];
   total_cents: number;
+}
+
+export interface SalesCatalog {
+  categories: {
+    id: string;
+    name: string;
+    parent_id?: string;
+    status: 'active' | 'inactive';
+    depth: number;
+  }[];
+  products: {
+    id: string;
+    name: string;
+    status: 'draft' | 'published' | 'archived';
+    category_id?: string;
+  }[];
 }
 
 export type CategoryDraft = Omit<AdminCategory, 'id'> & { id?: string };
@@ -111,10 +147,17 @@ export class AdminApi {
   private readonly base = inject(API_BASE_URL);
   private csrfToken = '';
 
-  sales(groupBy: SalesGroupBy, period: SalesPeriod): Observable<SalesReport> {
-    return this.http.get<SalesReport>(`${this.base}/admin/analytics/sales`, {
-      params: { group_by: groupBy, period },
-    });
+  sales(query: SalesQuery): Observable<SalesReport> {
+    const params: Record<string, string> = { group_by: query.group_by, period: query.period };
+    for (const key of ['from', 'to', 'category_id', 'product_id'] as const) {
+      const value = query[key];
+      if (value) params[key] = value;
+    }
+    return this.http.get<SalesReport>(`${this.base}/admin/analytics/sales`, { params });
+  }
+
+  salesCatalog(): Observable<SalesCatalog> {
+    return this.http.get<SalesCatalog>(`${this.base}/admin/analytics/catalog`);
   }
 
   session(): Observable<AuthSession> {

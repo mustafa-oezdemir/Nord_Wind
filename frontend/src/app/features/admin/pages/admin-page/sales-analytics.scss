@@ -123,21 +123,142 @@
   }
 }
 
+.sales-step-body {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.sales-filters,
+.sales-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.sales-field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: min(100%, 15rem);
+  flex: 1 1 15rem;
+  max-width: 24rem;
+  color: t.$slate;
+  font-size: t.$size-sm;
+  font-weight: 650;
+
+  select,
+  input {
+    min-height: 2.7rem;
+    width: 100%;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid t.$line;
+    border-radius: 0.7rem;
+    background: t.$white;
+    color: t.$ink;
+    font: inherit;
+    font-size: t.$size-base;
+    font-weight: 500;
+  }
+  select:focus-visible,
+  input:focus-visible {
+    outline: 3px solid t.$amber;
+    outline-offset: 2px;
+    border-color: t.$fjord;
+  }
+}
+
+.sales-range .sales-field {
+  flex: 0 1 11rem;
+  min-width: 10rem;
+}
+
+.sales-apply {
+  min-height: 2.7rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid t.$fjord-dark;
+  border-radius: 0.7rem;
+  background: t.$fjord-dark;
+  color: t.$white;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+
+  &:hover {
+    background: t.$fjord;
+  }
+  &:focus-visible {
+    outline: 3px solid t.$amber;
+    outline-offset: 2px;
+  }
+}
+
+.sales-hint {
+  margin: 0;
+  color: t.$slate;
+  font-size: t.$size-sm;
+}
+
+.sales-field-error {
+  margin: 0;
+  color: t.$danger;
+  font-size: t.$size-sm;
+  font-weight: 650;
+}
+
+.sales-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.45rem;
+  border-radius: 0.2rem;
+  vertical-align: baseline;
+}
+
+.sales-table .sales-group-row {
+  th,
+  td {
+    background: t.$mist;
+    font-weight: 750;
+  }
+}
+
+.sales-table .sales-indent {
+  padding-left: 1.6rem;
+  font-weight: 500;
+}
+
 .sales-panel app-sales-chart {
   display: block;
   margin-top: 1.3rem;
 }
 .sales-table-wrap {
-  margin-top: 1.3rem;
+  margin-top: 0.5rem;
   overflow-x: auto;
 }
 .sales-table {
   width: 100%;
   min-width: 400px;
 }
-.sales-table caption {
-  caption-side: top;
+.sales-table-title {
+  margin: 1.3rem 0 0;
   color: t.$slate;
+}
+.sales-table-wrap .sales-table {
+  margin-bottom: 0;
+}
+// Erste Spalte bleibt beim seitlichen Scrollen langer Zeiträume sichtbar.
+.sales-table tr > th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 11rem;
+  max-width: 18rem;
+  background: t.$white;
+  box-shadow: 1px 0 0 t.$line;
+}
+.sales-table td {
+  white-space: nowrap;
 }
 .sales-table tfoot {
   font-weight: 750;
@@ -157,4 +278,9 @@
     grid-template-columns: 1fr;
     gap: 0.7rem;
   }
+}
+
+.sales-table tr.sales-group-row > th:first-child,
+.sales-table tr.sales-group-row > td {
+  background: t.$mist;
 }

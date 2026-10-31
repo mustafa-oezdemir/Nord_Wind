@@ -3,11 +3,15 @@
     <div>
       <span class="admin-eyebrow">Analyse</span>
       <h3 id="sales-title">Umsatz entdecken</h3>
-      <p>Wählen Sie nacheinander Ansicht, Zeitraum und Diagramm.</p>
+      <p>
+        Wählen Sie eine Ansicht. Zeitraum (7 Tage) und Diagramm sind voreingestellt und lassen sich
+        jederzeit ändern.
+      </p>
     </div>
     @if (salesReport()) {
       <div class="sales-total">
-        <span>Umsatz im Zeitraum</span><strong>{{ salesMoney(salesReport()!.total_cents) }}</strong>
+        <span>Umsatz vom {{ periodText(salesReport()!) }}</span>
+        <strong>{{ salesMoney(salesReport()!.total_cents) }}</strong>
       </div>
     }
   </div>
@@ -16,28 +20,86 @@
       <span>01</span>
       <h4>Was möchten Sie sehen?</h4>
     </div>
-    <div class="sales-choices" role="group" aria-label="Umsatzansicht">
-      <button
-        type="button"
-        [attr.aria-pressed]="salesGroup() === 'total'"
-        (click)="chooseSalesGroup('total')"
-      >
-        Gesamtumsatz
-      </button>
-      <button
-        type="button"
-        [attr.aria-pressed]="salesGroup() === 'category'"
-        (click)="chooseSalesGroup('category')"
-      >
-        Kategorien
-      </button>
-      <button
-        type="button"
-        [attr.aria-pressed]="salesGroup() === 'product'"
-        (click)="chooseSalesGroup('product')"
-      >
-        Produkte
-      </button>
+    <div class="sales-step-body">
+      <div class="sales-choices" role="group" aria-label="Umsatzansicht">
+        <button
+          type="button"
+          [attr.aria-pressed]="salesGroup() === 'total'"
+          (click)="chooseSalesGroup('total')"
+        >
+          Gesamtumsatz
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesGroup() === 'category'"
+          (click)="chooseSalesGroup('category')"
+        >
+          Kategorien
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="salesGroup() === 'product'"
+          (click)="chooseSalesGroup('product')"
+        >
+          Produkte
+        </button>
+      </div>
+      @if (salesGroup() === 'category' || salesGroup() === 'product') {
+        <div class="sales-filters">
+          <label class="sales-field">
+            <span>Kategorie</span>
+            <select
+              #categorySelect
+              aria-label="Kategorie auswählen"
+              (change)="chooseCategory(categorySelect.value)"
+            >
+              <option value="" [selected]="categoryId() === ''">Alle Kategorien</option>
+              @for (option of categoryOptions(); track option.id) {
+                <option [value]="option.id" [selected]="option.id === categoryId()">
+                  {{ option.label }}
+                </option>
+              }
+            </select>
+          </label>
+          @if (salesGroup() === 'product') {
+            <label class="sales-field">
+              <span>Produkt</span>
+              <select
+                #productSelect
+                aria-label="Produkt auswählen"
+                (change)="chooseProduct(productSelect.value)"
+              >
+                <option value="" [selected]="productId() === ''">
+                  {{ categoryId() ? 'Alle Produkte dieser Kategorie' : 'Alle Produkte' }}
+                </option>
+                @for (group of productOptionGroups(); track group.key) {
+                  <optgroup [label]="group.label">
+                    @for (product of group.products; track product.id) {
+                      <option [value]="product.id" [selected]="product.id === productId()">
+                        {{ product.label }}
+                      </option>
+                    }
+                  </optgroup>
+                }
+              </select>
+            </label>
+          }
+        </div>
+        <p class="sales-hint">
+          @if (salesGroup() === 'category') {
+            Ohne Auswahl erscheinen alle Kategorien. Eine Oberkategorie zeigt sich mit ihren
+            Unterkategorien, eine Unterkategorie allein.
+          } @else {
+            Zuerst die Kategorie, dann das Produkt wählen. Ohne Auswahl erscheinen alle Produkte,
+            gruppiert nach Kategorie.
+          }
+        </p>
+        @if (catalogError()) {
+          <p class="sales-field-error" role="alert">
+            Kategorien und Produkte konnten nicht geladen werden: {{ catalogError() }}
+          </p>
+        }
+      }
     </div>
   </div>
   @if (salesGroup()) {
@@ -46,28 +108,72 @@
         <span>02</span>
         <h4>Welcher Zeitraum?</h4>
       </div>
-      <div class="sales-choices" role="group" aria-label="Umsatzzeitraum">
-        <button
-          type="button"
-          [attr.aria-pressed]="salesPeriod() === 'week'"
-          (click)="chooseSalesPeriod('week')"
-        >
-          7 Tage
-        </button>
-        <button
-          type="button"
-          [attr.aria-pressed]="salesPeriod() === 'month'"
-          (click)="chooseSalesPeriod('month')"
-        >
-          30 Tage
-        </button>
-        <button
-          type="button"
-          [attr.aria-pressed]="salesPeriod() === 'quarter'"
-          (click)="chooseSalesPeriod('quarter')"
-        >
-          3 Monate
-        </button>
+      <div class="sales-step-body">
+        <div class="sales-choices" role="group" aria-label="Umsatzzeitraum">
+          <button
+            type="button"
+            [attr.aria-pressed]="salesPeriod() === 'week'"
+            (click)="chooseSalesPeriod('week')"
+          >
+            7 Tage
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="salesPeriod() === 'month'"
+            (click)="chooseSalesPeriod('month')"
+          >
+            30 Tage
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="salesPeriod() === 'quarter'"
+            (click)="chooseSalesPeriod('quarter')"
+          >
+            3 Monate
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="salesPeriod() === 'custom'"
+            (click)="chooseSalesPeriod('custom')"
+          >
+            Eigener Zeitraum
+          </button>
+        </div>
+        @if (salesPeriod() === 'custom') {
+          <form class="sales-range" (submit)="applyCustomRange($event)" novalidate>
+            <label class="sales-field">
+              <span>Von</span>
+              <input
+                #fromInput
+                type="date"
+                name="from"
+                [value]="customFrom()"
+                [max]="today"
+                (input)="customFrom.set(fromInput.value)"
+              />
+            </label>
+            <label class="sales-field">
+              <span>Bis</span>
+              <input
+                #toInput
+                type="date"
+                name="to"
+                [value]="customTo()"
+                [max]="today"
+                (input)="customTo.set(toInput.value)"
+              />
+            </label>
+            <button type="submit" class="sales-apply">Anzeigen</button>
+          </form>
+          @if (customError()) {
+            <p class="sales-field-error" role="alert">{{ customError() }}</p>
+          } @else {
+            <p class="sales-hint">
+              Bis 62 Tage zeigt die Auswertung Tageswerte, darüber Monatswerte; höchstens zwei
+              Jahre.
+            </p>
+          }
+        }
       </div>
     </div>
   }
@@ -77,7 +183,7 @@
   @if (salesError()) {
     <p class="alert alert-danger" role="alert">{{ salesError() }}</p>
   }
-  @if (salesReport()) {
+  @if (salesReport(); as report) {
     <div class="sales-step">
       <div class="sales-step-label">
         <span>03</span>
@@ -114,80 +220,116 @@
         </button>
       </div>
     </div>
-    @if (salesChartType()) {
-      <app-sales-chart [report]="salesReport()!" [chartType]="salesChartType()!" />
-    }
+    <app-sales-chart [report]="report" [chartType]="salesChartType()" [colors]="colors()" />
+    <p class="sales-table-title" aria-hidden="true">
+      Umsatz nach
+      {{
+        report.group_by === 'category'
+          ? 'Kategorie'
+          : report.group_by === 'product'
+            ? 'Produkt'
+            : 'Gesamt'
+      }}
+      vom {{ periodText(report) }}
+    </p>
     <div class="sales-table-wrap">
       <table class="table table-sm sales-table">
-        <caption>
+        <caption class="visually-hidden">
           Umsatz nach
           {{
-            salesGroup() === 'category'
+            report.group_by === 'category'
               ? 'Kategorie'
-              : salesGroup() === 'product'
+              : report.group_by === 'product'
                 ? 'Produkt'
                 : 'Gesamt'
           }}
           vom
           {{
-            salesReport()!.start_date
-          }}
-          bis
-          {{
-            salesReport()!.end_date
+            periodText(report)
           }}
         </caption>
         <thead>
           <tr>
             <th scope="col">
               {{
-                salesGroup() === 'category'
+                report.group_by === 'category'
                   ? 'Kategorie'
-                  : salesGroup() === 'product'
+                  : report.group_by === 'product'
                     ? 'Produkt'
                     : 'Ansicht'
               }}
             </th>
-            @for (bucket of salesReport()!.buckets; track bucket.key) {
+            @for (bucket of report.buckets; track bucket.key) {
               <th scope="col" class="text-end">{{ bucket.label }}</th>
             }
             <th scope="col" class="text-end">Stück</th>
             <th scope="col" class="text-end">Umsatz</th>
           </tr>
         </thead>
-        <tbody>
-          @for (series of salesReport()!.series; track series.key) {
-            <tr>
-              <th scope="row">{{ series.label }}</th>
-              @for (value of series.values_cents; track $index) {
-                <td class="text-end">{{ salesMoney(value) }}</td>
-              }
-              <td class="text-end">{{ series.quantity }}</td>
-              <td class="text-end">{{ salesMoney(series.total_cents) }}</td>
-            </tr>
-          }
-        </tbody>
+        @for (group of tableGroups(); track group.key) {
+          <tbody>
+            @if (report.group_by === 'product') {
+              <tr class="sales-group-row">
+                <th scope="colgroup" [attr.colspan]="report.buckets.length + 1">
+                  <span
+                    class="sales-swatch"
+                    [style.background]="group.color"
+                    aria-hidden="true"
+                  ></span>
+                  {{ group.label }}
+                </th>
+                <td class="text-end">{{ group.quantity }}</td>
+                <td class="text-end">{{ salesMoney(group.totalCents) }}</td>
+              </tr>
+            }
+            @for (row of group.rows; track row.series.key) {
+              <tr>
+                <th
+                  scope="row"
+                  [class.sales-indent]="report.group_by === 'product'"
+                  [style.padding-left.rem]="
+                    report.group_by === 'category' ? 0.5 + row.series.depth * 1.25 : null
+                  "
+                >
+                  @if (report.group_by !== 'total') {
+                    <span
+                      class="sales-swatch"
+                      [style.background]="row.color"
+                      aria-hidden="true"
+                    ></span>
+                  }
+                  {{ row.series.label }}
+                </th>
+                @for (value of row.series.values_cents; track $index) {
+                  <td class="text-end">{{ salesMoney(value) }}</td>
+                }
+                <td class="text-end">{{ row.series.quantity }}</td>
+                <td class="text-end">{{ salesMoney(row.series.total_cents) }}</td>
+              </tr>
+            }
+          </tbody>
+        }
         <tfoot>
           <tr>
             <th scope="row">Gesamt</th>
-            @for (bucket of salesReport()!.buckets; track bucket.key; let index = $index) {
+            @for (bucket of report.buckets; track bucket.key; let index = $index) {
               <td class="text-end">
-                {{ salesMoney(salesBucketTotal(salesReport()!, index)) }}
+                {{ salesMoney(salesBucketTotal(report, index)) }}
               </td>
             }
             <td></td>
-            <td class="text-end">{{ salesMoney(salesReport()!.total_cents) }}</td>
+            <td class="text-end">{{ salesMoney(report.total_cents) }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
-    @if (salesReport()!.total_cents === 0) {
+    @if (report.total_cents === 0) {
       <p class="sales-message">Für diesen Zeitraum liegen keine bezahlten Verkäufe vor.</p>
     }
     <p class="sales-definition">
       Bruttoumsatz aus bezahlten Bestellpositionen nach Rabatt, ohne Versand. Erstattete
-      Bestellungen zählen nicht. Kategoriezuordnung nach der aktuellen primären Kategorie. Zeitzone:
-      Berlin.
+      Bestellungen zählen nicht. Jedes Produkt zählt zu seiner aktuellen primären Kategorie;
+      Unterkategorien erscheinen als eigene Zeilen. Zeitzone: Berlin.
     </p>
   }
 </section>
