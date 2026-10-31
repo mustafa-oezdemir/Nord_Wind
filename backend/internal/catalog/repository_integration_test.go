@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -216,7 +217,7 @@ func TestRepositoryPostgres(t *testing.T) {
 				}
 				return r.AddProductCategory(ctx, p.ID, c.ID)
 			}},
-			{"Referenzierte Kategorie nicht löschbar", "23001", func(t *testing.T, r *Repository) error {
+			{"Referenzierte Kategorie nicht löschbar", restrictViolation, func(t *testing.T, r *Repository) error {
 				p := mustProduct(t, ctx, r, Product{Name: "Kamera", Slug: "kamera"})
 				c := mustCategory(t, ctx, r, Category{Name: "Technik", Slug: "technik"})
 				if err := r.AddProductCategory(ctx, p.ID, c.ID); err != nil {
@@ -286,10 +287,16 @@ func containsVariant(variants []ProductVariant, id string) bool {
 	return false
 }
 
+// restrictViolation: Ein Fremdschlüssel mit ON DELETE RESTRICT meldet seit PostgreSQL 18
+// SQLSTATE 23001 (restrict_violation), bis Version 17 dagegen 23503 (foreign_key_violation).
+// Beide bedeuten „noch referenziert“; die Admin-API antwortet in beiden Fällen mit 409.
+const restrictViolation = "23001|23503"
+
+// assertSQLState prüft den SQLSTATE; mehrere zulässige Codes werden mit | getrennt.
 func assertSQLState(t *testing.T, err error, want string) {
 	t.Helper()
 	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.Code != want {
+	if !errors.As(err, &pgErr) || !slices.Contains(strings.Split(want, "|"), pgErr.Code) {
 		t.Fatalf("SQLSTATE %s erwartet, erhalten: %v", want, err)
 	}
 }
