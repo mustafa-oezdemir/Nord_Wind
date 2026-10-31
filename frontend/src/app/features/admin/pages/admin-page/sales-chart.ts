@@ -1,30 +1,20 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  Input,
+  OnChanges,
+  OnDestroy,
+  PLATFORM_ID,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
+import type { ChartConfiguration } from 'chart.js';
 import { SalesReport } from '../../data-access/admin-api';
 
 export type SalesChartType = 'bar' | 'line' | 'area' | 'doughnut';
-
-interface ChartSeries {
-  label: string;
-  color: string;
-  path: string;
-  area: string;
-  points: { x: number; y: number }[];
-}
-
-interface ChartBar {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string;
-}
-
-interface ChartSlice {
-  label: string;
-  color: string;
-  path: string;
-  percentage: number;
-}
 
 const colors = [
   '#126f87',
@@ -37,90 +27,89 @@ const colors = [
   '#7e9654',
   '#77838c',
 ];
-const plot = { left: 66, right: 780, top: 20, bottom: 262 };
+const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+
+/** Chart.js erhält Euro-Werte für Achse und Tooltip; die API rechnet weiterhin in Cent. */
+export function salesChartConfig(
+  report: SalesReport,
+  chartType: SalesChartType,
+): ChartConfiguration {
+  const doughnut = chartType === 'doughnut';
+  const area = chartType === 'area';
+  const type = doughnut ? 'doughnut' : chartType === 'bar' ? 'bar' : 'line';
+  const datasets = doughnut
+    ? [
+        {
+          label: 'Umsatz',
+          data: report.series.map((series) => series.total_cents / 100),
+          backgroundColor: report.series.map((_, index) => colors[index % colors.length]),
+          borderColor: '#ffffff',
+          borderWidth: 2,
+        },
+      ]
+    : report.series.map((series, index) => ({
+        label: series.label,
+        data: series.values_cents.map((cents) => cents / 100),
+        borderColor: colors[index % colors.length],
+        backgroundColor: area
+          ? `${colors[index % colors.length]}33`
+          : colors[index % colors.length],
+        borderWidth: 2,
+        borderRadius: chartType === 'bar' ? 3 : 0,
+        fill: area,
+        tension: 0.28,
+        pointRadius: report.buckets.length <= 7 ? 3 : 0,
+        pointHoverRadius: 5,
+      }));
+
+  return {
+    type,
+    data: {
+      labels: doughnut
+        ? report.series.map((series) => series.label)
+        : report.buckets.map((bucket) => bucket.label),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: report.group_by !== 'total',
+          position: 'bottom',
+          labels: { usePointStyle: true },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) =>
+              `${doughnut ? context.label : `${context.dataset.label} · ${context.label}`}: ${euro.format(Number(context.raw) || 0)}`,
+          },
+        },
+      },
+      scales: doughnut
+        ? {}
+        : {
+            x: {
+              grid: { display: false },
+              ticks: { maxTicksLimit: report.buckets.length > 15 ? 7 : 10 },
+            },
+            y: { beginAtZero: true, ticks: { callback: (value) => euro.format(Number(value)) } },
+          },
+    },
+  };
+}
 
 @Component({
   selector: 'app-sales-chart',
   template: `
     <div class="chart-shell">
-      <div class="chart-plot">
-        @if (chartType === 'doughnut') {
-          <svg viewBox="0 0 360 320" role="img" [attr.aria-label]="accessibleTitle">
-            @for (slice of slices; track slice.label) {
-              <path [attr.d]="slice.path" [attr.fill]="slice.color" />
-            }
-            <circle cx="180" cy="155" r="57" fill="white" />
-            <text x="180" y="149" text-anchor="middle" class="chart-center-label">Gesamt</text>
-            <text x="180" y="172" text-anchor="middle" class="chart-center-value">
-              {{ totalLabel }}
-            </text>
-          </svg>
-        } @else {
-          <svg viewBox="0 0 800 320" role="img" [attr.aria-label]="accessibleTitle">
-            @for (tick of ticks; track tick.y) {
-              <line
-                [attr.x1]="plot.left"
-                [attr.x2]="plot.right"
-                [attr.y1]="tick.y"
-                [attr.y2]="tick.y"
-                class="chart-grid"
-              />
-              <text x="56" [attr.y]="tick.y + 4" text-anchor="end" class="chart-axis">
-                {{ tick.label }}
-              </text>
-            }
-            @if (chartType === 'bar') {
-              @for (bar of bars; track $index) {
-                <rect
-                  [attr.x]="bar.x"
-                  [attr.y]="bar.y"
-                  [attr.width]="bar.width"
-                  [attr.height]="bar.height"
-                  [attr.fill]="bar.color"
-                  rx="2"
-                />
-              }
-            } @else {
-              @for (series of lines; track series.label) {
-                @if (chartType === 'area') {
-                  <path [attr.d]="series.area" [attr.fill]="series.color" fill-opacity="0.16" />
-                }
-                <path
-                  [attr.d]="series.path"
-                  [attr.stroke]="series.color"
-                  fill="none"
-                  stroke-width="2.5"
-                  stroke-linejoin="round"
-                  stroke-linecap="round"
-                />
-                @if (report.buckets.length <= 7) {
-                  @for (point of series.points; track $index) {
-                    <circle
-                      [attr.cx]="point.x"
-                      [attr.cy]="point.y"
-                      r="3.5"
-                      [attr.fill]="series.color"
-                    />
-                  }
-                }
-              }
-            }
-            @for (label of xLabels; track label.key) {
-              <text [attr.x]="label.x" y="289" text-anchor="middle" class="chart-axis">
-                {{ label.text }}
-              </text>
-            }
-          </svg>
-        }
-      </div>
-      @if (report.group_by !== 'total') {
-        <ul class="chart-legend" aria-label="Datenreihen">
-          @for (item of legend; track item.label) {
-            <li>
-              <span [style.background]="item.color" aria-hidden="true"></span>{{ item.label }}
-            </li>
-          }
-        </ul>
+      <div class="chart-frame"><canvas #canvas aria-hidden="true"></canvas></div>
+      @if (failed()) {
+        <p role="status">
+          Das Diagramm konnte nicht geladen werden. Die Werte stehen in der Tabelle.
+        </p>
       }
     </div>
   `,
@@ -131,180 +120,68 @@ const plot = { left: 66, right: 780, top: 20, bottom: 262 };
       background: #fff;
       padding: 1rem;
     }
-    .chart-plot {
-      overflow-x: auto;
-    }
-    svg {
-      display: block;
+    .chart-frame {
+      position: relative;
       width: 100%;
-      min-width: 520px;
-      max-height: 360px;
-      margin: auto;
+      height: clamp(18rem, 32vw, 25rem);
     }
-    svg[viewBox='0 0 360 320'] {
-      min-width: 0;
-      max-width: 360px;
-    }
-    .chart-grid {
-      stroke: #e7edf0;
-      stroke-width: 1;
-    }
-    .chart-axis {
-      fill: #647481;
-      font-size: 12px;
-      font-family: inherit;
-    }
-    .chart-center-label {
-      fill: #647481;
-      font-size: 12px;
-      font-family: inherit;
-    }
-    .chart-center-value {
-      fill: #16323e;
-      font-size: 18px;
-      font-weight: 700;
-      font-family: inherit;
-    }
-    .chart-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1rem;
-      margin: 1rem 0 0;
-      padding: 0;
-      list-style: none;
+    p {
+      margin: 0.75rem 0 0;
       color: #425762;
-      font-size: 0.85rem;
-    }
-    .chart-legend li {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .chart-legend span {
-      display: inline-block;
-      width: 0.7rem;
-      height: 0.7rem;
-      border-radius: 50%;
     }
   `,
 })
-export class SalesChart implements OnChanges {
+export class SalesChart implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) report!: SalesReport;
   @Input({ required: true }) chartType!: SalesChartType;
+  @ViewChild('canvas') private canvas?: ElementRef<HTMLCanvasElement>;
 
-  protected readonly plot = plot;
-  protected ticks: { y: number; label: string }[] = [];
-  protected bars: ChartBar[] = [];
-  protected lines: ChartSeries[] = [];
-  protected slices: ChartSlice[] = [];
-  protected legend: { label: string; color: string }[] = [];
-  protected xLabels: { key: string; x: number; text: string }[] = [];
-  protected totalLabel = '';
-  protected accessibleTitle = '';
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private chart: { destroy(): void } | null = null;
+  private generation = 0;
+  protected readonly failed = signal(false);
+
+  ngAfterViewInit(): void {
+    void this.render();
+  }
 
   ngOnChanges(): void {
-    if (!this.report || !this.chartType) return;
-    const { report } = this;
-    this.totalLabel =
-      new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 }).format(
-        report.total_cents / 100,
-      ) + ' €';
-    this.accessibleTitle = `${this.chartType === 'doughnut' ? 'Ring' : this.chartType === 'bar' ? 'Balken' : this.chartType === 'area' ? 'Flächen' : 'Linien'}diagramm: ${report.group_by === 'total' ? 'Gesamtumsatz' : report.group_by === 'category' ? 'Kategorieumsatz' : 'Produktumsatz'} vom ${report.start_date} bis ${report.end_date}. Werte in der folgenden Tabelle.`;
-    this.legend = report.series.map((series, index) => ({
-      label: series.label,
-      color: colors[index % colors.length],
-    }));
+    if (this.canvas) void this.render();
+  }
 
-    const max = Math.max(1, ...report.series.flatMap((series) => series.values_cents));
-    const ceiling = niceCeiling(max);
-    this.ticks = Array.from({ length: 5 }, (_, index) => ({
-      y: plot.bottom - (index / 4) * (plot.bottom - plot.top),
-      label: compactEuro((ceiling * index) / 4),
-    }));
-    const bucketCount = report.buckets.length;
-    const bucketWidth = (plot.right - plot.left) / Math.max(bucketCount, 1);
-    const x = (index: number) => plot.left + bucketWidth * (index + 0.5);
-    const y = (value: number) => plot.bottom - (value / ceiling) * (plot.bottom - plot.top);
-    const labelStep = bucketCount > 15 ? 5 : bucketCount > 7 ? 3 : 1;
-    this.xLabels = report.buckets
-      .map((bucket, index) => ({ key: bucket.key, x: x(index), text: bucket.label, index }))
-      .filter((bucket) => bucket.index % labelStep === 0 || bucket.index === bucketCount - 1);
-    this.bars = [];
-    this.lines = [];
-    report.series.forEach((series, seriesIndex) => {
-      const color = colors[seriesIndex % colors.length];
-      const points = report.buckets.map((_, index) => ({
-        x: x(index),
-        y: y(series.values_cents[index] ?? 0),
-      }));
-      this.lines.push({
-        label: series.label,
-        color,
-        points,
-        path: points.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' '),
-        area: points.length
-          ? `M${points[0].x} ${plot.bottom} ` +
-            points.map((point) => `L${point.x} ${point.y}`).join(' ') +
-            ` L${points[points.length - 1].x} ${plot.bottom} Z`
-          : '',
-      });
-      const barWidth = Math.max(
-        1,
-        Math.min(22, (bucketWidth * 0.78) / Math.max(report.series.length, 1)),
+  ngOnDestroy(): void {
+    this.generation++;
+    this.chart?.destroy();
+    this.chart = null;
+  }
+
+  private async render(): Promise<void> {
+    if (!this.browser || !this.canvas || !this.report || !this.chartType) return;
+    const generation = ++this.generation;
+    this.failed.set(false);
+    try {
+      const context = this.canvas.nativeElement.getContext('2d');
+      if (!context) throw new Error('Canvas ist nicht verfügbar');
+      const chartjs = await import('chart.js');
+      if (generation !== this.generation) return;
+      chartjs.Chart.register(
+        chartjs.BarController,
+        chartjs.BarElement,
+        chartjs.CategoryScale,
+        chartjs.LinearScale,
+        chartjs.LineController,
+        chartjs.LineElement,
+        chartjs.PointElement,
+        chartjs.DoughnutController,
+        chartjs.ArcElement,
+        chartjs.Filler,
+        chartjs.Legend,
+        chartjs.Tooltip,
       );
-      report.buckets.forEach((_, index) => {
-        const value = series.values_cents[index] ?? 0;
-        if (value <= 0) return;
-        const height = plot.bottom - y(value);
-        this.bars.push({
-          x: x(index) - (barWidth * report.series.length) / 2 + barWidth * seriesIndex,
-          y: y(value),
-          width: barWidth - 1,
-          height,
-          color,
-        });
-      });
-    });
-    this.slices = [];
-    const total = report.series.reduce((sum, series) => sum + series.total_cents, 0);
-    let angle = -Math.PI / 2;
-    report.series.forEach((series, index) => {
-      if (series.total_cents <= 0 || total <= 0) return;
-      const next = angle + (series.total_cents / total) * Math.PI * 2;
-      this.slices.push({
-        label: series.label,
-        color: colors[index % colors.length],
-        path: arcPath(180, 155, 116, angle, next),
-        percentage: Math.round((series.total_cents / total) * 100),
-      });
-      angle = next;
-    });
+      this.chart?.destroy();
+      this.chart = new chartjs.Chart(context, salesChartConfig(this.report, this.chartType));
+    } catch {
+      if (generation === this.generation) this.failed.set(true);
+    }
   }
-}
-
-function niceCeiling(value: number): number {
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const scaled = value / magnitude;
-  return (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * magnitude;
-}
-
-function compactEuro(cents: number): string {
-  return (
-    new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 }).format(
-      cents / 100,
-    ) + ' €'
-  );
-}
-
-function arcPath(cx: number, cy: number, radius: number, start: number, end: number): string {
-  // Ein voller Kreis braucht zwei SVG-Bögen, sonst verschwindet das Segment.
-  if (end - start >= Math.PI * 2 - 0.0001) {
-    const middle = start + Math.PI;
-    return `${arcPath(cx, cy, radius, start, middle)} ${arcPath(cx, cy, radius, middle, end)}`;
-  }
-  const sx = cx + radius * Math.cos(start);
-  const sy = cy + radius * Math.sin(start);
-  const ex = cx + radius * Math.cos(end);
-  const ey = cy + radius * Math.sin(end);
-  return `M${cx} ${cy} L${sx} ${sy} A${radius} ${radius} 0 ${end - start > Math.PI ? 1 : 0} 1 ${ex} ${ey} Z`;
 }

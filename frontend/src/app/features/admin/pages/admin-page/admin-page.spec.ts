@@ -158,6 +158,7 @@ describe('AdminPage', () => {
 
   it('führt nacheinander durch Ansicht, Zeitraum und Diagramm und zeigt die Umsatztabelle', async () => {
     sales.mockClear();
+    const canvasContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     const { fixture, element } = await render('admin');
     tile(element, 'Admin Dashboard').click();
     fixture.detectChanges();
@@ -185,6 +186,7 @@ describe('AdminPage', () => {
       .find((button) => button.textContent?.trim() === 'Fläche')!
       .click();
     fixture.detectChanges();
-    expect(element.querySelector('app-sales-chart svg')).not.toBeNull();
+    expect(element.querySelector('app-sales-chart canvas')).not.toBeNull();
+    canvasContext.mockRestore();
   });
 });

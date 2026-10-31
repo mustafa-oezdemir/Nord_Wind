@@ -11,8 +11,9 @@ Die Auswahl erfolgt in drei Schritten: Gesamt-, Kategorie- oder Produktumsatz;
 7 Tage, 30 Tage oder drei Kalendermonate; anschließend Balken-, Linien-,
 Flächen- oder Ringdiagramm. Eine Tabelle liefert dieselben Summen ohne
 grafische Darstellung und bleibt per Tastatur und Screenreader zugänglich.
-Die Diagramme sind als lokale SVGs umgesetzt; es wird keine zusätzliche
-JavaScript-Abhängigkeit geladen.
+Die Diagramme werden mit `chart.js` im Browser erzeugt. Die Canvas-Grafik ist
+für Screenreader ausgeblendet, weil die nachfolgende Tabelle alle Tages- bzw.
+Monatswerte enthält. Für SSR wird Chart.js erst im Browser geladen.
 
 Der Umsatz umfasst Bruttobeträge der Bestellpositionen nach anteiligem
 Bestellrabatt, ohne Versandkosten. Maßgeblich ist das erste `PAID`-Ereignis
