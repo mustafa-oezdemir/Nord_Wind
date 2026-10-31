@@ -178,6 +178,9 @@
               </div>
               <div class="cart-controls">
                 <p class="mb-1">{{ money(item.unit_price_cents) | money }} je Stück</p>
+                <p class="mb-1" [attr.data-testid]="'cart-line-total-' + item.variant_id">
+                  Positionssumme: {{ money(item.line_total_cents) | money }}
+                </p>
                 <label class="form-label" [for]="'cart-qty-' + item.variant_id">Menge</label>
                 <div class="d-flex gap-2 align-items-center">
                   <input
@@ -189,24 +192,20 @@
                     step="1"
                     [ngModel]="quantities()[item.variant_id]"
                     (ngModelChange)="setDraft(item.variant_id, $event)"
-                  />
-                  <button
-                    class="btn btn-outline-primary btn-sm"
-                    type="button"
                     [disabled]="busy()"
-                    (click)="saveQuantity(item)"
-                  >
-                    Ändern
-                  </button>
+                  />
                   <button
                     class="btn btn-outline-danger btn-sm"
                     type="button"
-                    [disabled]="busy()"
+                    [disabled]="busy() || quantityPending()"
                     (click)="remove(item)"
                   >
                     Entfernen
                   </button>
                 </div>
+                @if (quantityPending()) {
+                  <p class="form-text mb-0" role="status">Menge wird automatisch aktualisiert.</p>
+                }
               </div>
             </div>
           </li>
@@ -232,7 +231,7 @@
           <button
             class="btn btn-outline-secondary btn-sm"
             type="button"
-            [disabled]="busy()"
+            [disabled]="busy() || quantityPending()"
             (click)="removeDiscount()"
           >
             Rabattcode {{ discount.code }} entfernen
@@ -253,7 +252,7 @@
               <button
                 class="btn btn-outline-primary"
                 type="submit"
-                [disabled]="busy() || !discountCode.trim()"
+                [disabled]="busy() || quantityPending() || !discountCode.trim()"
               >
                 Einlösen
               </button>
@@ -277,7 +276,11 @@
           </a>
         } @else {
           <p class="text-danger mt-3 mb-0" role="status">
-            Entfernen Sie nicht lieferbare Artikel, um zur Kasse zu gehen.
+            @if (quantityPending() || busy()) {
+              Warten Sie, bis die Mengen und Summen aktualisiert sind.
+            } @else {
+              Entfernen Sie nicht lieferbare Artikel, um zur Kasse zu gehen.
+            }
           </p>
         }
       </section>

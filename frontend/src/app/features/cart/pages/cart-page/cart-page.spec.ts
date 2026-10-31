@@ -138,6 +138,41 @@ describe('CartPage', () => {
     expect(element.textContent).toMatch(/enthaltene MwSt\. 7\s%/);
   });
 
+  it('speichert Mengen automatisch und behält eine Änderung während der ersten Anfrage', async () => {
+    const element = await render(mixedCart);
+    const input = element.querySelector<HTMLInputElement>('#cart-qty-variant-id')!;
+    input.value = '2';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(element.querySelector('[data-testid="cart-checkout"]')).toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 380));
+    const first = http.expectOne('/api/v1/cart/items/variant-id');
+    expect(first.request.method).toBe('PUT');
+    expect(first.request.body).toEqual({ quantity: 2 });
+
+    input.value = '3';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    first.flush({
+      ...mixedCart,
+      items: [item({ quantity: 2, line_total_cents: 6000 }), mixedCart.items[1]],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 380));
+    const second = http.expectOne('/api/v1/cart/items/variant-id');
+    expect(second.request.body).toEqual({ quantity: 3 });
+    second.flush({
+      ...mixedCart,
+      items: [item({ quantity: 3, line_total_cents: 9000 }), mixedCart.items[1]],
+    });
+    await Promise.resolve();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(input.value).toBe('3');
+    expect(text(element, 'cart-line-total-variant-id')).toContain('90,00 €');
+    expect(element.querySelector('[data-testid="cart-checkout"]')).not.toBeNull();
+  });
+
   it('löst einen Rabattcode ein und übernimmt die neue Aufstellung der API', async () => {
     const element = await render(mixedCart);
     const input = element.querySelector('#cart-discount-code') as HTMLInputElement;

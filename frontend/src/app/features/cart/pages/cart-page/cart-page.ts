@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   ElementRef,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -27,20 +28,34 @@ import { PriceSummary } from '../../ui/price-summary/price-summary';
   templateUrl: './cart-page.html',
   styleUrl: './cart-page.scss',
 })
-export class CartPage implements OnInit {
+export class CartPage implements OnInit, OnDestroy {
   private readonly api = inject(CartApi);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('cartHeading');
 
   protected readonly session = signal<CustomerSession | null>(null);
   protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
-  /** Zur Kasse nur, wenn jede Position lieferbar ist; die API prüft das erneut. */
-  protected readonly canCheckout = computed(
-    () => this.cart().items.length > 0 && this.cart().items.every((item) => item.available),
-  );
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal('');
-  protected readonly quantities = signal<Record<string, number>>({});
+  protected readonly quantities = signal<Record<string, number | null>>({});
+  protected readonly quantityPending = computed(() =>
+    this.cart().items.some((item) => this.quantities()[item.variant_id] !== item.quantity),
+  );
+  protected readonly quantityInputValid = computed(() =>
+    this.cart().items.every((item) => {
+      const quantity = this.quantities()[item.variant_id];
+      return Number.isInteger(quantity) && quantity !== null && quantity >= 1 && quantity <= 99;
+    }),
+  );
+  /** Zur Kasse erst nach gespeicherten Mengen; die API prüft Bestand und Preis erneut. */
+  protected readonly canCheckout = computed(
+    () =>
+      !this.busy() &&
+      !this.quantityPending() &&
+      this.cart().items.length > 0 &&
+      this.cart().items.every((item) => item.available),
+  );
+  private quantitySaveTimer?: ReturnType<typeof setTimeout>;
   protected discountCode = '';
   protected email = '';
   protected password = '';
@@ -57,6 +72,10 @@ export class CartPage implements OnInit {
     } catch (error) {
       if (!(error instanceof HttpErrorResponse && error.status === 401)) this.showError(error);
     }
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.quantitySaveTimer);
   }
 
   protected async authenticate(): Promise<void> {
@@ -106,19 +125,65 @@ export class CartPage implements OnInit {
     });
   }
 
-  protected setDraft(variantId: string, quantity: number): void {
+  protected setDraft(variantId: string, quantity: number | null): void {
     this.quantities.update((previous) => ({ ...previous, [variantId]: quantity }));
+    this.error.set('');
+    if (this.quantityPending()) this.scheduleQuantitySave();
+    else clearTimeout(this.quantitySaveTimer);
   }
 
-  protected async saveQuantity(item: CartItem): Promise<void> {
-    const quantity = Number(this.quantities()[item.variant_id]);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+  private scheduleQuantitySave(): void {
+    clearTimeout(this.quantitySaveTimer);
+    this.quantitySaveTimer = setTimeout(() => {
+      this.quantitySaveTimer = undefined;
+      void this.saveQuantities();
+    }, 350);
+  }
+
+  private async saveQuantities(): Promise<void> {
+    const submittedDraft = this.quantities();
+    const changes = this.cart()
+      .items.filter((item) => submittedDraft[item.variant_id] !== item.quantity)
+      .map((item) => ({ variantId: item.variant_id, quantity: submittedDraft[item.variant_id] }));
+    if (changes.length === 0) return;
+    if (!this.quantityInputValid()) {
       this.error.set('Die Menge muss zwischen 1 und 99 liegen.');
       return;
     }
-    await this.run(async () =>
-      this.setCart(await firstValueFrom(this.api.set(item.variant_id, quantity))),
-    );
+    if (this.busy()) {
+      this.scheduleQuantitySave();
+      return;
+    }
+    this.busy.set(true);
+    this.error.set('');
+    this.notice.set('');
+    try {
+      for (const change of changes) {
+        this.cart.set(await firstValueFrom(this.api.set(change.variantId, change.quantity!)));
+      }
+      const latestDraft = this.quantities();
+      this.setCart(this.cart());
+      this.quantities.update((saved) =>
+        Object.fromEntries(
+          Object.entries(saved).map(([variantId, quantity]) => [
+            variantId,
+            latestDraft[variantId] !== submittedDraft[variantId]
+              ? latestDraft[variantId]
+              : quantity,
+          ]),
+        ),
+      );
+      if (this.quantityPending()) this.scheduleQuantitySave();
+    } catch (error) {
+      this.showError(error);
+      try {
+        await this.load();
+      } catch {
+        this.setCart(this.cart());
+      }
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   protected async remove(item: CartItem): Promise<void> {
@@ -161,6 +226,7 @@ export class CartPage implements OnInit {
   }
 
   private setCart(value: CartSnapshot): void {
+    clearTimeout(this.quantitySaveTimer);
     this.cart.set(value);
     this.quantities.set(
       Object.fromEntries(value.items.map((item) => [item.variant_id, item.quantity])),
