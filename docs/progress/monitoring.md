@@ -1,7 +1,7 @@
 # Monitoring mit Prometheus und Grafana
 
 - **Stand:** 31. Oktober 2026. Code, Konfiguration und Tests sind fertig. Der Lauf mit Docker steht noch aus (siehe [Prüfungen](#prüfungen)).
-- **Basis:** `main` mit E-Mail-Benachrichtigungen, Mailpit-Volume und Trivy-Pin (`fc31842`).
+- **Basis:** `main` mit E-Mail-Benachrichtigungen, Mailpit-Volume, Trivy-Pin, Header und Verkaufsanalyse im Adminbereich (`6b85b16`).
 - **Entscheidung:** [ADR-012](../adr/ADR-012-monitoring.md).
 - **Vorgaben des Projektinhabers:**
   - Prometheus und Grafana einrichten.
