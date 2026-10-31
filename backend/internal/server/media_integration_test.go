@@ -60,7 +60,7 @@ func TestProductMediaOnPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Register(ctx, "media-admin@example.invalid", "Synthetic-Media-Passphrase-2026"); err != nil {
+	if _, err := service.Register(ctx, "media-admin@example.invalid", "Synthetic-Media-Passphrase-2026", "test"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE customers SET role = 'admin' WHERE email = 'media-admin@example.invalid'`); err != nil {

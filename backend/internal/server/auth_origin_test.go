@@ -45,3 +45,22 @@ func TestSafeOriginLocalDevelopmentAlias(t *testing.T) {
 		})
 	}
 }
+
+func TestClientSourceTrustsOnlyConfiguredProxyHeader(t *testing.T) {
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+	request.RemoteAddr = "172.18.0.5:12345"
+	request.Header.Set("X-Nordwinds-Client-IP", "203.0.113.7")
+	context.Request = request
+	if source := (&AuthHandler{}).clientSource(context); source != "172.18.0.5" {
+		t.Fatalf("Unvertrauter Header wurde verwendet: %q", source)
+	}
+	handler := &AuthHandler{config: AuthConfig{TrustedProxyClientIP: true}}
+	if source := handler.clientSource(context); source != "203.0.113.7" {
+		t.Fatalf("Proxy-IP wurde nicht verwendet: %q", source)
+	}
+	request.Header.Set("X-Nordwinds-Client-IP", "203.0.113.7, 198.51.100.2")
+	if source := handler.clientSource(context); source != "172.18.0.5" {
+		t.Fatalf("Ungültiger Proxy-Header wurde verwendet: %q", source)
+	}
+}

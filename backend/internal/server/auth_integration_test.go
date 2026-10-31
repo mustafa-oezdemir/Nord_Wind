@@ -157,6 +157,17 @@ func TestAuthenticationOnPostgres(t *testing.T) {
 			t.Fatalf("Rate-Limit-Versuch %d: %d statt %d", attempt+1, response.Code, want)
 		}
 	}
+	for attempt := 3; attempt <= 21; attempt++ {
+		response := authRequest(router, http.MethodPost, "/api/v1/auth/register", registerBody, nil, "")
+		if attempt == 21 {
+			assertProblem(t, response, http.StatusTooManyRequests, "RATE_LIMITED")
+			if response.Header().Get("Retry-After") != "900" {
+				t.Fatal("Retry-After fehlt beim Registrierungs-Limit")
+			}
+		} else {
+			assertProblem(t, response, http.StatusConflict, "CONFLICT")
+		}
+	}
 	text := logs.String()
 	for _, secret := range []string{password, cookie.Value, newCookie.Value, csrf, newCSRF, "test@example.invalid"} {
 		if strings.Contains(text, secret) {

@@ -26,6 +26,17 @@ $homepageResponse = Invoke-WebRequest -Uri "$base/"
 if ($homepageResponse.StatusCode -ne 200 -or $homepageResponse.Content -notmatch '<title>[^<]*NordWinds</title>') {
     throw 'Die NordWinds-Startseite antwortet nicht wie erwartet.'
 }
+$policy = [string]$homepageResponse.Headers['Content-Security-Policy']
+$nonce = [regex]::Match($policy, "script-src 'self' 'nonce-([^']+)'").Groups[1].Value
+if (-not $nonce -or -not $homepageResponse.Content.Contains('ngCspNonce="' + $nonce + '"') -or
+    [string]$homepageResponse.Headers['X-Content-Type-Options'] -ne 'nosniff') {
+    throw 'CSP-Nonce oder Sicherheitsheader fehlen.'
+}
+foreach ($tag in [regex]::Matches($homepageResponse.Content, '<(?:script|style)\b[^>]*>')) {
+    if (-not $tag.Value.Contains('nonce="' + $nonce + '"')) {
+        throw 'Ein Inline-Tag besitzt keinen CSP-Nonce.'
+    }
+}
 
 $meta = Invoke-RestMethod -Uri "$base/api/v1/meta"
 if ($meta.name -cne 'NordWinds' -or $meta.locale -cne 'de-DE' -or $meta.currency -cne 'EUR') {
@@ -42,9 +53,9 @@ if ($products.data.Count -gt 0) {
     }
 }
 
-docker compose exec -T api /usr/local/bin/migrate status | Out-Null
+docker compose run --rm --no-deps migrate status | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw 'Die Datenbankmigration wurde nicht bestätigt.'
 }
 
-Write-Output 'Smoke-Test bestanden: Startseite, Produkt-SSR, Gin-API, Container-Health und Migration.'
+Write-Output 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Container-Health und Migration.'

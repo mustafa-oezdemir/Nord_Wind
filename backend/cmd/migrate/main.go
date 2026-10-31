@@ -26,6 +26,11 @@ func main() {
 	defer cancel()
 	if os.Args[1] == "up" {
 		err = migrations.Up(ctx, db)
+		if err == nil {
+			if password := os.Getenv("NORDWINDS_DB_RUNTIME_PASSWORD"); password != "" {
+				err = migrations.GrantRuntime(ctx, db, password)
+			}
+		}
 	} else if os.Args[1] == "down" {
 		err = migrations.Down(ctx, db)
 	} else {

@@ -19,6 +19,8 @@ for service in db api ssr edge; do
 done
 
 curl -fsS "${base_url}/" | grep -E '<title>[^<]*NordWinds</title>' >/dev/null
+curl -fsS -D - -o /dev/null "${base_url}/" | grep -F "script-src 'self' 'nonce-" >/dev/null
+curl -fsS -D - -o /dev/null "${base_url}/" | grep -Fi 'X-Content-Type-Options: nosniff' >/dev/null
 curl -fsS "${base_url}/api/v1/meta" | grep -F '"name":"NordWinds"' >/dev/null
 
 products_json="$(curl -fsS "${base_url}/api/v1/products?limit=1")"
@@ -29,5 +31,5 @@ if [ -n "$slug" ]; then
   printf '%s' "$detail_html" | grep -F 'detail-title' >/dev/null
 fi
 
-docker compose exec -T api /usr/local/bin/migrate status >/dev/null
-printf '%s\n' 'Smoke-Test bestanden: Startseite, Produkt-SSR, Gin-API, Container-Health und Migration.'
+docker compose run --rm --no-deps migrate status >/dev/null
+printf '%s\n' 'Smoke-Test bestanden: Startseite, CSP, Produkt-SSR, Gin-API, Container-Health und Migration.'

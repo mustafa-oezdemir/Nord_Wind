@@ -39,17 +39,30 @@ ENTRYPOINT ["/usr/local/bin/api"]
 FROM node:26.13.0-alpine3.24 AS ssr
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install --global npm@12.2.0 \
-    && npm ci --omit=dev
+RUN npm ci --omit=dev \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=frontend-build /src/frontend/dist/nordwinds ./dist/nordwinds
 ENV NODE_ENV=production
 USER node
 EXPOSE 4000
 CMD ["node", "dist/nordwinds/server/server.mjs"]
 
-FROM caddy:2.11.4-alpine AS edge
+FROM golang:1.27.3-alpine3.24 AS edge-build
+WORKDIR /src/caddy
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download github.com/caddyserver/caddy/v2@v2.11.7 \
+    && cp -a /go/pkg/mod/github.com/caddyserver/caddy/v2@v2.11.7/. ./ \
+    && chmod -R u+w . \
+    && go get github.com/go-jose/go-jose/v4@v4.1.6 golang.org/x/net@v0.60.0 \
+    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/caddy ./cmd/caddy
+
+FROM alpine:3.24.3 AS edge
+RUN apk add --no-cache ca-certificates
+COPY --from=edge-build /out/caddy /usr/bin/caddy
 ENV XDG_CONFIG_HOME=/tmp/caddy/config \
     XDG_DATA_HOME=/tmp/caddy/data
 COPY ops/Caddyfile /etc/caddy/Caddyfile
 USER 10001:10001
 EXPOSE 8080
+ENTRYPOINT ["/usr/bin/caddy"]
+CMD ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

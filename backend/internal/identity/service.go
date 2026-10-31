@@ -43,10 +43,25 @@ func NormalizeEmail(raw string) (string, error) {
 	return email, nil
 }
 
-func (s *Service) Register(ctx context.Context, rawEmail, password string) (Customer, error) {
+func (s *Service) Register(ctx context.Context, rawEmail, password, source string) (Customer, error) {
 	email, err := NormalizeEmail(rawEmail)
 	if err != nil {
 		return Customer{}, err
+	}
+	if source == "" {
+		source = "unknown"
+	}
+	now := time.Now().UTC()
+	if err := s.repository.PruneLoginAttempts(ctx, now); err != nil {
+		return Customer{}, err
+	}
+	registrationKey := sha256.Sum256([]byte("registration-source:" + source))
+	attempts, err := s.repository.CountLoginAttempt(ctx, registrationKey[:], now)
+	if err != nil {
+		return Customer{}, err
+	}
+	if attempts > 20 {
+		return Customer{}, ErrRateLimited
 	}
 	hash, err := HashPassword(password)
 	if err != nil {

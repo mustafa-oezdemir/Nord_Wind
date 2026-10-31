@@ -57,6 +57,7 @@ Die [CI- und PR-Anleitung](docs/verification/ci.md) erklärt die Qualitätsschri
 Der [NW-09-Nachweis](docs/progress/NW-09.md) beschreibt Storefront, Design-System und die ausgeführten bzw. noch ausstehenden Oberflächenprüfungen.
 Der [NW-10-Nachweis](docs/progress/NW-10.md) beschreibt Produktdetail, Variantenauswahl und den neuen Detail-Endpunkt der API.
 Der [NW-22-Nachweis](docs/progress/NW-22.md) dokumentiert die Zugänglichkeits- und SEO-Prüfung sowie die Entscheidung für gezieltes SSR.
+Der [NW-23-Sicherheitsnachweis](docs/progress/NW-23.md) beschreibt die geprüften Schutzmaßnahmen, Scans und offenen Betriebsrisiken.
 
 ## Container-Images
 

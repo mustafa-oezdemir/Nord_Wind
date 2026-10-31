@@ -1,0 +1,77 @@
+name: Security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Quellen auschecken
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Geheimnisse im Quellbaum suchen
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          exit-code: '1'
+          format: table
+
+  images:
+    name: images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Quellen auschecken
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: API-Image bauen
+        run: docker build --target api --tag nordwinds-api:ci .
+      - name: SSR-Image bauen
+        run: docker build --target ssr --tag nordwinds-ssr:ci .
+      - name: Edge-Image bauen
+        run: docker build --target edge --tag nordwinds-edge:ci .
+      - name: API-Image prüfen
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: nordwinds-api:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: SSR-Image prüfen
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8 # v0.36.0
+        with:
+          image-ref: nordwinds-ssr:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: Edge-Image prüfen
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: nordwinds-edge:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table

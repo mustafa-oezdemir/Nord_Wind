@@ -21,6 +21,7 @@ import (
 type AuthConfig struct {
 	PublicOrigin         string
 	SecureCookie         bool
+	TrustedProxyClientIP bool
 	RegistrationNotifier interface {
 		SendWelcome(ctx context.Context, recipient string) error
 	}
@@ -60,12 +61,15 @@ func (h *AuthHandler) register(c *gin.Context) {
 		HandleError(c, err)
 		return
 	}
-	customer, err := h.service.Register(c.Request.Context(), request.Email, request.Password)
+	customer, err := h.service.Register(c.Request.Context(), request.Email, request.Password, h.clientSource(c))
 	switch {
 	case errors.Is(err, identity.ErrInvalidInput):
 		writeProblem(c, InvalidRequest)
 	case errors.Is(err, identity.ErrDuplicate):
 		writeProblem(c, Conflict)
+	case errors.Is(err, identity.ErrRateLimited):
+		c.Header("Retry-After", "900")
+		writeProblem(c, RateLimited)
 	case err != nil:
 		HandleError(c, err)
 	default:
@@ -90,11 +94,7 @@ func (h *AuthHandler) login(c *gin.Context) {
 		return
 	}
 	oldToken := h.cookieToken(c)
-	source, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
-	if source == "" {
-		source = c.Request.RemoteAddr
-	}
-	customer, token, session, err := h.service.Login(c.Request.Context(), request.Email, request.Password, source, oldToken)
+	customer, token, session, err := h.service.Login(c.Request.Context(), request.Email, request.Password, h.clientSource(c), oldToken)
 	switch {
 	case errors.Is(err, identity.ErrInvalidCredentials):
 		writeProblem(c, Unauthenticated)
@@ -184,6 +184,22 @@ func (h *AuthHandler) cookieName() string {
 		return "__Host-nordwinds_session"
 	}
 	return "nordwinds_session"
+}
+
+// Nur der isoliert angeschlossene Edge-Proxy darf die Herkunfts-IP liefern.
+// Ohne diese explizite Konfiguration zählt ausschließlich die TCP-Gegenstelle.
+func (h *AuthHandler) clientSource(c *gin.Context) string {
+	source, _, err := net.SplitHostPort(c.Request.RemoteAddr)
+	if err != nil {
+		source = c.Request.RemoteAddr
+	}
+	if h.config.TrustedProxyClientIP {
+		forwarded := c.GetHeader("X-Nordwinds-Client-IP")
+		if net.ParseIP(forwarded) != nil {
+			return forwarded
+		}
+	}
+	return source
 }
 
 func (h *AuthHandler) cookieToken(c *gin.Context) string {

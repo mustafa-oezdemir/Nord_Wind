@@ -45,6 +45,23 @@ func main() {
 		os.Exit(1)
 	}
 	defer connection.Close()
+	if appEnv != "development" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		var elevated, schemaCreate, databaseCreate, ownsTables, roleMembership bool
+		err := connection.SQL.QueryRowContext(ctx, `SELECT
+			rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls,
+			has_schema_privilege(current_user, 'public', 'CREATE'),
+			has_database_privilege(current_user, current_database(), 'CREATE'),
+			EXISTS (SELECT 1 FROM pg_class WHERE relnamespace = 'public'::regnamespace
+				AND relowner = current_user::regrole),
+			EXISTS (SELECT 1 FROM pg_auth_members WHERE member = current_user::regrole)
+			FROM pg_roles WHERE rolname = current_user`).Scan(&elevated, &schemaCreate, &databaseCreate, &ownsTables, &roleMembership)
+		cancel()
+		if err != nil || elevated || schemaCreate || databaseCreate || ownsTables || roleMembership {
+			logger.Error("API benötigt eine Datenbankrolle ohne Verwaltungs- und DDL-Rechte", "event", "db.role.unsafe")
+			os.Exit(1)
+		}
+	}
 
 	appName := os.Getenv("APP_NAME")
 	if appName == "" {
@@ -69,7 +86,10 @@ func main() {
 		logger.Error("Authentifizierung konnte nicht initialisiert werden", "event", "auth.init.failed")
 		os.Exit(1)
 	}
-	authConfig := server.AuthConfig{PublicOrigin: publicOrigin, SecureCookie: appEnv != "development", Logger: logger}
+	authConfig := server.AuthConfig{
+		PublicOrigin: publicOrigin, SecureCookie: appEnv != "development", Logger: logger,
+		TrustedProxyClientIP: os.Getenv("NORDWINDS_TRUST_PROXY_CLIENT_IP") == "true",
+	}
 	if appEnv == "development" {
 		if host := os.Getenv("SMTP_HOST"); host != "" {
 			port := os.Getenv("SMTP_PORT")

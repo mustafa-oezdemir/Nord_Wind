@@ -17,6 +17,8 @@ Der PostgreSQL-Integrationstest läuft nur mit `NORDWINDS_MIGRATION_TEST_URL`. E
 
 Der Katalog-Repository-Test benötigt `NORDWINDS_CATALOG_TEST_URL` für eine **andere** PostgreSQL-Testdatenbank mit Namen `nordwinds_test_*` und ohne vorhandene Katalogdaten. Er wendet die Migrationen an, führt alle Fixtures in Transaktionen aus, rollt diese nach jedem Teiltest zurück und prüft, dass keine Katalogdatensätze zurückbleiben. Bei gleichzeitiger Ausführung von `go test ./...` dürfen `NORDWINDS_MIGRATION_TEST_URL` und `NORDWINDS_CATALOG_TEST_URL` nicht auf dieselbe Datenbank zeigen. Ohne Katalog-Test-URL wird nur dieser Integrationstest übersprungen; ein Mock ersetzt den PostgreSQL-Lauf nicht. Der Test prüft CRUD, Kategorie- und Variantenbeziehungen sowie PostgreSQL-SQLSTATE bei Constraint-Verstößen. `go test -race ./...` erfordert eine Go-Umgebung mit aktiviertem CGO und C-Compiler.
 
+Für einen Betrieb außerhalb von `APP_ENV=development` braucht die API eine Datenbankrolle ohne Superuser-, Rollenverwaltungs- oder DDL-Rechte. Dafür `NORDWINDS_DB_RUNTIME_USER=nordwinds_runtime` und ein eigenes `NORDWINDS_DB_RUNTIME_PASSWORD` mit mindestens 32 Zeichen konfigurieren. `migrate up` legt die Rolle an und erteilt ihr die benötigten Tabellen- und Sequenzrechte; Migrationen verwenden weiter den Eigentümerzugang. Die API verweigert in anderen Umgebungen den Start mit einer erhöhten Datenbankrolle. Im lokalen Entwicklungsmodus bleiben die bisherigen Zugangsdaten zulässig. Die Rollenvergabe und die Grenzen dieser Prüfung sind im [NW-23-Sicherheitsnachweis](../docs/progress/NW-23.md) beschrieben.
+
 ## Öffentlicher Katalog
 
 `GET /api/v1/products` liefert veröffentlichte Produkte mit aktiven Varianten; `GET /api/v1/categories` liefert aktive Kategorien. Beide Endpunkte unterstützen `category` (Slug), `q`, `sort`, `page` und `limit`. `page` beginnt bei 1, `limit` liegt zwischen 1 und 100 (Standard 20). Die Antwort enthält immer `data` als Array und `pagination` mit `page`, `limit`, `total` und `total_pages`. Ein unbekannter oder inaktiver Kategorie-Slug ergibt 404, ungültige Parameter ergeben 400. Der vollständige Vertrag einschließlich Sortieroptionen steht in [OpenAPI](../docs/api/openapi.yaml).
@@ -34,7 +36,7 @@ Fehlerantworten folgen [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) m
 | `CONFLICT` | 409 | Fachlicher Zustandskonflikt |
 | `UNAUTHENTICATED` | 401 | Anmeldung fehlt oder ist ungültig |
 | `FORBIDDEN` | 403 | Berechtigung oder CSRF-Prüfung fehlt |
-| `RATE_LIMITED` | 429 | Zu viele Login-Versuche |
+| `RATE_LIMITED` | 429 | Zu viele Login- oder Registrierungsversuche |
 | `METHOD_NOT_ALLOWED` | 405 | HTTP-Methode nicht zulässig |
 | `BODY_TOO_LARGE` | 413 | Anfrageinhalt über 1 MiB; Bild-Uploads über 4 MiB Multipart-Body oder 3 MiB Datei |
 | `URI_TOO_LONG` | 414 | Anfrageziel über 2048 Byte |
@@ -55,6 +57,8 @@ Für HTTPS-Umgebungen muss `APP_PUBLIC_ORIGIN` auf den exakten öffentlichen Ori
 Der Authentifizierungs-Integrationstest benötigt `NORDWINDS_AUTH_TEST_URL` für eine **separate** zunächst leere PostgreSQL-Datenbank mit Namen `nordwinds_test_*`. Er prüft Registrierung, falsche Passwörter, CSRF, Session-Fixation und -Ablauf, Rate-Limit, Rollenwechsel und Redaction. Ohne die Variable wird nur dieser Test übersprungen. Bei einem parallelen Gesamtlauf benötigt jeder PostgreSQL-Integrationstest eine eigene Datenbank.
 
 Im lokalen Compose-Betrieb sendet die API nach erfolgreicher Registrierung eine Begrüßungsnachricht an MailHog (`SMTP_HOST=mailhog`, `SMTP_PORT=1025`). Die Nachricht enthält kein Passwort. Ein SMTP-Fehler wird ohne E-Mail-Adresse protokolliert und macht ein bereits erstelltes Konto nicht rückgängig. Außerhalb von `APP_ENV=development` ist dieser lokale Versand deaktiviert; für echte Zustellung ist ein gesonderter Maildienst erforderlich.
+
+Login- und Registrierungsversuche werden für 15 Minuten datenbankgestützt begrenzt. Im Compose-Stack setzt ausschließlich Caddy den Header `X-Nordwinds-Client-IP` auf die TCP-Quelladresse; die API berücksichtigt ihn nur mit `NORDWINDS_TRUST_PROXY_CLIENT_IP=true`. Bei direktem API-Betrieb muss die Option deaktiviert bleiben, bis ein entsprechend vertrauenswürdiger Proxy vorgeschaltet ist. Die HTTP-Oberfläche setzt pro HTML-Antwort einen neuen CSP-Nonce; die Prüfung dazu ist Teil des Smoke-Tests.
 
 ## Geschützte Katalogverwaltung
 
