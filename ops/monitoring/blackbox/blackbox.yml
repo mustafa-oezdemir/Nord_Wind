@@ -1,0 +1,40 @@
+# Blackbox-Module für NordWinds (ADR-012).
+# Das SSR akzeptiert nur die Hosts localhost und 127.0.0.1 (frontend/src/server.ts);
+# deshalb senden die Prüfungen denselben Host wie ein Browser im lokalen Betrieb.
+modules:
+  http_storefront:
+    prober: http
+    timeout: 8s
+    http:
+      method: GET
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      headers:
+        Host: localhost:8080
+        User-Agent: NordWinds-Blackbox
+      fail_if_body_not_matches_regexp:
+        - "NordWinds"
+
+  http_api:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      headers:
+        Host: localhost:8080
+        Accept: application/json
+        User-Agent: NordWinds-Blackbox
+      fail_if_body_not_matches_regexp:
+        - '"data"'
+
+  tls_prometheus:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: ip4
+      tls: true
+      tls_config:
+        ca_file: /run/monitoring/ca.crt
+        server_name: prometheus

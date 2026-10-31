@@ -89,6 +89,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
       POSTGRES_SSLMODE: disable
       NORDWINDS_DB_RUNTIME_PASSWORD: ${NORDWINDS_DB_RUNTIME_PASSWORD:-}
+      # Rolle für den PostgreSQL-Exporter (ADR-012); ohne Passwort wird sie nicht angelegt.
+      NORDWINDS_DB_MONITOR_USER: ${NORDWINDS_DB_MONITOR_USER:-nordwinds_monitor}
+      NORDWINDS_DB_MONITOR_PASSWORD: ${NORDWINDS_DB_MONITOR_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
@@ -111,6 +114,7 @@ services:
       POSTGRES_USER: ${NORDWINDS_DB_RUNTIME_USER:-${POSTGRES_USER:-nordwinds_app}}
       POSTGRES_PASSWORD: ${NORDWINDS_DB_RUNTIME_PASSWORD:-${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}}
       NORDWINDS_DB_RUNTIME_PASSWORD: ""
+      NORDWINDS_DB_MONITOR_PASSWORD: ""
       APP_NAME: ${APP_NAME:-NordWinds}
       APP_ENV: ${APP_ENV:-development}
       NORDWINDS_DEMO_CHECKOUT_ENABLED: ${NORDWINDS_DEMO_CHECKOUT_ENABLED:-false}
@@ -208,11 +212,167 @@ services:
     tmpfs:
       - /tmp:mode=1777
 
+  # Monitoring (ADR-012). Startet nur mit dem Profil „monitoring“, z. B. über
+  # COMPOSE_PROFILES=monitoring in .env. Oberflächen nur über 127.0.0.1.
+  monitoring-init:
+    profiles: ["monitoring"]
+    image: nordwinds-monitoring-init:local
+    build:
+      context: .
+      target: monitoring-init
+    environment:
+      PROMETHEUS_USER: ${PROMETHEUS_USER:-nordwinds_prometheus}
+      PROMETHEUS_PASSWORD: ${PROMETHEUS_PASSWORD:-}
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-nordwinds_admin}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      NORDWINDS_METRICS_TOKEN: ${NORDWINDS_METRICS_TOKEN:-}
+      NORDWINDS_DB_MONITOR_USER: ${NORDWINDS_DB_MONITOR_USER:-nordwinds_monitor}
+      NORDWINDS_DB_MONITOR_PASSWORD: ${NORDWINDS_DB_MONITOR_PASSWORD:-}
+    volumes:
+      - monitoring-state:/monitoring/state
+      - prometheus-secrets:/monitoring/prometheus
+      - grafana-secrets:/monitoring/grafana
+    network_mode: none
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    # Nur um Schlüssel und Passwortdateien den Diensten Prometheus und Grafana zu übergeben.
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v3.13.4
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.config.file=/run/monitoring/web-config.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - ./ops/monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-secrets:/run/monitoring:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:${HOST_PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      monitoring-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/bin/promtool", "check", "healthy", "--url=https://localhost:9090", "--http.config.file=/run/monitoring/http-client.yml"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - private
+      - monitoring
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  postgres-exporter:
+    profiles: ["monitoring"]
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    environment:
+      DATA_SOURCE_URI: db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-nordwinds}?sslmode=disable
+      DATA_SOURCE_USER: ${NORDWINDS_DB_MONITOR_USER:-nordwinds_monitor}
+      DATA_SOURCE_PASS: ${NORDWINDS_DB_MONITOR_PASSWORD:-}
+    expose:
+      - "9187"
+    depends_on:
+      monitoring-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - private
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # Prüft den Shop von außen: Startseite und Produktliste über Caddy und SSR,
+  # Katalog-API über Caddy sowie das TLS-Zertifikat von Prometheus.
+  blackbox-exporter:
+    profiles: ["monitoring"]
+    image: prom/blackbox-exporter:v0.29.0
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+      - ./ops/monitoring/blackbox:/etc/blackbox:ro
+      # Nur ca.crt ist für den Exporter lesbar; alle anderen Dateien gehören Grafana.
+      - grafana-secrets:/run/monitoring:ro
+    expose:
+      - "9115"
+    depends_on:
+      monitoring-init:
+        condition: service_completed_successfully
+    networks:
+      - public
+      - monitoring
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:13.2.4
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-nordwinds_admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/monitoring/admin_password
+      GF_SECURITY_SECRET_KEY__FILE: /run/monitoring/secret_key
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_DEFAULT_LANGUAGE: de-DE
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_SERVER_ROOT_URL: http://127.0.0.1:${HOST_GRAFANA_PORT:-3000}/
+      GF_PATHS_PROVISIONING: /run/monitoring/provisioning
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/nordwinds/dashboards/nordwinds-betrieb.json
+      GF_LOG_MODE: console
+    volumes:
+      - grafana-secrets:/run/monitoring:ro
+      - grafana-data:/var/lib/grafana
+      - ./ops/monitoring/grafana/dashboards:/etc/nordwinds/dashboards:ro
+    ports:
+      - "127.0.0.1:${HOST_GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      monitoring-init:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_started
+    networks:
+      - monitoring
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   private:
     internal: true
   public: {}
+  monitoring: {}
 
 volumes:
   db-data: {}
   mailpit-data: {}
+  monitoring-state: {}
+  prometheus-secrets: {}
+  grafana-secrets: {}
+  prometheus-data: {}
+  grafana-data: {}

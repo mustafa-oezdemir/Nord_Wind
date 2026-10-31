@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
 
-# Die drei Images werden aus dem Repository-Stamm gebaut:
+# Die Images werden aus dem Repository-Stamm gebaut:
 # docker build --target edge -t nordwinds-edge .
 # docker build --target api  -t nordwinds-api  .
 # docker build --target ssr  -t nordwinds-ssr  .
+# docker build --target monitoring-init -t nordwinds-monitoring-init .
 
 # Node.js 26: aktuelle LTS-Version. Go, Caddy und Alpine: aktuelle stabile Versionen.
 FROM node:26.13.0-alpine3.24 AS frontend-build
@@ -35,6 +36,17 @@ COPY --from=backend-build --chown=10001:10001 /out/migrate /usr/local/bin/migrat
 USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/api"]
+
+# Monitoring (ADR-012): einmaliger Container, der Zertifikate und Zugangsdaten für
+# Prometheus und Grafana erzeugt. Statisch gelinkt, ohne Shell und Paketmanager.
+FROM backend-build AS monitoring-build
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/monitoring-init ./cmd/monitoring-init
+
+FROM scratch AS monitoring-init
+COPY --from=monitoring-build /out/monitoring-init /monitoring-init
+ENTRYPOINT ["/monitoring-init"]
 
 FROM node:26.13.0-alpine3.24 AS ssr
 WORKDIR /app

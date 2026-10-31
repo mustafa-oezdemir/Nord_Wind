@@ -31,6 +31,14 @@ func main() {
 				err = migrations.GrantRuntime(ctx, db, password)
 			}
 		}
+		// Rolle für den PostgreSQL-Exporter (ADR-012), nur wenn ein Passwort gesetzt ist.
+		if password := os.Getenv("NORDWINDS_DB_MONITOR_PASSWORD"); err == nil && password != "" {
+			role := os.Getenv("NORDWINDS_DB_MONITOR_USER")
+			if role == "" {
+				role = "nordwinds_monitor"
+			}
+			err = migrations.GrantMonitor(ctx, db, role, password)
+		}
 	} else if os.Args[1] == "down" {
 		err = migrations.Down(ctx, db)
 	} else {

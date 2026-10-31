@@ -97,13 +97,17 @@ func (h *AuthHandler) login(c *gin.Context) {
 	customer, token, session, err := h.service.Login(c.Request.Context(), request.Email, request.Password, h.clientSource(c), oldToken)
 	switch {
 	case errors.Is(err, identity.ErrInvalidCredentials):
+		observeAuth(c, "login", "invalid_credentials")
 		writeProblem(c, Unauthenticated)
 	case errors.Is(err, identity.ErrRateLimited):
+		observeAuth(c, "login", "rate_limited")
 		c.Header("Retry-After", "900")
 		writeProblem(c, RateLimited)
 	case err != nil:
+		observeAuth(c, "login", "error")
 		HandleError(c, err)
 	default:
+		observeAuth(c, "login", "success")
 		h.setCookie(c, token, false)
 		c.Header("Cache-Control", "no-store")
 		c.JSON(http.StatusOK, gin.H{"customer": customer, "csrf_token": session.CSRFToken, "expires_at": session.ExpiresAt})

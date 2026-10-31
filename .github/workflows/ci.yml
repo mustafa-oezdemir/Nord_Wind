@@ -95,6 +95,21 @@ jobs:
           POSTGRES_PASSWORD: ci-only-dummy-password
         run: docker compose -f compose.yaml config --quiet
 
+      - name: Monitoring-Konfiguration prüfen
+        env:
+          POSTGRES_PASSWORD: ci-only-dummy-password
+        run: |
+          docker compose -f compose.yaml --profile monitoring config --quiet
+          docker run --rm --entrypoint /bin/sh \
+            -v "$PWD/ops/monitoring/prometheus:/etc/prometheus:ro" prom/prometheus:v3.13.4 \
+            -c 'promtool check config --syntax-only /etc/prometheus/prometheus.yml && promtool check rules /etc/prometheus/rules/*.yml'
+          docker run --rm -v "$PWD/ops/monitoring/blackbox:/etc/blackbox:ro" prom/blackbox-exporter:v0.29.0 \
+            --config.file=/etc/blackbox/blackbox.yml --config.check
+          python3 -c 'import json, sys; [json.load(open(f, encoding="utf-8")) for f in sys.argv[1:]]' ops/monitoring/grafana/dashboards/*.json
+
+      - name: Monitoring-Init-Image bauen
+        run: docker build --target monitoring-init --tag nordwinds-monitoring-init:ci .
+
       - name: API-Image bauen
         run: docker build --target api --tag nordwinds-api:ci .
 
