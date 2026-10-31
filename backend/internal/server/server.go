@@ -23,7 +23,7 @@ func New(appName string, db pinger, logger *slog.Logger, metricsToken ...string)
 	if len(metricsToken) > 1 || (len(metricsToken) == 1 && metricsToken[0] != "" && len(metricsToken[0]) < 32) {
 		return nil, errors.New("NORDWINDS_METRICS_TOKEN muss mindestens 32 Zeichen haben")
 	}
-	metrics := &operationalMetrics{}
+	metrics := newOperationalMetrics(db)
 	router := gin.New()
 	router.HandleMethodNotAllowed = true
 	router.Use(assignRequestID, observeRequests(metrics), accessLog(logger), recoverProblem, limitInput, withDeadline)

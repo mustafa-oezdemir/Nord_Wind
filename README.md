@@ -51,6 +51,14 @@ go test ./...
 
 Mailpit fängt im lokalen Betrieb alle E-Mails des Shops ab: Begrüßung, Sicherheitshinweis, Bestellbestätigung, Zahlung, Versand, Zustellung, Stornierung, Erstattung und Kontoschließung. Die Oberfläche ist unter `http://127.0.0.1:8025` erreichbar; `HOST_MAILPIT_PORT` ändert den Port. Der SMTP-Port ist nicht am Host veröffentlicht, und nichts wird an echte Postfächer zugestellt. Die abgefangenen Nachrichten liegen im Volume `mailpit-data` und bleiben bei Neustarts und `docker compose up --build` erhalten; geleert wird das Postfach in der Mailpit-Oberfläche. Architektur, Konfiguration und der Wechsel zu einem echten SMTP-Anbieter stehen in [ADR-011](docs/adr/ADR-011-e-mail-benachrichtigungen.md) und in [E-Mail-Benachrichtigungen](docs/progress/e-mail-benachrichtigungen.md).
 
+Das Monitoring mit Prometheus und Grafana startet über `COMPOSE_PROFILES=monitoring` in `.env` mit dem normalen `docker compose up --build -d`:
+
+- Grafana zeigt unter `http://127.0.0.1:3000` das Dashboard „NordWinds – Betrieb“ mit Verfügbarkeit, API-Verkehr je Route, Shop, E-Mail, Sicherheit, Datenbank und API-Prozess.
+- Prometheus ist nur über HTTPS mit Anmeldung unter `https://127.0.0.1:9090` erreichbar und wertet 28 Alarmregeln aus.
+- Benutzer und Passwörter stehen in `.env` (Vorlage in `.env.example`).
+
+Entscheidung, Sicherheit und Versionen stehen in [ADR-012](docs/adr/ADR-012-monitoring.md); Bedienung, Alarme und Prüfergebnisse in [Monitoring](docs/progress/monitoring.md).
+
 Der [Abgleich der Projektdokumente](docs/requirements/document-review.md) und der [priorisierte Backlog](docs/requirements/backlog.md) halten Anforderungen, Widersprüche und die nächsten Entwicklungsschritte fest.
 Die [verifizierte Ausgangslage](docs/verification/baseline.md) zeigt, welche Prüfungen derzeit bestehen und welche wegen des fehlenden Starters noch nicht ausführbar sind.
 Der [Stand der Markenänderung](docs/progress/NW-02.md) dokumentiert die Umstellung auf NordWinds und die damals noch ausstehenden Prüfungen.

@@ -48,7 +48,15 @@ Neue Handler ordnen erwartete Fehler über `server.APIError` und `server.HandleE
 
 Access-Logs werden als `slog`-JSON ausgegeben. Sie enthalten nur Zeitpunkt, Service/Umgebung, Ereignis, Request-ID, HTTP-Methode, normalisierte Route, Status, Dauer und gegebenenfalls Fehlercode. Normale 4xx-Antworten erscheinen als `INFO`, 5xx als `ERROR`. URL-Parameter, Header, Cookies, Bodies, SQL- und fremde Fehlertexte werden nicht protokolliert.
 
-Mit einem mindestens 32 Zeichen langen `NORDWINDS_METRICS_TOKEN` ist `/internal/metrics` nur am internen API-Port und mit `Authorization: Bearer <Token>` abrufbar. Die Metriken umfassen HTTP-Statusklassen und -Dauer, DB-Readiness, GORM-Fehler und langsame Abfragen sowie simulierte Payment-Ereignisse und -Fehler. Caddy veröffentlicht diesen Pfad nicht. Sicherung und Rücksicherung sind in [NW-24](../docs/progress/NW-24.md) beschrieben.
+Mit einem mindestens 32 Zeichen langen `NORDWINDS_METRICS_TOKEN` ist `/internal/metrics` nur am internen API-Port und mit `Authorization: Bearer <Token>` abrufbar. Caddy veröffentlicht diesen Pfad nicht. Die Metriken im Prometheus-Textformat umfassen:
+
+- HTTP-Anfragen und -Dauer je Methode, Routenmuster und Statusklasse sowie laufende Anfragen;
+- DB-Readiness, GORM-Fehler, langsame Abfragen und den Verbindungspool;
+- Anmeldeversuche je Ergebnis und simulierte Payment-Ereignisse;
+- Go-Laufzeit und Prozesswerte;
+- aus PostgreSQL gelesene Geschäftskennzahlen (Bestellungen, Konten, Outbox, Reservierungen, Bestand).
+
+Labels enthalten keine Kunden- oder Bestelldaten. Prometheus und Grafana dafür richtet das Compose-Profil `monitoring` ein ([ADR-012](../docs/adr/ADR-012-monitoring.md)). Mit `NORDWINDS_DB_MONITOR_PASSWORD` legt `migrate up` zusätzlich die lesende Exporter-Rolle `NORDWINDS_DB_MONITOR_USER` mit `pg_monitor` an. Die PostgreSQL-Tests dazu verwenden `NORDWINDS_METRICS_TEST_URL` und `NORDWINDS_MONITOR_ROLE_TEST_URL`. Sicherung und Rücksicherung sind in [NW-24](../docs/progress/NW-24.md) beschrieben.
 
 ## Kundenanmeldung
 

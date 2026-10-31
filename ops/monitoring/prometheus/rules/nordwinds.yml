@@ -1,0 +1,262 @@
+# Aufzeichnungs- und Alarmregeln für NordWinds (ADR-012).
+# Schwellen sind Startwerte für die lokale Vorschau und vor einem Livebetrieb mit
+# echten Lastdaten zu überprüfen. Prometheus zeigt Alarme unter /alerts, Grafana im
+# Dashboard „NordWinds – Betrieb“; eine Zustellung (Alertmanager) ist nicht eingerichtet.
+groups:
+  - name: nordwinds-aufzeichnung
+    rules:
+      # Kundenverkehr ohne Healthchecks und Metrikabrufe.
+      - record: nordwinds:http_requests:rate5m
+        expr: sum(rate(nordwinds_http_route_requests_total{route!~"/internal/metrics|/health/.*"}[5m]))
+      - record: nordwinds:http_server_errors:ratio5m
+        expr: |
+          (sum(rate(nordwinds_http_route_requests_total{status_class="5xx", route!~"/internal/metrics|/health/.*"}[5m])) or vector(0))
+          /
+          sum(rate(nordwinds_http_route_requests_total{route!~"/internal/metrics|/health/.*"}[5m]))
+      - record: nordwinds:http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(nordwinds_http_route_request_duration_seconds_bucket{route!~"/internal/metrics|/health/.*"}[5m])))
+      - record: nordwinds:http_route_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, method, route) (rate(nordwinds_http_route_request_duration_seconds_bucket{route!~"/internal/metrics|/health/.*"}[5m])))
+
+  - name: nordwinds-verfuegbarkeit
+    rules:
+      - alert: NordWindsZielNichtErreichbar
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} ist nicht erreichbar"
+          description: "Prometheus erreicht {{ $labels.instance }} ({{ $labels.job }}) seit 2 Minuten nicht. Mit „docker compose ps“ und den Container-Protokollen prüfen."
+      - alert: NordWindsShopNichtErreichbar
+        expr: probe_success{job="probe-storefront"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Shopseite {{ $labels.instance }} antwortet nicht korrekt"
+          description: "Die Seite liefert seit 2 Minuten keinen Erfolg (Status, erwarteter Inhalt oder Zeitlimit). Edge (Caddy), SSR und API prüfen."
+      - alert: NordWindsKatalogApiNichtErreichbar
+        expr: probe_success{job="probe-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Katalog-API über Caddy nicht erreichbar"
+          description: "{{ $labels.instance }} liefert seit 2 Minuten keine gültige Antwort. API und Datenbank prüfen."
+      - alert: NordWindsPostgresNichtErreichbar
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL ist für den Exporter nicht erreichbar"
+          description: "Der PostgreSQL-Exporter kann sich seit 1 Minute nicht anmelden oder verbinden. Dienst db und die Rolle aus NORDWINDS_DB_MONITOR_USER prüfen."
+      - alert: NordWindsApiStartetWiederholt
+        expr: changes(process_start_time_seconds{job="nordwinds-api"}[30m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: "Die API ist in 30 Minuten mehrfach neu gestartet"
+          description: "{{ $value }} Neustarts in 30 Minuten deuten auf Abstürze hin. Protokolle mit „docker compose logs api“ prüfen."
+      - alert: NordWindsGeschaeftszahlenFehlen
+        expr: nordwinds_business_metrics_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Geschäftskennzahlen können nicht gelesen werden"
+          description: "Die API erreicht beim Metrikabruf seit 5 Minuten die Datenbank nicht oder die Abfrage schlägt fehl."
+
+  - name: nordwinds-api
+    rules:
+      - alert: NordWindsHoheFehlerquote
+        expr: nordwinds:http_server_errors:ratio5m > 0.05 and nordwinds:http_requests:rate5m > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mehr als 5 % der API-Anfragen enden mit einem Serverfehler"
+          description: "Fehlerquote {{ $value | humanizePercentage }} über 5 Minuten. Im Dashboard die betroffenen Routen ansehen und die API-Protokolle über die Request-ID prüfen."
+      - alert: NordWindsLangsameAntworten
+        expr: nordwinds:http_request_duration_seconds:p95_5m > 1 and nordwinds:http_requests:rate5m > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API antwortet langsam (p95 über 1 Sekunde)"
+          description: "95 % der Anfragen dauern bis zu {{ $value | humanizeDuration }}."
+      - alert: NordWindsLangsameRoute
+        expr: |
+          nordwinds:http_route_duration_seconds:p95_5m > 2
+          and on (method, route)
+          sum by (method, route) (rate(nordwinds_http_route_requests_total{route!~"/internal/metrics|/health/.*"}[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.method }} {{ $labels.route }} ist langsam"
+          description: "p95 dieser Route liegt seit 10 Minuten bei {{ $value | humanizeDuration }}."
+      - alert: NordWindsShopLangsam
+        expr: probe_duration_seconds{job="probe-storefront"} > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Shopseite {{ $labels.instance }} lädt langsam"
+          description: "Die Prüfung über Caddy und SSR dauert seit 10 Minuten über 3 Sekunden ({{ $value | humanizeDuration }})."
+
+  - name: nordwinds-datenbank
+    rules:
+      - alert: NordWindsDatenbankpruefungFehlgeschlagen
+        expr: increase(nordwinds_db_readiness_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "/health/ready meldet Datenbankfehler"
+          description: "Die API konnte PostgreSQL in den letzten 5 Minuten nicht erreichen; der Container gilt dann als nicht bereit."
+      - alert: NordWindsDatenbankabfragenFehlerhaft
+        expr: increase(nordwinds_db_query_errors_total[10m]) > 10
+        labels:
+          severity: warning
+        annotations:
+          summary: "Viele fehlgeschlagene Datenbankabfragen"
+          description: "{{ $value | printf \"%.0f\" }} fehlgeschlagene Abfragen in 10 Minuten."
+      - alert: NordWindsLangsameAbfragen
+        expr: increase(nordwinds_db_slow_queries_total[10m]) > 5
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mehrere Datenbankabfragen über 1 Sekunde"
+          description: "{{ $value | printf \"%.0f\" }} langsame Abfragen in 10 Minuten."
+      - alert: NordWindsVerbindungspoolAusgelastet
+        expr: rate(nordwinds_db_pool_wait_duration_seconds_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Anfragen warten auf freie Datenbankverbindungen"
+          description: "Die API wartet im Mittel {{ $value | humanizeDuration }} pro Sekunde auf Verbindungen aus dem Pool."
+      - alert: NordWindsPostgresVerbindungenKnapp
+        expr: |
+          sum by (instance) (pg_stat_activity_count)
+          / on (instance)
+          max by (instance) (pg_settings_max_connections) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Über 80 % der PostgreSQL-Verbindungen belegt"
+          description: "Auslastung {{ $value | humanizePercentage }} von max_connections."
+      - alert: NordWindsPostgresDeadlocks
+        expr: increase(pg_stat_database_deadlocks{datname!~"template0|template1|postgres"}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Deadlocks in {{ $labels.datname }}"
+          description: "PostgreSQL hat in 15 Minuten {{ $value | printf \"%.0f\" }} Deadlock(s) aufgelöst."
+      - alert: NordWindsLangeTransaktion
+        expr: max by (datname) (pg_stat_activity_max_tx_duration{datname!~"template0|template1|postgres"}) > 300
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transaktion in {{ $labels.datname }} läuft über 5 Minuten"
+          description: "Lange Transaktionen halten Sperren und blockieren VACUUM. Mit pg_stat_activity die Sitzung finden."
+
+  - name: nordwinds-geschaeft
+    rules:
+      - alert: NordWindsEmailEndgueltigFehlgeschlagen
+        expr: nordwinds_notification_outbox_entries{state="failed"} > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "E-Mails konnten nicht zugestellt werden"
+          description: "{{ $value | printf \"%.0f\" }} E-Mail(s) sind nach allen Versuchen fehlgeschlagen. Unter GET /api/v1/admin/notifications?state=failed prüfen und mit POST …/retry erneut anstoßen."
+      - alert: NordWindsEmailStau
+        expr: nordwinds_notification_outbox_oldest_pending_age_seconds > 900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "E-Mails warten auf den Versand"
+          description: "Die älteste E-Mail wartet seit {{ $value | humanizeDuration }}. SMTP-Server (lokal Mailpit) und Protokollereignis notification.delivery prüfen."
+      - alert: NordWindsReservierungenUeberfaellig
+        expr: nordwinds_inventory_reservations_overdue > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Abgelaufene Bestandsreservierungen werden nicht freigegeben"
+          description: "{{ $value | printf \"%.0f\" }} Reservierung(en) sind seit über 5 Minuten abgelaufen und noch aktiv."
+      - alert: NordWindsZahlungsfehler
+        expr: increase(nordwinds_mock_payment_errors_total[10m]) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mehrere abgelehnte Zahlungsereignisse"
+          description: "{{ $value | printf \"%.0f\" }} ungültige oder fehlgeschlagene Ereignisse der simulierten Zahlung in 10 Minuten (z. B. falsche Signatur)."
+      - alert: NordWindsArtikelAusverkauft
+        expr: nordwinds_catalog_variants_out_of_stock > 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Ausverkaufte Artikel im Katalog"
+          description: "{{ $value | printf \"%.0f\" }} aktive Variante(n) veröffentlichter Produkte haben keinen Bestand."
+
+  - name: nordwinds-sicherheit
+    rules:
+      - alert: NordWindsVieleFehlgeschlageneAnmeldungen
+        expr: sum(increase(nordwinds_auth_attempts_total{action="login", result=~"invalid_credentials|rate_limited"}[10m])) > 30
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele fehlgeschlagene Anmeldungen"
+          description: "{{ $value | printf \"%.0f\" }} Fehlversuche oder Sperren in 10 Minuten – möglicher Passwort-Rateangriff. Herkunft im Access-Log über die Route /api/v1/auth/login prüfen."
+
+  - name: nordwinds-laufzeit
+    rules:
+      - alert: NordWindsApiSpeicherHoch
+        expr: process_resident_memory_bytes{job="nordwinds-api"} > 512 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API belegt mehr als 512 MiB Arbeitsspeicher"
+          description: "Aktuell {{ $value | humanize1024 }}B. Dauerhaftes Wachstum deutet auf ein Speicherleck hin."
+      - alert: NordWindsApiGoroutinenHoch
+        expr: go_goroutines{job="nordwinds-api"} > 2000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele Goroutinen in der API"
+          description: "{{ $value | printf \"%.0f\" }} Goroutinen seit 15 Minuten."
+      - alert: NordWindsApiDateideskriptorenKnapp
+        expr: process_open_fds{job="nordwinds-api"} / process_max_fds{job="nordwinds-api"} > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API nutzt über 80 % der erlaubten Dateideskriptoren"
+          description: "Auslastung {{ $value | humanizePercentage }}."
+
+  - name: nordwinds-monitoring
+    rules:
+      - alert: NordWindsMonitoringZertifikatLaeuftAb
+        expr: probe_ssl_earliest_cert_expiry{job="probe-prometheus-tls"} - time() < 14 * 86400
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS-Zertifikat von Prometheus läuft bald ab"
+          description: "Noch {{ $value | humanizeDuration }}. monitoring-init erneuert es beim nächsten „docker compose up -d“."
+      - alert: NordWindsRegelauswertungFehlerhaft
+        expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus kann Regeln nicht auswerten"
+          description: "Gruppe {{ $labels.rule_group }}: Fehler in den letzten 10 Minuten. Unter /rules prüfen."
