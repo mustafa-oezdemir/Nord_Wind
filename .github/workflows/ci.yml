@@ -96,10 +96,9 @@ jobs:
         run: docker compose -f compose.yaml config --quiet
 
       - name: Monitoring-Konfiguration prüfen
-        env:
-          POSTGRES_PASSWORD: ci-only-dummy-password
         run: |
-          docker compose -f compose.yaml --profile monitoring config --quiet
+          # Nur für die Syntaxprüfung; zur Laufzeit erzeugt, damit kein Passwortwert im Repository steht.
+          POSTGRES_PASSWORD="$(openssl rand -hex 24)" docker compose -f compose.yaml --profile monitoring config --quiet
           docker run --rm --entrypoint /bin/sh \
             -v "$PWD/ops/monitoring/prometheus:/etc/prometheus:ro" prom/prometheus:v3.13.4 \
             -c 'promtool check config --syntax-only /etc/prometheus/prometheus.yml && promtool check rules /etc/prometheus/rules/*.yml'
