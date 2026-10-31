@@ -1,0 +1,29 @@
+{{.ShopName}}
+{{if .Preview}}
+Vorschau: Dieser Shop ist im Testbetrieb. Es werden keine echten Zahlungen verarbeitet und keine Waren versendet.
+{{end}}
+{{.Heading}}
+{{if .Greeting}}
+{{.Greeting}}
+{{end}}{{range .Paragraphs}}
+{{.}}
+{{end}}{{if .Facts}}
+{{range .Facts}}{{.Label}}: {{.Value}}
+{{end}}{{end}}{{if .Items}}
+Artikel
+{{range .Items}}- {{.Quantity}} × {{.Name}} ({{.Detail}}): {{.Total}}
+{{end}}{{end}}{{if .Totals}}
+{{range .Totals}}{{.Label}}: {{.Value}}
+{{end}}{{end}}{{if .Address}}
+Liefer- und Rechnungsadresse
+{{range .Address}}{{.}}
+{{end}}{{end}}{{with .Action}}
+{{.Label}}: {{.URL}}
+{{end}}{{range .Notes}}
+{{.}}
+{{end}}
+--
+{{.ShopName}} – Onlineshop für Deutschland
+Impressum: {{.ImprintURL}}
+Datenschutz: {{.PrivacyURL}}
+Diese E-Mail wurde automatisch erstellt, weil sie zu Ihrem Kundenkonto oder Ihrer Bestellung gehört.{{if .NoReply}} Antworten an diese Adresse werden nicht gelesen.{{end}}

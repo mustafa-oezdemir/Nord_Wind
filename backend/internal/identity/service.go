@@ -21,6 +21,19 @@ var (
 type Service struct {
 	repository *Repository
 	dummyHash  string
+	security   SecurityNotifier
+	onNotify   func(error)
+}
+
+// SecurityNotifier meldet sicherheitsrelevante Kontoereignisse per E-Mail (ADR-011).
+type SecurityNotifier interface {
+	EnqueueLoginLocked(ctx context.Context, email string, rateLimitKey []byte) error
+}
+
+// SetSecurityNotifier aktiviert den Hinweis bei gesperrten Anmeldeversuchen. Fehler beim
+// Einreihen gehen an onError und ändern die Anmeldeantwort nicht.
+func (s *Service) SetSecurityNotifier(notifier SecurityNotifier, onError func(error)) {
+	s.security, s.onNotify = notifier, onError
 }
 
 func NewService(repository *Repository) (*Service, error) {
@@ -90,6 +103,13 @@ func (s *Service) Login(ctx context.Context, rawEmail, password, source, oldToke
 		return Customer{}, "", Session{}, err
 	}
 	if accountAttempts > 5 || sourceAttempts > 100 {
+		// Genau beim ersten gesperrten Versuch eines Fensters; die Antwort bleibt gleich,
+		// ob das Konto existiert oder nicht.
+		if accountAttempts == 6 && s.security != nil {
+			if err := s.security.EnqueueLoginLocked(ctx, email, accountKey[:]); err != nil && s.onNotify != nil {
+				s.onNotify(err)
+			}
+		}
 		return Customer{}, "", Session{}, ErrRateLimited
 	}
 	customer, storedHash, err := s.repository.CustomerByEmail(ctx, email)

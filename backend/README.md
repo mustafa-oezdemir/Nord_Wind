@@ -58,7 +58,15 @@ Für HTTPS-Umgebungen muss `APP_PUBLIC_ORIGIN` auf den exakten öffentlichen Ori
 
 Der Authentifizierungs-Integrationstest benötigt `NORDWINDS_AUTH_TEST_URL` für eine **separate** zunächst leere PostgreSQL-Datenbank mit Namen `nordwinds_test_*`. Er prüft Registrierung, falsche Passwörter, CSRF, Session-Fixation und -Ablauf, Rate-Limit, Rollenwechsel und Redaction. Ohne die Variable wird nur dieser Test übersprungen. Bei einem parallelen Gesamtlauf benötigt jeder PostgreSQL-Integrationstest eine eigene Datenbank.
 
-Im lokalen Compose-Betrieb sendet die API nach erfolgreicher Registrierung eine Begrüßungsnachricht an MailHog (`SMTP_HOST=mailhog`, `SMTP_PORT=1025`). Die Nachricht enthält kein Passwort. Ein SMTP-Fehler wird ohne E-Mail-Adresse protokolliert und macht ein bereits erstelltes Konto nicht rückgängig. Außerhalb von `APP_ENV=development` ist dieser lokale Versand deaktiviert; für echte Zustellung ist ein gesonderter Maildienst erforderlich.
+E-Mails laufen über eine Transactional Outbox (Migration 15, [ADR-011](../docs/adr/ADR-011-e-mail-benachrichtigungen.md)):
+
+- Trigger reihen Registrierung, Kontoschließung, Bestellstatus und Erstattungen in derselben Transaktion ein; `identity.Service` meldet zusätzlich gesperrte Anmeldungen.
+- Der Dispatcher in der API versendet alle 5 Sekunden per SMTP, wiederholt Fehler mit Backoff und löscht gespeicherte Adressen nach dem Versand.
+- Lokal zeigt Mailpit die Nachrichten unter `http://127.0.0.1:8025`.
+- Ohne `MAIL_TRANSPORT=smtp` bleibt der Versand aus, und die Einträge warten in der Outbox.
+- In der Produktion verweigert die API den Start mit Testpostfach, Klartext-SMTP oder fehlenden Zugangsdaten.
+- `GET /api/v1/admin/notifications` und `POST /api/v1/admin/notifications/{id}/retry` zeigen Zustände ohne Adressen und planen Fehlschläge neu ein.
+- Die PostgreSQL-Tests verwenden `NORDWINDS_NOTIFICATION_TEST_URL` und `NORDWINDS_NOTIFICATION_FLOW_TEST_URL`.
 
 Login- und Registrierungsversuche werden für 15 Minuten datenbankgestützt begrenzt. Im Compose-Stack setzt ausschließlich Caddy den Header `X-Nordwinds-Client-IP` auf die TCP-Quelladresse; die API berücksichtigt ihn nur mit `NORDWINDS_TRUST_PROXY_CLIENT_IP=true`. Bei direktem API-Betrieb muss die Option deaktiviert bleiben, bis ein entsprechend vertrauenswürdiger Proxy vorgeschaltet ist. Die HTTP-Oberfläche setzt pro HTML-Antwort einen neuen CSP-Nonce; die Prüfung dazu ist Teil des Smoke-Tests.
 
