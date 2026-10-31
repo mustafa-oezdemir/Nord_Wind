@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { Observable, switchMap, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, catchError, switchMap, tap, throwError } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config/api-config';
 
 export interface CartItem {
@@ -85,11 +85,17 @@ export class CartApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private csrfToken = '';
+  private readonly sessionState = signal<CustomerSession | null | undefined>(undefined);
+  readonly activeSession = this.sessionState.asReadonly();
 
   session(): Observable<CustomerSession> {
-    return this.http
-      .get<CustomerSession>(`${this.base}/auth/session`)
-      .pipe(tap((value) => (this.csrfToken = value.csrf_token)));
+    return this.http.get<CustomerSession>(`${this.base}/auth/session`).pipe(
+      tap((value) => this.rememberSession(value)),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 401) this.clearSession();
+        return throwError(() => error);
+      }),
+    );
   }
 
   register(email: string, password: string): Observable<unknown> {
@@ -99,13 +105,18 @@ export class CartApi {
   login(email: string, password: string): Observable<CustomerSession> {
     return this.http
       .post<CustomerSession>(`${this.base}/auth/login`, { email, password })
-      .pipe(tap((value) => (this.csrfToken = value.csrf_token)));
+      .pipe(tap((value) => this.rememberSession(value)));
   }
 
   logout(): Observable<void> {
     return this.http
       .post<void>(`${this.base}/auth/logout`, {}, { headers: this.headers() })
-      .pipe(tap(() => (this.csrfToken = '')));
+      .pipe(tap(() => this.clearSession()));
+  }
+
+  clearSession(): void {
+    this.csrfToken = '';
+    this.sessionState.set(null);
   }
 
   get(): Observable<CartSnapshot> {
@@ -154,5 +165,10 @@ export class CartApi {
 
   private headers(): HttpHeaders {
     return new HttpHeaders({ 'X-CSRF-Token': this.csrfToken });
+  }
+
+  private rememberSession(value: CustomerSession): void {
+    this.csrfToken = value.csrf_token;
+    this.sessionState.set(value);
   }
 }

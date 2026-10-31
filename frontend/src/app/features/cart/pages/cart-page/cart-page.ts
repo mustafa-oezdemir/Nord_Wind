@@ -9,8 +9,9 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import {
@@ -30,6 +31,7 @@ import { PriceSummary } from '../../ui/price-summary/price-summary';
 })
 export class CartPage implements OnInit, OnDestroy {
   private readonly api = inject(CartApi);
+  private readonly route = inject(ActivatedRoute);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('cartHeading');
 
   protected readonly session = signal<CustomerSession | null>(null);
@@ -63,6 +65,12 @@ export class CartPage implements OnInit, OnDestroy {
   protected revealPassword = false;
   protected generatedPassword = false;
   protected registerMode = false;
+
+  constructor() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe((params) => (this.registerMode = params.get('anmeldung') === 'registrieren'));
+  }
 
   async ngOnInit(): Promise<void> {
     try {

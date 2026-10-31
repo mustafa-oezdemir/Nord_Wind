@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, switchMap, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/config/api-config';
 import { CartApi } from '../cart/data-access/cart-api';
 import { Order, OrderAddress } from '../checkout/data-access/orders-api';
@@ -65,6 +65,7 @@ export class AccountApi {
           headers: new HttpHeaders({ 'X-CSRF-Token': session.csrf_token }),
         }),
       ),
+      tap(() => this.cart.clearSession()),
     );
   }
 }

@@ -4,6 +4,7 @@
       #menuButton
       class="btn menu-button d-lg-none"
       type="button"
+      aria-label="Menü"
       aria-controls="mobiles-menue"
       aria-haspopup="dialog"
       [attr.aria-expanded]="menuOpen()"
@@ -18,7 +19,93 @@
       <app-brand-logo />
     </a>
     <app-search-form class="site-header-search" />
-    <a class="btn btn-outline-primary btn-sm site-header-cart" routerLink="/warenkorb">Warenkorb</a>
-    <a class="btn btn-outline-primary btn-sm site-header-account" routerLink="/konto">Konto</a>
+    <a
+      class="site-header-action site-header-cart"
+      routerLink="/warenkorb"
+      aria-label="Warenkorb öffnen"
+      title="Warenkorb"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5M3.14 5l.5 2H5V5zM6 5v2h2V5zm3 0v2h2V5zm3 0v2h1.36l.5-2zm1.11 3H12v2h.61zM11 8H9v2h2zM8 8H6v2h2zM5 8H3.89l.5 2H5zm0 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0m9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0"
+        />
+      </svg>
+    </a>
+    <div #accountMenuRoot class="site-header-account-wrap">
+      <button
+        #accountButton
+        class="site-header-action site-header-account"
+        type="button"
+        aria-label="Konto"
+        [attr.aria-controls]="accountOpen() ? 'site-account-menu' : null"
+        [attr.aria-expanded]="accountOpen()"
+        (click)="toggleAccountMenu()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 20c.5-3.5 3-5.5 7-5.5s6.5 2 7 5.5" />
+        </svg>
+        <span class="site-header-account-label">Konto</span>
+      </button>
+      @if (accountOpen()) {
+        <nav id="site-account-menu" class="site-header-dropdown" aria-label="Kontomenü">
+          @if (session() === undefined) {
+            @if (error()) {
+              <p class="site-header-dropdown-message" role="alert">{{ error() }}</p>
+              <button class="site-header-dropdown-link" type="button" (click)="loadSession()">
+                Erneut versuchen
+              </button>
+            } @else {
+              <p class="site-header-dropdown-message" role="status">Konto wird geladen …</p>
+            }
+          } @else if (session()) {
+            <p class="site-header-dropdown-email">{{ session()!.customer.email }}</p>
+            @if (session()!.customer.role === 'customer') {
+              <a class="site-header-dropdown-link" routerLink="/konto" (click)="closeAccountMenu()">
+                Mein Konto
+              </a>
+            } @else {
+              <a class="site-header-dropdown-link" routerLink="/admin" (click)="closeAccountMenu()">
+                Verwaltung
+              </a>
+            }
+            <button
+              class="site-header-dropdown-link"
+              type="button"
+              [disabled]="busy()"
+              (click)="logout()"
+            >
+              {{ busy() ? 'Abmelden …' : 'Abmelden' }}
+            </button>
+            @if (error()) {
+              <p class="site-header-dropdown-message" role="alert">{{ error() }}</p>
+            }
+          } @else {
+            <a
+              class="site-header-dropdown-link"
+              routerLink="/warenkorb"
+              [queryParams]="{ anmeldung: 'login' }"
+              (click)="closeAccountMenu()"
+            >
+              Anmelden
+            </a>
+            <a
+              class="site-header-dropdown-link"
+              routerLink="/warenkorb"
+              [queryParams]="{ anmeldung: 'registrieren' }"
+              (click)="closeAccountMenu()"
+            >
+              Registrieren
+            </a>
+          }
+        </nav>
+      }
+    </div>
   </div>
 </header>
