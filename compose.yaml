@@ -49,14 +49,23 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
+  # Lokales Testpostfach (ADR-011): fängt alle E-Mails ab, stellt nichts zu.
+  # Die Oberfläche ist nur über 127.0.0.1 erreichbar, SMTP nur im Compose-Netz.
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    environment:
+      MP_MAX_MESSAGES: "500"
     ports:
-      - "127.0.0.1:${HOST_MAILHOG_PORT:-8025}:8025"
+      - "127.0.0.1:${HOST_MAILPIT_PORT:-8025}:8025"
     expose:
       - "1025"
     networks:
       - public
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
 
@@ -105,13 +114,20 @@ services:
       NORDWINDS_METRICS_TOKEN: ${NORDWINDS_METRICS_TOKEN:-}
       NORDWINDS_MOCK_WEBHOOK_SECRET: ${NORDWINDS_MOCK_WEBHOOK_SECRET:-}
       API_HTTP_PORT: ${API_HTTP_PORT:-8080}
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
+      # Lokal und im Staging nur Mailpit; für echte Zustellung siehe README „E-Mail“.
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_TLS: ${SMTP_TLS:-none}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-NordWinds <no-reply@nordwinds.local>}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
-      mailhog:
-        condition: service_started
+      mailpit:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${API_HTTP_PORT:-8080}/health/ready"]
       interval: 5s

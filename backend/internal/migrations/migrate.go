@@ -10,7 +10,7 @@ import (
 //go:embed sql/*.sql
 var files embed.FS
 
-var migrationNames = []string{"bootstrap", "domain_foundation", "catalog_search", "identity", "admin_audit", "product_images", "cart", "pricing", "orders", "inventory_reservations", "mock_payments", "shipping", "account", "employee_role"}
+var migrationNames = []string{"bootstrap", "domain_foundation", "catalog_search", "identity", "admin_audit", "product_images", "cart", "pricing", "orders", "inventory_reservations", "mock_payments", "shipping", "account", "employee_role", "notifications"}
 
 const migrationLockID = 703001
 

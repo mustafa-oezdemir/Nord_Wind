@@ -90,15 +90,21 @@ func main() {
 		PublicOrigin: publicOrigin, SecureCookie: appEnv != "development", Logger: logger,
 		TrustedProxyClientIP: os.Getenv("NORDWINDS_TRUST_PROXY_CLIENT_IP") == "true",
 	}
-	if appEnv == "development" {
-		if host := os.Getenv("SMTP_HOST"); host != "" {
-			port := os.Getenv("SMTP_PORT")
-			if port == "" {
-				port = "1025"
-			}
-			authConfig.RegistrationNotifier = notification.SMTP{Address: net.JoinHostPort(host, port), From: "no-reply@nordwinds.local"}
-		}
+	// E-Mails laufen über die Outbox (ADR-011); Trigger reihen Registrierung, Bestellung,
+	// Zahlung, Versand und Kontoschließung ein, der Dispatcher unten versendet sie.
+	mailOrigin := publicOrigin
+	if mailOrigin == "" && appEnv == "development" {
+		mailOrigin = "http://localhost:8080"
 	}
+	mailConfig, err := notification.ConfigFromEnv(os.Getenv, appEnv, mailOrigin)
+	if err != nil {
+		logger.Error("E-Mail-Konfiguration ungültig", "event", "config.invalid", "reason", err.Error())
+		os.Exit(1)
+	}
+	notificationStore := notification.NewStore(connection.SQL)
+	identityService.SetSecurityNotifier(notificationStore, func(error) {
+		logger.Error("Sicherheitshinweis konnte nicht eingereiht werden", "event", "notification.enqueue.failed")
+	})
 	authHandler := server.RegisterAuthRoutes(router, identityService, authConfig)
 	server.RegisterAdminRoutes(router, authHandler, catalog.NewAdminRepository(connection.SQL))
 	server.RegisterMediaRoutes(router, catalog.NewRepository(connection.SQL))
@@ -110,6 +116,7 @@ func main() {
 		demoCheckoutEnabled(appEnv, os.Getenv("NORDWINDS_DEMO_CHECKOUT_ENABLED")))
 	server.RegisterAdminOrderRoutes(router, authHandler, orderRepository, logger)
 	server.RegisterAccountRoutes(router, authHandler, orderRepository)
+	server.RegisterAdminNotificationRoutes(router, authHandler, notificationStore, logger)
 	mockPayments := payment.NewRepository(connection.SQL)
 	if appEnv == "development" {
 		secret := make([]byte, 32)
@@ -164,6 +171,19 @@ func main() {
 			}
 		}
 	}()
+	if mailConfig.Enabled {
+		dispatcher := notification.NewDispatcher(notificationStore, orderRepository,
+			notification.NewSMTPTransport(mailConfig), mailConfig, logger)
+		go dispatcher.Run(ctx, 5*time.Second)
+		logger.Info("E-Mail-Versand aktiv", "event", "notification.started", "smtp_host", mailConfig.Host,
+			"smtp_tls", string(mailConfig.TLS), "capture", notification.IsCaptureHost(mailConfig.Host))
+	} else {
+		level := slog.LevelInfo
+		if appEnv == "production" {
+			level = slog.LevelWarn
+		}
+		logger.Log(ctx, level, "E-Mail-Versand deaktiviert; Benachrichtigungen bleiben in der Outbox", "event", "notification.disabled")
+	}
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- httpServer.Serve(listener) }()
 	logger.Info("API gestartet", "event", "app.started", "port", port)

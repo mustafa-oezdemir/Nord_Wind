@@ -540,6 +540,80 @@ paths:
         '403': { $ref: '#/components/responses/AuthProblem' }
         '404': { $ref: '#/components/responses/AdminNotFound' }
         '409': { $ref: '#/components/responses/AdminConflict' }
+  /api/v1/admin/notifications:
+    get:
+      summary: E-Mail-Outbox einsehen
+      description: >-
+        Zustand der transaktionalen E-Mails (ADR-011) ohne Empfängeradressen und ohne Inhalte.
+        `counts` nennt die Anzahl je Zustand; `failed` zeigt endgültig fehlgeschlagene Zustellungen.
+      operationId: listAdminNotifications
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema: { type: string, enum: [pending, sending, sent, failed, skipped] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Einträge, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, counts]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, kind, state, order_number, attempts, last_error, next_attempt_at, created_at, sent_at]
+                      properties:
+                        id: { type: integer, format: int64 }
+                        kind:
+                          type: string
+                          enum: [account.welcome, account.closed, security.login_locked, order.created, order.paid,
+                            order.payment_failed, order.processing, order.shipped, order.delivered, order.cancelled, order.refunded]
+                        state: { type: string, enum: [pending, sending, sent, failed, skipped] }
+                        order_number: { type: string, nullable: true }
+                        attempts: { type: integer }
+                        last_error:
+                          type: string
+                          nullable: true
+                          enum: [connect, tls, auth, timeout, rejected_temporary, rejected_permanent, render, recipient_unavailable, unknown]
+                        next_attempt_at: { type: string, format: date-time }
+                        created_at: { type: string, format: date-time }
+                        sent_at: { type: string, format: date-time, nullable: true }
+                  counts:
+                    type: object
+                    additionalProperties: { type: integer, format: int64 }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+  /api/v1/admin/notifications/{id}/retry:
+    post:
+      summary: Fehlgeschlagene E-Mail erneut einplanen
+      description: >-
+        Setzt eine fehlgeschlagene Benachrichtigung auf fällig und den Versuchszähler zurück.
+        Bestätigungen einer Kontoschließung sind ausgenommen, weil ihre Adresse bereits gelöscht ist (409).
+      operationId: retryAdminNotification
+      security: [{ SessionCookie: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/CSRFToken' }
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '204': { description: Erneut eingeplant. }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/AuthProblem' }
+        '403': { $ref: '#/components/responses/AuthProblem' }
+        '404': { $ref: '#/components/responses/AdminNotFound' }
+        '409': { $ref: '#/components/responses/AdminConflict' }
   /api/v1/admin/orders:
     get:
       summary: Bestellungen für Admins und Mitarbeiter auflisten

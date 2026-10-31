@@ -107,6 +107,22 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		assertSQLState(t, ctx, db, query, code, customerID)
 	}
 	mustExec(t, ctx, db, `INSERT INTO order_status_events (order_id, to_status, actor) VALUES ($1, 'CREATED', 'customer')`, orderID)
+
+	// Version 15: Trigger reihen Benachrichtigungen in derselben Transaktion ein (ADR-011).
+	var queued string
+	if err := db.QueryRowContext(ctx, `SELECT string_agg(kind, ',' ORDER BY kind) FROM notification_outbox`).Scan(&queued); err != nil ||
+		queued != "account.welcome,order.created" {
+		t.Fatalf("Outbox nach Registrierung und Bestellung: %q, %v", queued, err)
+	}
+	assertSQLState(t, ctx, db, `INSERT INTO notification_outbox (kind, dedupe_key) VALUES ('marketing.newsletter', 'werbung-0001')`, "23514")
+	assertSQLState(t, ctx, db, `INSERT INTO notification_outbox (kind, dedupe_key) VALUES ('order.paid', 'ohne-bestellnummer')`, "23514")
+	if err := Down(ctx, db); err == nil {
+		t.Fatal("Benachrichtigungs-Down darf eingereihte E-Mails nicht verwerfen")
+	}
+	mustExec(t, ctx, db, `TRUNCATE notification_outbox`)
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 15 mit Domain-Daten: %v", err)
+	}
 	mustExec(t, ctx, db, `UPDATE customers SET role = 'employee' WHERE id = $1`, customerID)
 	if err := Down(ctx, db); err == nil {
 		t.Fatal("Mitarbeiter-Down darf bestehende Mitarbeiterkonten nicht entfernen")
@@ -210,6 +226,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		mustExec(t, ctx, db, "DELETE FROM "+table)
 	}
 	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 15: %v", err)
+	}
+	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 14: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
@@ -258,6 +277,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 		t.Fatalf("Status nach Up/Down/Up: %v", err)
 	}
 
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 15 vor Bootstrap-Test: %v", err)
+	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 14 vor Bootstrap-Test: %v", err)
 	}
@@ -321,6 +343,9 @@ func TestUpDownUpOnIsolatedPostgres(t *testing.T) {
 	var legacyValue string
 	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'legacy'`).Scan(&legacyValue); err != nil || legacyValue != "bleibt" {
 		t.Fatalf("Bestehender Wert ging beim Upgrade verloren: %q, %v", legacyValue, err)
+	}
+	if err := Down(ctx, db); err != nil {
+		t.Fatalf("Down von Version 15 mit bestehendem app_settings: %v", err)
 	}
 	if err := Down(ctx, db); err != nil {
 		t.Fatalf("Down von Version 14 mit bestehendem app_settings: %v", err)

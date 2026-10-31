@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{{.Subject}}</title>
+<style>
+  body { margin: 0; padding: 0; }
+  a { color: #126b82; }
+  @media (max-width: 620px) {
+    .nw-card { padding: 24px 20px !important; }
+    .nw-heading { font-size: 24px !important; line-height: 30px !important; }
+    .nw-button { width: 100% !important; }
+    .nw-button a { display: block !important; text-align: center !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#eef4f6;color:#102b44;font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#eef4f6;">{{.Preheader}}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef4f6;">
+<tr><td align="center" style="padding:24px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+    <tr><td style="background-color:#102b44;border-radius:12px 12px 0 0;border-bottom:4px solid #f0b33c;padding:20px 32px;">
+      <a href="{{.Origin}}" style="color:#ffffff;text-decoration:none;font-size:22px;font-weight:700;letter-spacing:-0.2px;">{{.ShopName}}</a>
+    </td></tr>
+    {{- if .Preview}}
+    <tr><td style="background-color:#fbe8c2;padding:10px 32px;font-size:13px;line-height:19px;color:#102b44;">
+      Vorschau: Dieser Shop ist im Testbetrieb. Es werden keine echten Zahlungen verarbeitet und keine Waren versendet.
+    </td></tr>
+    {{- end}}
+    <tr><td class="nw-card" style="background-color:#ffffff;border-radius:0 0 12px 12px;padding:32px;">
+      <h1 class="nw-heading" style="margin:0 0 16px;font-size:28px;line-height:34px;font-weight:700;color:#102b44;">{{.Heading}}</h1>
+      {{- if .Greeting}}<p style="margin:0 0 12px;font-size:16px;line-height:24px;">{{.Greeting}}</p>{{end}}
+      {{- range .Paragraphs}}
+      <p style="margin:0 0 12px;font-size:16px;line-height:24px;">{{.}}</p>
+      {{- end}}
+
+      {{- if .Facts}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;background-color:#eef4f6;border-radius:8px;">
+        {{- range .Facts}}
+        <tr>
+          <td style="padding:10px 16px;font-size:14px;line-height:20px;color:#4c6172;">{{.Label}}</td>
+          <td align="right" style="padding:10px 16px;font-size:15px;line-height:20px;color:#102b44;{{if .Strong}}font-weight:700;{{end}}">{{.Value}}</td>
+        </tr>
+        {{- end}}
+      </table>
+      {{- end}}
+
+      {{- if .Items}}
+      <h2 style="margin:24px 0 8px;font-size:18px;line-height:24px;color:#102b44;">Artikel</h2>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        {{- range .Items}}
+        <tr>
+          <td valign="top" style="padding:10px 0;border-bottom:1px solid #d3e0e6;font-size:15px;line-height:21px;width:44px;color:#4c6172;">{{.Quantity}}×</td>
+          <td valign="top" style="padding:10px 8px;border-bottom:1px solid #d3e0e6;font-size:15px;line-height:21px;">{{.Name}}<br><span style="font-size:13px;color:#4c6172;">{{.Detail}}</span></td>
+          <td valign="top" align="right" style="padding:10px 0;border-bottom:1px solid #d3e0e6;font-size:15px;line-height:21px;white-space:nowrap;">{{.Total}}</td>
+        </tr>
+        {{- end}}
+      </table>
+      {{- end}}
+
+      {{- if .Totals}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:12px 0 0;">
+        {{- range .Totals}}
+        <tr>
+          <td style="padding:4px 0;font-size:{{if .Strong}}18px{{else}}14px{{end}};line-height:24px;{{if .Strong}}font-weight:700;color:#102b44;border-top:1px solid #d3e0e6;padding-top:10px;{{else}}color:#4c6172;{{end}}">{{.Label}}</td>
+          <td align="right" style="padding:4px 0;font-size:{{if .Strong}}18px{{else}}14px{{end}};line-height:24px;white-space:nowrap;{{if .Strong}}font-weight:700;color:#102b44;border-top:1px solid #d3e0e6;padding-top:10px;{{else}}color:#4c6172;{{end}}">{{.Value}}</td>
+        </tr>
+        {{- end}}
+      </table>
+      {{- end}}
+
+      {{- if .Address}}
+      <h2 style="margin:24px 0 8px;font-size:18px;line-height:24px;color:#102b44;">Liefer- und Rechnungsadresse</h2>
+      <p style="margin:0;font-size:15px;line-height:22px;">{{range $index, $line := .Address}}{{if $index}}<br>{{end}}{{$line}}{{end}}</p>
+      {{- end}}
+
+      {{- with .Action}}
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="nw-button" style="margin:28px 0 8px;">
+        <tr><td style="border-radius:6px;background-color:#126b82;">
+          <a href="{{.URL}}" style="display:inline-block;padding:14px 28px;font-size:16px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:6px;">{{.Label}}</a>
+        </td></tr>
+      </table>
+      <p style="margin:0 0 4px;font-size:13px;line-height:19px;color:#4c6172;">Falls der Knopf nicht funktioniert: <a href="{{.URL}}" style="color:#126b82;word-break:break-all;">{{.URL}}</a></p>
+      {{- end}}
+
+      {{- range .Notes}}
+      <p style="margin:16px 0 0;font-size:13px;line-height:19px;color:#4c6172;">{{.}}</p>
+      {{- end}}
+    </td></tr>
+    <tr><td style="padding:20px 32px;font-size:12px;line-height:18px;color:#4c6172;">
+      {{.ShopName}} – Onlineshop für Deutschland<br>
+      <a href="{{.ImprintURL}}" style="color:#4c6172;">Impressum</a> &nbsp;|&nbsp; <a href="{{.PrivacyURL}}" style="color:#4c6172;">Datenschutz</a><br>
+      Diese E-Mail wurde automatisch erstellt, weil sie zu Ihrem Kundenkonto oder Ihrer Bestellung gehört.{{if .NoReply}} Antworten an diese Adresse werden nicht gelesen.{{end}}<br>
+      © {{.CurrentYear}} {{.ShopName}}
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>
