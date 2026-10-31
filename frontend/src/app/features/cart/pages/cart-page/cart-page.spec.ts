@@ -190,6 +190,20 @@ describe('CartPage', () => {
     expect(text(element, 'cart-total')).toBe('44,90 €');
   });
 
+  it('setzt den Fokus nach dem Abmelden auf die Warenkorb-Überschrift', async () => {
+    const element = await render(EMPTY_CART);
+    const logout = Array.from(element.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Abmelden'),
+    )!;
+    logout.focus();
+    logout.click();
+    http.expectOne('/api/v1/auth/logout').flush(null);
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(document.activeElement).toBe(element.querySelector('h1'));
+  });
+
   it('erzeugt ein Passwort für beide Registrierungsfelder und blockiert Abweichungen', async () => {
     const fixture = TestBed.createComponent(CartPage);
     fixture.detectChanges();
@@ -260,6 +274,8 @@ describe('CartPage', () => {
     await Promise.resolve();
     http.expectOne('/api/v1/cart').flush({ items: [], subtotal_cents: 0, currency: 'EUR' });
     await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement).toBe(root.querySelector('h1'));
     http.verify();
   });
 });

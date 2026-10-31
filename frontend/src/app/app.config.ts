@@ -17,6 +17,7 @@ import { routes } from './app.routes';
 import { API_BASE_URL } from './core/config/api-config';
 import { apiInterceptor } from './core/http/api-interceptor';
 import { PageTitleStrategy } from './core/routing/page-title-strategy';
+import { provideClientHydration } from '@angular/platform-browser';
 
 registerLocaleData(localeDe);
 
@@ -34,5 +35,6 @@ export const appConfig: ApplicationConfig = {
     // Same-Origin über Caddy; lokal leitet proxy.conf.json `/api` an den Compose-Stack weiter.
     { provide: API_BASE_URL, useValue: '/api/v1' },
     { provide: TitleStrategy, useClass: PageTitleStrategy },
+    provideClientHydration(),
   ],
 };

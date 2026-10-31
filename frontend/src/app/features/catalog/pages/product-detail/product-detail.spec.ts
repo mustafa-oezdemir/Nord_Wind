@@ -79,6 +79,10 @@ describe('ProductDetailPage', () => {
     expect(TestBed.inject(Meta).getTag('name="description"')?.content).toBe(
       'Für Herd und Backofen.',
     );
+    expect(document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe(
+      `${document.location.origin}/produkte/gusseisenpfanne`,
+    );
+    expect(TestBed.inject(Meta).getTag('property="og:title"')?.content).toBe('Gusseisenpfanne');
   });
 
   it('zeigt für jede gewählte Variante den Preis und Bestand der API und hält die Wahl in der URL fest', async () => {
@@ -99,6 +103,9 @@ describe('ProductDetailPage', () => {
       expect(sku()).toBe(variantSku);
       expect(TestBed.inject(Location).path()).toBe(
         `/produkte/gusseisenpfanne?variante=${variantSku}`,
+      );
+      expect(document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href).toBe(
+        `${document.location.origin}/produkte/gusseisenpfanne`,
       );
     }
   });
@@ -195,6 +202,8 @@ describe('ProductDetailPage', () => {
 
     expect(textOf(element.querySelector('h1'))).toBe('Produkt nicht gefunden');
     expect(TestBed.inject(Title).getTitle()).toBe('Produkt nicht gefunden | NordWinds');
+    expect(TestBed.inject(Meta).getTag('name="robots"')?.content).toBe('noindex');
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
   });
 
   it('zeigt bei Serverfehler eine Meldung und lädt nach „Erneut versuchen“ neu', async () => {

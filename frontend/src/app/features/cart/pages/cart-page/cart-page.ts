@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -21,6 +29,7 @@ import { PriceSummary } from '../../ui/price-summary/price-summary';
 })
 export class CartPage implements OnInit {
   private readonly api = inject(CartApi);
+  private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('cartHeading');
 
   protected readonly session = signal<CustomerSession | null>(null);
   protected readonly cart = signal<CartSnapshot>(EMPTY_CART);
@@ -64,6 +73,7 @@ export class CartPage implements OnInit {
       this.generatedPassword = false;
       this.session.set(session);
       if (session.customer.role === 'customer') await this.load();
+      setTimeout(() => this.heading()?.nativeElement.focus());
     });
   }
 
@@ -92,6 +102,7 @@ export class CartPage implements OnInit {
       await firstValueFrom(this.api.logout());
       this.session.set(null);
       this.setCart(EMPTY_CART);
+      setTimeout(() => this.heading()?.nativeElement.focus());
     });
   }
 

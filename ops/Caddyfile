@@ -11,8 +11,6 @@
 	}
 
 	handle {
-		root * /srv
-		try_files {path} /index.html
-		file_server
+		reverse_proxy ssr:{$SSR_HTTP_PORT}
 	}
 }

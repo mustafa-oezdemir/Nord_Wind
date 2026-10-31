@@ -1,5 +1,5 @@
 <div class="container py-4 py-lg-5 cart-page">
-  <h1>Warenkorb</h1>
+  <h1 #cartHeading tabindex="-1">Warenkorb</h1>
   <p class="text-secondary">Der Warenkorb bleibt in Ihrem Kundenkonto gespeichert.</p>
   @if (error()) {
     <div class="alert alert-danger" role="alert">{{ error() }}</div>

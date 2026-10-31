@@ -2,6 +2,8 @@ import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  RESPONSE_INIT,
   DestroyRef,
   computed,
   effect,
@@ -18,6 +20,7 @@ import { apiErrorMessage, toApiError } from '../../../../core/http/api-error';
 import { firstValueFrom } from 'rxjs';
 import { CartApi } from '../../../cart/data-access/cart-api';
 import { formatPageTitle } from '../../../../core/routing/page-title-strategy';
+import { PUBLIC_SITE_ORIGIN } from '../../../../core/config/site-origin';
 import { formatPercentBp } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
@@ -48,6 +51,9 @@ export class ProductDetailPage {
   private readonly location = inject(Location);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
+  private readonly document = inject(DOCUMENT);
+  private readonly publicOrigin = inject(PUBLIC_SITE_ORIGIN);
+  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
   private readonly cartApi = inject(CartApi);
 
   protected readonly cartBusy = signal(false);
@@ -115,15 +121,48 @@ export class ProductDetailPage {
     effect(() => {
       const detail = this.detail();
       if (this.notFound()) {
+        if (this.responseInit) this.responseInit.status = 404;
         this.title.setTitle(formatPageTitle('Produkt nicht gefunden'));
+        this.meta.updateTag({ name: 'robots', content: 'noindex' });
+        this.removeCanonical();
       } else if (detail) {
+        if (this.responseInit) this.responseInit.status = 200;
         this.title.setTitle(formatPageTitle(detail.name));
-        this.meta.updateTag({ name: 'description', content: metaDescription(detail) });
+        const description = metaDescription(detail);
+        const canonical = new URL(
+          `/produkte/${encodeURIComponent(detail.slug)}`,
+          this.publicOrigin,
+        );
+        this.meta.removeTag('name="robots"');
+        this.meta.updateTag({ name: 'description', content: description });
+        this.meta.updateTag({ property: 'og:type', content: 'product' });
+        this.meta.updateTag({ property: 'og:title', content: detail.name });
+        this.meta.updateTag({ property: 'og:description', content: description });
+        this.meta.updateTag({ property: 'og:url', content: canonical.href });
+        this.setCanonical(canonical.href);
       }
     });
-    inject(DestroyRef).onDestroy(() =>
-      this.meta.updateTag({ name: 'description', content: DEFAULT_DESCRIPTION }),
-    );
+    inject(DestroyRef).onDestroy(() => {
+      this.meta.updateTag({ name: 'description', content: DEFAULT_DESCRIPTION });
+      this.meta.removeTag('name="robots"');
+      for (const property of ['og:type', 'og:title', 'og:description', 'og:url']) {
+        this.meta.removeTag(`property="${property}"`);
+      }
+      this.removeCanonical();
+    });
+  }
+
+  private setCanonical(href: string): void {
+    const link =
+      this.document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]') ??
+      this.document.createElement('link');
+    link.rel = 'canonical';
+    link.href = href;
+    this.document.head.appendChild(link);
+  }
+
+  private removeCanonical(): void {
+    this.document.head.querySelector('link[rel="canonical"]')?.remove();
   }
 
   /** Auswahl in der URL festhalten, ohne neu zu navigieren oder nach oben zu springen. */

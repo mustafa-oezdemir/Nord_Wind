@@ -8,10 +8,10 @@ Dieses Repository enthält eine deutschsprachige Angular-Storefront, eine Go-API
 
 ## Geplante Architektur
 
-- Angular, TypeScript und Bootstrap für die Kundenoberfläche
+- Angular, TypeScript und Bootstrap für die Kundenoberfläche; Node rendert öffentliche Katalogseiten serverseitig
 - Go mit Gin-REST-API für die Serveranwendung
 - PostgreSQL für die dauerhafte Datenspeicherung
-- Docker Compose und Caddy für den lokalen Betrieb und die HTTP-Weiterleitung
+- Docker Compose und Caddy für den lokalen Betrieb und die HTTP-Weiterleitung an Go-API und Angular-SSR
 
 Die erste Version ist als Onlineshop eines einzelnen Anbieters geplant. Der Markenname lautet **NordWinds**. Für neue technische Bezeichner wird `nordwinds` verwendet.
 
@@ -56,7 +56,8 @@ Der [NW-03-Buildnachweis](docs/progress/NW-03.md) dokumentiert die inzwischen la
 Die [CI- und PR-Anleitung](docs/verification/ci.md) erklärt die Qualitätsschritte und die Voraussetzungen für verpflichtende Statuschecks.
 Der [NW-09-Nachweis](docs/progress/NW-09.md) beschreibt Storefront, Design-System und die ausgeführten bzw. noch ausstehenden Oberflächenprüfungen.
 Der [NW-10-Nachweis](docs/progress/NW-10.md) beschreibt Produktdetail, Variantenauswahl und den neuen Detail-Endpunkt der API.
+Der [NW-22-Nachweis](docs/progress/NW-22.md) dokumentiert die Zugänglichkeits- und SEO-Prüfung sowie die Entscheidung für gezieltes SSR.
 
 ## Container-Images
 
-Das mehrstufige `Dockerfile` definiert zwei Ziele: `edge` für Angular und Caddy sowie `api` für Go und die Migration. Die Builds verwenden `npm ci`, `go mod download` und die versionierten Lock-/Prüfsummendateien. Compose startet PostgreSQL, führt die erste Migration aus und schaltet danach API und Caddy frei. Die Caddy-Konfiguration nutzt lokal HTTP auf Port 8080; für einen öffentlichen Betrieb ist eine gesonderte HTTPS-Konfiguration erforderlich.
+Das mehrstufige `Dockerfile` definiert drei Ziele: `edge` für Caddy, `ssr` für Angular und Node sowie `api` für Go und die Migration. Die Builds verwenden `npm ci`, `go mod download` und die versionierten Lock-/Prüfsummendateien. Compose startet PostgreSQL, führt Migrationen aus und schaltet danach API, SSR und Caddy frei. Caddy leitet `/api` an Go und die übrigen Anfragen an Angular weiter. Die Caddy-Konfiguration nutzt lokal HTTP auf Port 8080; für einen öffentlichen Betrieb ist eine gesonderte HTTPS-Konfiguration erforderlich.
