@@ -10,7 +10,7 @@
 ![Go 1.27](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)
 ![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
 ![Verkauf gesperrt](https://img.shields.io/badge/Live--Verkauf-gesperrt-E8A838)
-[![Projekt unterstützen](https://img.shields.io/badge/Sponsor-PayPal.Me-0070BA?logo=paypal&logoColor=white)](https://paypal.me/pehlion?locale.x=de_DE&country.x=DE)
+[![Projekt unterstützen](https://img.shields.io/badge/Sponsor-PayPal-0070BA?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=N39U7LWSRUA6E)
 
 [Schnellstart](#schnellstart) · [Funktionen](#funktionen) · [Testbestellungen](#testbestellungen-simulieren) · [Tests](#qualität-prüfen) · [Betrieb](#betrieb-und-freigabe) · [Unterstützung](#projekt-unterstützen) · [Dokumentation](#dokumentation)
 
@@ -123,7 +123,9 @@ Für die **isolierte lokale Staging-Vorschau** erklärt das [Release-Runbook](op
 
 ## Projekt unterstützen
 
-Die GitHub-Schaltfläche **Sponsor** nutzt den [PayPal.Me-Link](https://paypal.me/pehlion?locale.x=de_DE&country.x=DE) aus [`.github/FUNDING.yml`](.github/FUNDING.yml). Diese externe Unterstützung der Repository-Entwicklung ist keine Produktbestellung und aktiviert weder die NordWinds-Kasse noch einen Live-Verkauf.
+Die GitHub-Schaltfläche **Sponsor** nutzt den [PayPal-Donate-Link](https://www.paypal.com/donate/?hosted_button_id=N39U7LWSRUA6E) aus [`.github/FUNDING.yml`](.github/FUNDING.yml). Diese externe Unterstützung der Repository-Entwicklung ist keine Produktbestellung und aktiviert weder die NordWinds-Kasse noch einen Live-Verkauf.
+
+[![QR-Code für den PayPal-Donate-Link](docs/assets/paypal-donate-qr.png)](https://www.paypal.com/donate/?hosted_button_id=N39U7LWSRUA6E)
 
 ## Dokumentation
 
