@@ -104,7 +104,7 @@ docker compose -f compose.yaml config --quiet
 pwsh -NoProfile -File scripts/smoke.ps1
 ```
 
-Die CI prüft darüber hinaus Go-Format, Go-Abhängigkeiten, Monitoring-Konfiguration und Docker-Builds. [Security](.github/workflows/security.yml) prüft Geheimnisse im Quellbaum und die Images. Die Workflow-Badges zeigen den **GitHub-Status**, nicht das Ergebnis eines lokalen Tests; bei einem privaten Repository sind sie nur mit passendem Zugriff sichtbar. Der jüngste Remote-Lauf wurde wegen eines GitHub-Abrechnungs- bzw. Ausgabenlimits vor dem ersten Schritt gestoppt; [CI-Status und Einschränkungen](docs/verification/ci.md) trennen dies von lokal bestandenen Prüfungen.
+Die CI prüft darüber hinaus Go-Format, Go-Abhängigkeiten, Monitoring-Konfiguration und Docker-Builds. [Security](.github/workflows/security.yml) prüft Geheimnisse im Quellbaum und die Images. Die Workflow-Badges zeigen den **GitHub-Status**, nicht das Ergebnis eines lokalen Tests; bei einem privaten Repository sind sie nur mit passendem Zugriff sichtbar. [CI-Status und Einschränkungen](docs/verification/ci.md) trennen lokale Prüfergebnisse von den Remote-Checks.
 
 ## Betrieb und Freigabe
 

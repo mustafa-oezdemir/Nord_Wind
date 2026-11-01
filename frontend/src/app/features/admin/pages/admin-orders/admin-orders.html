@@ -40,7 +40,7 @@
             <div class="d-flex justify-content-between flex-wrap gap-2">
               <div>
                 <strong>{{ order.order_number }}</strong> ·
-                {{ order.created_at | date: 'dd.MM.yyyy HH:mm' }}<br />{{ order.customer_email }}
+                {{ order.created_at | berlinDate: 'dateTime' }}<br />{{ order.customer_email }}
               </div>
               <span>{{ statusLabel(order.status) }}</span>
             </div>

@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { BerlinDatePipe } from '../../shared/date/berlin-date.pipe';
 import { CartApi } from '../cart/data-access/cart-api';
 import { OrderAddress, OrderStatus, OrdersApi } from '../checkout/data-access/orders-api';
 import { AccountApi, SavedAddress } from './account-api';
@@ -22,7 +22,7 @@ const blankAddress = (): OrderAddress => ({
 
 @Component({
   selector: 'app-account-page',
-  imports: [DatePipe, FormsModule, RouterLink],
+  imports: [BerlinDatePipe, FormsModule, RouterLink],
   templateUrl: './account-page.html',
 })
 export class AccountPage implements OnInit {

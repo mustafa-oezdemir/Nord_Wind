@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -14,6 +13,7 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { formatPageTitle } from '../../../../core/routing/page-title-strategy';
+import { BerlinDatePipe } from '../../../../shared/date/berlin-date.pipe';
 import { euros } from '../../../../shared/money/money';
 import { MoneyPipe } from '../../../../shared/money/money.pipe';
 import { PriceSummary } from '../../../cart/ui/price-summary/price-summary';
@@ -56,7 +56,7 @@ const PAYMENT_LABELS: Record<MockPayment['state'], string> = {
 /** Bestätigung nach der Kasse; zeigt den gespeicherten Snapshot aus der API. */
 @Component({
   selector: 'app-order-confirmation',
-  imports: [DatePipe, RouterLink, MoneyPipe, PriceSummary, CheckoutSteps],
+  imports: [BerlinDatePipe, RouterLink, MoneyPipe, PriceSummary, CheckoutSteps],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './order-confirmation.html',
   styleUrl: './order-confirmation.scss',

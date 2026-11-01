@@ -46,7 +46,7 @@
                         order.order_number
                       }}</a>
                     </td>
-                    <td>{{ order.created_at | date: 'dd.MM.yyyy' }}</td>
+                    <td>{{ order.created_at | berlinDate: 'date' }}</td>
                     <td>{{ statusLabel(order.status) }}</td>
                     <td>{{ (order.pricing.total_cents / 100).toFixed(2) }} €</td>
                     <td>{{ order.shipment?.tracking_number || 'Noch keine' }}</td>

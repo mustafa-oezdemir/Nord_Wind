@@ -1,16 +1,16 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../../core/config/api-config';
+import { BerlinDatePipe } from '../../../../shared/date/berlin-date.pipe';
 import { Order, OrderStatus } from '../../../checkout/data-access/orders-api';
 import { AuthSession } from '../../data-access/admin-api';
 
 @Component({
   selector: 'app-admin-orders',
-  imports: [DatePipe, FormsModule, RouterLink],
+  imports: [BerlinDatePipe, FormsModule, RouterLink],
   templateUrl: './admin-orders.html',
 })
 export class AdminOrders implements OnInit {

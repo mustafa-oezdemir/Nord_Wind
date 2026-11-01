@@ -55,7 +55,7 @@
       <ol class="order-next" aria-label="So geht es weiter">
         <li class="order-next-done">
           <strong>Bestellung gespeichert</strong>
-          <span>{{ current.created_at | date: 'd. MMMM y, HH:mm' : 'Europe/Berlin' }} Uhr</span>
+          <span>{{ current.created_at | berlinDate: 'longDateTime' }} Uhr</span>
         </li>
         <li>
           <strong>Zahlung</strong>
@@ -88,7 +88,7 @@
         <ol>
           @for (event of current.status_events; track $index) {
             <li>
-              {{ event.created_at | date: 'd. MMMM y, HH:mm' : 'Europe/Berlin' }} Uhr –
+              {{ event.created_at | berlinDate: 'longDateTime' }} Uhr –
               {{ statusLabel(event.to_status) }}
             </li>
           }
