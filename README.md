@@ -10,8 +10,9 @@
 ![Go 1.27](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)
 ![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
 ![Verkauf gesperrt](https://img.shields.io/badge/Live--Verkauf-gesperrt-E8A838)
+[![Projekt unterstützen](https://img.shields.io/badge/Sponsor-PayPal.Me-0070BA?logo=paypal&logoColor=white)](https://paypal.me/pehlion?locale.x=de_DE&country.x=DE)
 
-[Schnellstart](#schnellstart) · [Funktionen](#funktionen) · [Testbestellungen](#testbestellungen-simulieren) · [Tests](#qualität-prüfen) · [Betrieb](#betrieb-und-freigabe) · [Dokumentation](#dokumentation)
+[Schnellstart](#schnellstart) · [Funktionen](#funktionen) · [Testbestellungen](#testbestellungen-simulieren) · [Tests](#qualität-prüfen) · [Betrieb](#betrieb-und-freigabe) · [Unterstützung](#projekt-unterstützen) · [Dokumentation](#dokumentation)
 
 > [!IMPORTANT]
 > NordWinds ist derzeit eine **lokale Vorschau**. Ein realer Betreiber, ein verbindliches Sortiment, ein echter Zahlungsanbieter sowie die rechtliche und steuerliche Freigabe fehlen. Es werden keine echten Zahlungen verarbeitet oder Waren versandt. Testbestellungen lassen sich ausschließlich in der lokalen Entwicklungsumgebung einschalten.
@@ -104,7 +105,7 @@ docker compose -f compose.yaml config --quiet
 pwsh -NoProfile -File scripts/smoke.ps1
 ```
 
-Die CI prüft darüber hinaus Go-Format, Go-Abhängigkeiten, Monitoring-Konfiguration und Docker-Builds. [Security](.github/workflows/security.yml) prüft Geheimnisse im Quellbaum und die Images. Die Workflow-Badges zeigen den **GitHub-Status**, nicht das Ergebnis eines lokalen Tests; bei einem privaten Repository sind sie nur mit passendem Zugriff sichtbar. [CI-Status und Einschränkungen](docs/verification/ci.md) trennen lokale Prüfergebnisse von den Remote-Checks.
+Die CI prüft darüber hinaus Go-Format, Go-Abhängigkeiten, Monitoring-Konfiguration und Docker-Builds. [Security](.github/workflows/security.yml) prüft Geheimnisse im Quellbaum und die Images. Die Workflow-Badges zeigen den **GitHub-Status**, nicht das Ergebnis eines lokalen Tests. [CI-Status und Einschränkungen](docs/verification/ci.md) trennen lokale Prüfergebnisse von den Remote-Checks.
 
 ## Betrieb und Freigabe
 
@@ -119,6 +120,10 @@ Mailpit fängt lokal Begrüßungs-, Sicherheits-, Bestell- und Versandnachrichte
 Der Dienst `backup` erstellt beim Start und danach täglich ein geprüftes PostgreSQL-Archiv im Git-ignorierten Ordner `backups/`. [NW-24](docs/progress/NW-24.md) beschreibt Rücksicherung, Request-IDs, Metriken und ihre Grenzen. Mit `COMPOSE_PROFILES=monitoring` lassen sich Prometheus und Grafana lokal ergänzen; Einrichtung und Zugangsdaten stehen in [.env.example](.env.example) und der [Monitoring-Anleitung](docs/progress/monitoring.md).
 
 Für die **isolierte lokale Staging-Vorschau** erklärt das [Release-Runbook](ops/release-runbook.md) `.env.staging`, `staging.localhost:18443`, synthetischen Kundenfluss, Backup- und Migrationsprobe. Das Zertifikat stammt von einer lokalen Caddy-CA. Ein echter Staging- oder Produktionsstart benötigt einen Betreiber, rechtliche/steuerliche Prüfung, einen Zahlungsanbieter mit Sandbox-Test, öffentliche Infrastruktur sowie durchgesetzte PR-, CI- und manuelle Freigaben. Die offenen Punkte sind in [NW-21](docs/progress/NW-21.md), [NW-25](docs/progress/NW-25.md) und [NW-26](docs/progress/NW-26.md) festgehalten.
+
+## Projekt unterstützen
+
+Die GitHub-Schaltfläche **Sponsor** nutzt den [PayPal.Me-Link](https://paypal.me/pehlion?locale.x=de_DE&country.x=DE) aus [`.github/FUNDING.yml`](.github/FUNDING.yml). Diese externe Unterstützung der Repository-Entwicklung ist keine Produktbestellung und aktiviert weder die NordWinds-Kasse noch einen Live-Verkauf.
 
 ## Dokumentation
 

@@ -19,7 +19,7 @@ Die interne Caddy-CA dient nur `staging.localhost`; der Test prüft ihr Zertifik
 
 ## Release-Tag und Remote-Freigabe
 
-1. Alle Änderungen durch einen gemergten PR nach `main` bringen. `quality`, `images` und `secrets` müssen für den exakten Commit grün sein. Branch-/Ruleset-Schutz muss PR und Checks erzwingen; die GitHub-Umgebung `staging` muss erforderliche Reviewer haben. Der aktuelle GitHub-Abrechnungsblocker ist vorher zu beheben.
+1. Alle Änderungen durch einen gemergten PR nach `main` bringen. `quality`, `images` und `secrets` müssen für den exakten Commit grün sein. Branch-/Ruleset-Schutz muss PR und Checks erzwingen; die GitHub-Umgebung `staging` muss erforderliche Reviewer haben. Beide Schutzregeln waren am 1. November 2026 noch nicht eingerichtet.
 2. Erst dann `git fetch origin main --tags` ausführen, den 40-stelligen SHA des geprüften Commits notieren und einen **annotierten** SemVer-Tag wie `v1.2.3` auf genau diesem Commit erstellen. Tag und Push sind ein bewusster Release-Schritt, nicht Teil des lokalen Staging-Tests.
 3. `Release controls` per `workflow_dispatch` mit Tag und SHA starten. Der Workflow prüft die PR-/CI-/Security-Bedingungen erneut, wartet auf die Environment-Freigabe und führt einen isolierten Staging-Smoke, Kundenfluss sowie Backup-/Migrations-Dry-Run aus. Er stellt keine Anwendung bereit.
 4. Für eine echte Staging- oder Produktionsbereitstellung Zielhost, öffentliche Domain, TLS-Aussteller, Netzwerkgrenzen und unveränderliche Image-Digests ergänzen. Die lokale `tls internal`-Konfiguration darf nicht als öffentliches TLS eingesetzt werden.
